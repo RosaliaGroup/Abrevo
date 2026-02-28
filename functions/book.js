@@ -52,12 +52,14 @@ exports.handler = async (event) => {
     // Text caller confirmation
     if (phone) {
       const callerMsg = `Appointment confirmed!\n\n📍 ${type}\n📅 ${date} at ${time}\n\nNeed to reschedule? ${client.rescheduleLink}`;
-      await sendSMS(phone, callerMsg);
+      const callerResult = await sendSMS(phone, callerMsg);
+      console.log('Caller SMS result:', JSON.stringify(callerResult));
     }
 
     // Text Ana with full details
     const teamMsg = `New Booking!\n\nName: ${name}\nPhone: ${phone}\nEmail: ${email}\nProperty: ${type}\nDate: ${date} at ${time}\nBudget: ${data.budget || 'N/A'}\nArea: ${data.preferred_area || data.area || 'N/A'}\nMove-In: ${data.move_in_date || 'N/A'}\nIncome: ${data.income_qualifies || 'N/A'}\nCredit: ${data.credit_qualifies || 'N/A'}\n\nNotes: ${data.additional_notes || data.notes || 'N/A'}`;
-    await sendSMS(client.notifyPhone, teamMsg);
+    const teamResult = await sendSMS(client.notifyPhone, teamMsg);
+    console.log('Team SMS result:', JSON.stringify(teamResult));
 
     return {
       statusCode: 200,
