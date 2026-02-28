@@ -1,12 +1,12 @@
 const { google } = require('googleapis');
 
-// Client configurations
 const CLIENTS = {
   rosalia: {
     calendarId: 'inquiries@rosaliagroup.com',
     notifyPhone: '+16462269189',
     notifyName: 'Ana',
     teamName: 'Rosalia Group',
+    rescheduleLink: 'calendly.com/ana-rosaliagroup/apartment-tour-request',
     googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
   }
 };
@@ -17,11 +17,7 @@ async function sendSMS(phone, message) {
   const response = await fetch('https://textbelt.com/text', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      phone,
-      message,
-      key: TEXTBELT_KEY,
-    }),
+    body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
   });
   return response.json();
 }
@@ -34,17 +30,13 @@ async function createCalendarEvent(client, data) {
 
   const calendar = google.calendar({ version: 'v3', auth });
 
-  // Parse date and time — handle various formats from Alex
   let startDateTime;
   try {
-    // Try direct parse first
     startDateTime = new Date(`${data.preferred_date} ${data.preferred_time}`);
     if (isNaN(startDateTime.getTime())) {
-      // Try with EST timezone hint
       startDateTime = new Date(`${data.preferred_date} ${data.preferred_time} EST`);
     }
     if (isNaN(startDateTime.getTime())) {
-      // Fallback: use tomorrow at noon
       startDateTime = new Date();
       startDateTime.setDate(startDateTime.getDate() + 1);
       startDateTime.setHours(12, 0, 0, 0);
@@ -54,7 +46,7 @@ async function createCalendarEvent(client, data) {
     startDateTime.setDate(startDateTime.getDate() + 1);
     startDateTime.setHours(12, 0, 0, 0);
   }
-  const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000); // 30 min
+  const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
 
   const description = `
 Phone: ${data.phone || 'N/A'}
@@ -111,13 +103,13 @@ exports.handler = async (event) => {
       console.error('Calendar error:', err.message);
     }
 
-    // 2. Text the caller confirmation
+    // 2. Text caller — clean confirmation
     if (data.phone) {
-      const callerMsg = `Your appointment is confirmed!\n\n${data.type || 'Appointment'}\n${data.preferred_date} at ${data.preferred_time}\n\n${client.teamName} will be in touch to coordinate. See you then!`;
+      const callerMsg = `Appointment confirmed!\n\n📍 ${data.type || 'Appointment'}\n📅 ${data.preferred_date} at ${data.preferred_time}\n\nNeed to reschedule? ${client.rescheduleLink}`;
       await sendSMS(data.phone, callerMsg);
     }
 
-    // 3. Text Ana/team with full details
+    // 3. Text Ana with full details
     const teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${data.type}\nDate: ${data.preferred_date} at ${data.preferred_time}\nBudget: ${data.budget}\nArea: ${data.preferred_area}\nMove-In: ${data.move_in_date}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
     await sendSMS(client.notifyPhone, teamMsg);
 
