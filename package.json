@@ -1,8 +1,12 @@
 {
-  "name": "rosalia-booking-function",
+  "name": "abrevo-booking",
   "version": "1.0.0",
-  "description": "Handles Vapi booking webhooks for Rosalia Group",
+  "description": "Abrevo booking engine",
+  "main": "index.js",
   "dependencies": {
-    "nodemailer": "^6.9.8"
+    "googleapis": "^140.0.0"
+  },
+  "engines": {
+    "node": "18"
   }
 }
