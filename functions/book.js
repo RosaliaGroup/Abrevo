@@ -1,12 +1,10 @@
-const { google } = require('googleapis');
-// Client configurations
 const CLIENTS = {
   rosalia: {
     calendarId: 'inquiries@rosaliagroup.com',
     notifyPhone: '+16462269189',
     notifyName: 'Ana',
     teamName: 'Rosalia Group',
-    googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
+    rescheduleLink: 'calendly.com/ana-rosaliagroup/apartment-tour-request',
   }
 };
 
@@ -16,52 +14,9 @@ async function sendSMS(phone, message) {
   const response = await fetch('https://textbelt.com/text', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      phone,
-      message,
-      key: TEXTBELT_KEY,
-    }),
+    body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
   });
   return response.json();
-}
-
-async function createCalendarEvent(client, data) {
-  const auth = new google.auth.GoogleAuth({
-    credentials: client.googleCredentials,
-    scopes: ['https://www.googleapis.com/auth/calendar'],
-  });
-
-  const calendar = google.calendar({ version: 'v3', auth });
-
-  // Parse date and time
-  const startDateTime = new Date(`${data.preferred_date} ${data.preferred_time}`);
-  const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000); // 30 min
-
-  const description = `
-Phone: ${data.phone || 'N/A'}
-Email: ${data.email || 'N/A'}
-Budget: ${data.budget || 'N/A'}
-Apartment Size: ${data.apartment_size || 'N/A'}
-Preferred Area: ${data.preferred_area || 'N/A'}
-Move-In Date: ${data.move_in_date || 'N/A'}
-Income Qualifies: ${data.income_qualifies || 'N/A'}
-Credit Qualifies: ${data.credit_qualifies || 'N/A'}
-
-Notes:
-${data.additional_notes || 'N/A'}
-  `.trim();
-
-  const event = await calendar.events.insert({
-    calendarId: client.calendarId,
-    resource: {
-      summary: data.type || 'Appointment',
-      description,
-      start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
-      end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
-    },
-  });
-
-  return event.data;
 }
 
 exports.handler = async (event) => {
@@ -83,29 +38,30 @@ exports.handler = async (event) => {
     }
 
     const data = JSON.parse(event.body || '{}');
+    
+    console.log('Incoming data:', JSON.stringify(data));
 
-    // 1. Create Google Calendar event
-    let calendarEvent = null;
-    try {
-      calendarEvent = await createCalendarEvent(client, data);
-    } catch (err) {
-      console.error('Calendar error:', err.message);
+    const name = data.full_name || data.name || 'Guest';
+    const phone = data.phone || data.caller_phone || '';
+    const email = data.email || data.caller_email || '';
+    const type = data.type || data.appointment_type || 'Appointment';
+    const date = data.preferred_date || data.date || '';
+    const time = data.preferred_time || data.time || '';
+
+    // Text caller confirmation
+    if (phone) {
+      const callerMsg = `Appointment confirmed!\n\n📍 ${type}\n📅 ${date} at ${time}\n\nNeed to reschedule? ${client.rescheduleLink}`;
+      await sendSMS(phone, callerMsg);
     }
 
-    // 2. Text the caller confirmation
-    if (data.phone) {
-      const callerMsg = `Your appointment is confirmed!\n\n${data.type || 'Appointment'}\n${data.preferred_date} at ${data.preferred_time}\n\n${client.teamName} will be in touch to coordinate. See you then!`;
-      await sendSMS(data.phone, callerMsg);
-    }
-
-    // 3. Text Ana/team with full details
-    const teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${data.type}\nDate: ${data.preferred_date} at ${data.preferred_time}\nBudget: ${data.budget}\nArea: ${data.preferred_area}\nMove-In: ${data.move_in_date}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
+    // Text Ana with full details
+    const teamMsg = `New Booking!\n\nName: ${name}\nPhone: ${phone}\nEmail: ${email}\nProperty: ${type}\nDate: ${date} at ${time}\nBudget: ${data.budget || 'N/A'}\nArea: ${data.preferred_area || data.area || 'N/A'}\nMove-In: ${data.move_in_date || 'N/A'}\nIncome: ${data.income_qualifies || 'N/A'}\nCredit: ${data.credit_qualifies || 'N/A'}\n\nNotes: ${data.additional_notes || data.notes || 'N/A'}`;
     await sendSMS(client.notifyPhone, teamMsg);
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ success: true, eventId: calendarEvent?.id }),
+      body: JSON.stringify({ success: true }),
     };
 
   } catch (err) {
@@ -117,4 +73,3 @@ exports.handler = async (event) => {
     };
   }
 };
-
