@@ -29,9 +29,11 @@ async function createCalendarEvent(client, data) {
 
   const calendar = google.calendar({ version: 'v3', auth });
 
+  // Parse date in America/New_York timezone
   let startDateTime;
   try {
-    startDateTime = new Date(`${data.preferred_date} ${data.preferred_time}`);
+    const dateStr = `${data.preferred_date} ${data.preferred_time}`;
+    startDateTime = new Date(dateStr);
     if (isNaN(startDateTime.getTime())) {
       startDateTime = new Date(`${data.preferred_date} ${data.preferred_time} EST`);
     }
@@ -113,7 +115,7 @@ exports.handler = async (event) => {
 
     // 2. Text caller confirmation
     if (phone) {
-      const callerMsg = `Appointment confirmed!\n\n📍 ${type}\n📅 ${date} at ${time}\n\nQuestions? Call us at (201) 449-6850`;
+      const callerMsg = `Appointment confirmed!\n\n📍 ${type}\n📅 ${date} at ${time}\n\nQuestions? Call us at (862) 777-9789`;
       const callerResult = await sendSMS(phone, callerMsg);
       console.log('Caller SMS result:', JSON.stringify(callerResult));
     }
