@@ -31,7 +31,7 @@ async function createCalendarEvent(client, data) {
 
   let startDateTime;
   try {
-    const dateStr = `${data.preferred_date} ${data.preferred_time} GMT-0500`;
+    const dateStr = `${data.preferred_date} ${data.preferred_time} GMT-0400`;
     startDateTime = new Date(dateStr);
     if (isNaN(startDateTime.getTime())) {
       startDateTime = new Date(`${data.preferred_date} ${data.preferred_time}`);
