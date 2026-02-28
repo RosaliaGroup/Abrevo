@@ -42,7 +42,8 @@ exports.handler = async (event) => {
     console.log('Incoming data:', JSON.stringify(data));
 
     const name = data.full_name || data.name || 'Guest';
-    const phone = data.phone || data.caller_phone || '';
+    let phone = data.phone || data.caller_phone || '';
+    if (phone && !phone.startsWith('+')) phone = '+1' + phone;
     const email = data.email || data.caller_email || '';
     const type = data.type || data.appointment_type || 'Appointment';
     const date = data.preferred_date || data.date || '';
