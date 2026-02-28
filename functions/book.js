@@ -29,13 +29,12 @@ async function createCalendarEvent(client, data) {
 
   const calendar = google.calendar({ version: 'v3', auth });
 
-  // Parse date in America/New_York timezone
   let startDateTime;
   try {
-    const dateStr = `${data.preferred_date} ${data.preferred_time}`;
+    const dateStr = `${data.preferred_date} ${data.preferred_time} GMT-0500`;
     startDateTime = new Date(dateStr);
     if (isNaN(startDateTime.getTime())) {
-      startDateTime = new Date(`${data.preferred_date} ${data.preferred_time} EST`);
+      startDateTime = new Date(`${data.preferred_date} ${data.preferred_time}`);
     }
     if (isNaN(startDateTime.getTime())) {
       startDateTime = new Date();
