@@ -96,7 +96,7 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown client' }) };
     }
 
-    const data = JSON.parse(event.body || '{}');
+    console.log('Incoming data:', JSON.stringify(data));
     
     // Log all incoming data
     console.log('Incoming data:', JSON.stringify(data));
