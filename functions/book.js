@@ -63,6 +63,10 @@ async function createCalendarEvent(client, data) {
     startDateTime.setDate(startDateTime.getDate() + 1);
     startDateTime.setHours(12, 0, 0, 0);
   }
+
+  console.log('Parsed date string:', `${data.preferred_date} ${data.preferred_time}`);
+  console.log('Parsed startDateTime:', startDateTime.toISOString());
+
   const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
 
   const description = [
@@ -72,8 +76,8 @@ async function createCalendarEvent(client, data) {
     'Apartment Size: ' + (data.apartment_size || 'N/A'),
     'Preferred Area: ' + (data.preferred_area || 'N/A'),
     'Move-In Date: ' + (data.move_in_date || 'N/A'),
-    'Income Qualifies: ' + (data.income_qualifies || 'N/A'),
-    'Credit Qualifies: ' + (data.credit_qualifies || 'N/A'),
+    'Income: ' + (data.income_qualifies || 'N/A'),
+    'Credit: ' + (data.credit_qualifies || 'N/A'),
     '',
     'Notes:',
     (data.additional_notes || 'N/A')
@@ -82,7 +86,7 @@ async function createCalendarEvent(client, data) {
   const event = await calendar.events.insert({
     calendarId: client.calendarId,
     resource: {
-      summary: data.type || 'Appointment',
+      summary: `${data.full_name || 'Guest'} — ${data.type || 'Appointment'}`,
       description,
       start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
       end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
@@ -120,6 +124,8 @@ exports.handler = async (event) => {
     const type = data.type || data.appointment_type || 'Appointment';
     const date = data.preferred_date || data.date || '';
     const time = data.preferred_time || data.time || '';
+    const income = data.income_qualifies || 'N/A';
+    const credit = data.credit_qualifies || 'N/A';
 
     // 1. Create Google Calendar event first to get event ID
     let calendarEvent = null;
@@ -143,8 +149,8 @@ exports.handler = async (event) => {
         apartment_size: data.apartment_size || null,
         preferred_area: data.preferred_area || null,
         move_in_date: data.move_in_date || null,
-        income_qualifies: data.income_qualifies || null,
-        credit_qualifies: data.credit_qualifies || null,
+        income_qualifies: income !== 'N/A' ? income : null,
+        credit_qualifies: credit !== 'N/A' ? credit : null,
         additional_notes: data.additional_notes || null,
         client: clientId,
         calendar_event_id: calendarEvent?.id || null,
@@ -161,8 +167,8 @@ exports.handler = async (event) => {
       console.log('Caller SMS result:', JSON.stringify(callerResult));
     }
 
-    // 4. Text Ana with full details
-    const teamMsg = `New Booking!\n\nName: ${name}\nPhone: ${phone}\nProperty: ${type}\nDate: ${date} at ${time}\nBudget: ${data.budget || 'N/A'}\nArea: ${data.preferred_area || 'N/A'}\nMove-In: ${data.move_in_date || 'N/A'}\nIncome: ${data.income_qualifies || 'N/A'}\nCredit: ${data.credit_qualifies || 'N/A'}`;
+    // 4. Text Ana with full details including income and credit
+    const teamMsg = `New Booking!\n\nName: ${name}\nPhone: ${phone}\nEmail: ${email}\nProperty: ${type}\nDate: ${date} at ${time}\nBudget: ${data.budget || 'N/A'}\nSize: ${data.apartment_size || 'N/A'}\nArea: ${data.preferred_area || 'N/A'}\nMove-In: ${data.move_in_date || 'N/A'}\nIncome: ${income}\nCredit: ${credit}`;
     const teamResult = await sendSMS(client.notifyPhone, teamMsg);
     console.log('Team SMS result:', JSON.stringify(teamResult));
 
