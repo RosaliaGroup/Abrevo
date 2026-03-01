@@ -3,7 +3,6 @@ const { google } = require('googleapis');
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
 const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
-
 const GOOGLE_CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
 const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
 const ANA_PHONE = '+16462269189';
@@ -17,20 +16,18 @@ async function sendSMS(phone, message) {
   return response.json();
 }
 
-async function updateCalendarEvent(eventId, data) {
+async function createOrUpdateCalendarEvent(booking, new_date, new_time) {
   const auth = new google.auth.GoogleAuth({
     credentials: GOOGLE_CREDENTIALS,
     scopes: ['https://www.googleapis.com/auth/calendar'],
   });
-
   const calendar = google.calendar({ version: 'v3', auth });
 
   let startDateTime;
   try {
-    const dateStr = `${data.new_date} ${data.new_time} GMT-0400`;
-    startDateTime = new Date(dateStr);
+    startDateTime = new Date(`${new_date} ${new_time} GMT-0400`);
     if (isNaN(startDateTime.getTime())) {
-      startDateTime = new Date(`${data.new_date} ${data.new_time}`);
+      startDateTime = new Date(`${new_date} ${new_time}`);
     }
   } catch(e) {
     startDateTime = new Date();
@@ -39,12 +36,11 @@ async function updateCalendarEvent(eventId, data) {
   }
   const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
 
-  // If we have an eventId update existing event, otherwise create new
-  if (eventId) {
+  // If existing event ID, patch it — otherwise create new
+  if (booking.calendar_event_id) {
     const updated = await calendar.events.patch({
       calendarId: CALENDAR_ID,
-      eventId,
-      sendUpdates: 'all',
+      eventId: booking.calendar_event_id,
       resource: {
         start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
         end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
@@ -52,15 +48,25 @@ async function updateCalendarEvent(eventId, data) {
     });
     return updated.data;
   } else {
-    // Create new event if no eventId stored
+    const description = [
+      'Phone: ' + (booking.phone || 'N/A'),
+      'Email: ' + (booking.email || 'N/A'),
+      'Budget: ' + (booking.budget || 'N/A'),
+      'Apartment Size: ' + (booking.apartment_size || 'N/A'),
+      'Move-In Date: ' + (booking.move_in_date || 'N/A'),
+      'Income Qualifies: ' + (booking.income_qualifies || 'N/A'),
+      'Credit Qualifies: ' + (booking.credit_qualifies || 'N/A'),
+      '',
+      'RESCHEDULED APPOINTMENT'
+    ].join('\n');
+
     const created = await calendar.events.insert({
       calendarId: CALENDAR_ID,
-      sendUpdates: 'all',
       resource: {
-        summary: data.type || 'Appointment',
+        summary: booking.type || 'Appointment',
+        description,
         start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
         end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
-        attendees: data.email ? [{ email: data.email }] : [],
       },
     });
     return created.data;
@@ -84,31 +90,30 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'phone, new_date, and new_time are required' }) };
     }
 
-    // Normalize phone
     let normalizedPhone = phone.replace(/\D/g, '');
     if (!normalizedPhone.startsWith('+')) normalizedPhone = '+1' + normalizedPhone;
 
     // Find latest booking
     const findRes = await fetch(
       `${SUPABASE_URL}/rest/v1/bookings?phone=eq.${encodeURIComponent(normalizedPhone)}&order=created_at.desc&limit=1`,
-      {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-        },
-      }
+      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
     );
     const bookings = await findRes.json();
 
     if (!bookings || bookings.length === 0) {
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ success: false, message: 'No existing booking found.' }),
-      };
+      return { statusCode: 200, headers, body: JSON.stringify({ success: false, message: 'No existing booking found.' }) };
     }
 
     const booking = bookings[0];
+
+    // Create/update calendar event
+    let calendarEvent = null;
+    try {
+      calendarEvent = await createOrUpdateCalendarEvent(booking, new_date, new_time);
+      console.log('Calendar event:', calendarEvent.id);
+    } catch(err) {
+      console.error('Calendar error:', err.message);
+    }
 
     // Update Supabase
     await fetch(
@@ -120,21 +125,13 @@ exports.handler = async (event) => {
           'apikey': SUPABASE_KEY,
           'Authorization': `Bearer ${SUPABASE_KEY}`,
         },
-        body: JSON.stringify({ preferred_date: new_date, preferred_time: new_time }),
+        body: JSON.stringify({
+          preferred_date: new_date,
+          preferred_time: new_time,
+          calendar_event_id: calendarEvent?.id || booking.calendar_event_id,
+        }),
       }
     );
-
-    // Update Google Calendar
-    try {
-      await updateCalendarEvent(booking.calendar_event_id || null, {
-        new_date,
-        new_time,
-        type: booking.type,
-        email: booking.email,
-      });
-    } catch(err) {
-      console.error('Calendar update error:', err.message);
-    }
 
     // Text caller
     const callerMsg = `Appointment rescheduled!\n\n📍 ${booking.type}\n📅 ${new_date} at ${new_time}\n\nQuestions? Call us at (201) 449-6850`;
@@ -154,10 +151,6 @@ exports.handler = async (event) => {
 
   } catch (err) {
     console.error('Reschedule error:', err);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: err.message }),
-    };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };
