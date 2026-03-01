@@ -16,12 +16,29 @@ async function sendSMS(phone, message) {
   return response.json();
 }
 
-async function createOrUpdateCalendarEvent(booking, new_date, new_time) {
+async function getCalendarClient() {
   const auth = new google.auth.GoogleAuth({
     credentials: GOOGLE_CREDENTIALS,
     scopes: ['https://www.googleapis.com/auth/calendar'],
   });
-  const calendar = google.calendar({ version: 'v3', auth });
+  return google.calendar({ version: 'v3', auth });
+}
+
+async function deleteCalendarEvent(eventId) {
+  try {
+    const calendar = await getCalendarClient();
+    await calendar.events.delete({
+      calendarId: CALENDAR_ID,
+      eventId,
+    });
+    console.log('Deleted calendar event:', eventId);
+  } catch (err) {
+    console.error('Delete calendar event error:', err.message);
+  }
+}
+
+async function createCalendarEvent(booking, new_date, new_time) {
+  const calendar = await getCalendarClient();
 
   let startDateTime;
   try {
@@ -36,41 +53,33 @@ async function createOrUpdateCalendarEvent(booking, new_date, new_time) {
   }
   const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
 
-  // If existing event ID, patch it — otherwise create new
-  if (booking.calendar_event_id) {
-    const updated = await calendar.events.patch({
-      calendarId: CALENDAR_ID,
-      eventId: booking.calendar_event_id,
-      resource: {
-        start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
-        end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
-      },
-    });
-    return updated.data;
-  } else {
-    const description = [
-      'Phone: ' + (booking.phone || 'N/A'),
-      'Email: ' + (booking.email || 'N/A'),
-      'Budget: ' + (booking.budget || 'N/A'),
-      'Apartment Size: ' + (booking.apartment_size || 'N/A'),
-      'Move-In Date: ' + (booking.move_in_date || 'N/A'),
-      'Income Qualifies: ' + (booking.income_qualifies || 'N/A'),
-      'Credit Qualifies: ' + (booking.credit_qualifies || 'N/A'),
-      '',
-      'RESCHEDULED APPOINTMENT'
-    ].join('\n');
+  const description = [
+    'RESCHEDULED APPOINTMENT',
+    '',
+    'Phone: ' + (booking.phone || 'N/A'),
+    'Email: ' + (booking.email || 'N/A'),
+    'Budget: ' + (booking.budget || 'N/A'),
+    'Apartment Size: ' + (booking.apartment_size || 'N/A'),
+    'Preferred Area: ' + (booking.preferred_area || 'N/A'),
+    'Move-In Date: ' + (booking.move_in_date || 'N/A'),
+    'Income Qualifies: ' + (booking.income_qualifies || 'N/A'),
+    'Credit Qualifies: ' + (booking.credit_qualifies || 'N/A'),
+    '',
+    'Notes:',
+    (booking.additional_notes || 'N/A'),
+  ].join('\n');
 
-    const created = await calendar.events.insert({
-      calendarId: CALENDAR_ID,
-      resource: {
-        summary: booking.type || 'Appointment',
-        description,
-        start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
-        end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
-      },
-    });
-    return created.data;
-  }
+  const event = await calendar.events.insert({
+    calendarId: CALENDAR_ID,
+    resource: {
+      summary: booking.type || 'Appointment',
+      description,
+      start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
+      end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
+    },
+  });
+
+  return event.data;
 }
 
 exports.handler = async (event) => {
@@ -106,16 +115,21 @@ exports.handler = async (event) => {
 
     const booking = bookings[0];
 
-    // Create/update calendar event
-    let calendarEvent = null;
-    try {
-      calendarEvent = await createOrUpdateCalendarEvent(booking, new_date, new_time);
-      console.log('Calendar event:', calendarEvent.id);
-    } catch(err) {
-      console.error('Calendar error:', err.message);
+    // 1. Delete original calendar event if it exists
+    if (booking.calendar_event_id) {
+      await deleteCalendarEvent(booking.calendar_event_id);
     }
 
-    // Update Supabase
+    // 2. Create new calendar event with full caller info
+    let newCalendarEvent = null;
+    try {
+      newCalendarEvent = await createCalendarEvent(booking, new_date, new_time);
+      console.log('New calendar event created:', newCalendarEvent.id);
+    } catch (err) {
+      console.error('Calendar create error:', err.message);
+    }
+
+    // 3. Update Supabase with new date, time, and new calendar event ID
     await fetch(
       `${SUPABASE_URL}/rest/v1/bookings?id=eq.${booking.id}`,
       {
@@ -128,18 +142,18 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           preferred_date: new_date,
           preferred_time: new_time,
-          calendar_event_id: calendarEvent?.id || booking.calendar_event_id,
+          calendar_event_id: newCalendarEvent?.id || null,
         }),
       }
     );
 
-    // Text caller
+    // 4. Text caller — rescheduled confirmation
     const callerMsg = `Appointment rescheduled!\n\n📍 ${booking.type}\n📅 ${new_date} at ${new_time}\n\nQuestions? Call us at (201) 449-6850`;
     const callerResult = await sendSMS(normalizedPhone, callerMsg);
     console.log('Caller SMS:', JSON.stringify(callerResult));
 
-    // Text Ana
-    const teamMsg = `Rescheduled!\n\nName: ${booking.full_name}\nPhone: ${normalizedPhone}\nProperty: ${booking.type}\nNew Date: ${new_date} at ${new_time}`;
+    // 5. Text Ana — rescheduled notification
+    const teamMsg = `Rescheduled!\n\nName: ${booking.full_name}\nPhone: ${normalizedPhone}\nProperty: ${booking.type}\nNew Date: ${new_date} at ${new_time}\nBudget: ${booking.budget || 'N/A'}\nSize: ${booking.apartment_size || 'N/A'}\nMove-In: ${booking.move_in_date || 'N/A'}`;
     const teamResult = await sendSMS(ANA_PHONE, teamMsg);
     console.log('Team SMS:', JSON.stringify(teamResult));
 
