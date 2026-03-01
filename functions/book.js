@@ -81,13 +81,11 @@ async function createCalendarEvent(client, data) {
 
   const event = await calendar.events.insert({
     calendarId: client.calendarId,
-    sendUpdates: 'all',
     resource: {
       summary: data.type || 'Appointment',
       description,
       start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
       end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
-      attendees: data.email ? [{ email: data.email }] : [],
     },
   });
 
