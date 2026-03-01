@@ -148,7 +148,7 @@ exports.handler = async (event) => {
     );
 
     // 4. Text caller — rescheduled confirmation
-    const callerMsg = `Appointment rescheduled!\n\n📍 ${booking.type}\n📅 ${new_date} at ${new_time}\n\nQuestions? Call us at (201) 449-6850`;
+    const callerMsg = `Appointment rescheduled!\n\n📍 ${booking.type}\n📅 ${new_date} at ${new_time}\n\nQuestions? Call us at (862) 333-1681`;
     const callerResult = await sendSMS(normalizedPhone, callerMsg);
     console.log('Caller SMS:', JSON.stringify(callerResult));
 
