@@ -123,7 +123,16 @@ exports.handler = async (event) => {
     const date = data.preferred_date || data.date || '';
     const time = data.preferred_time || data.time || '';
 
-    // 1. Save to Supabase
+    // 1. Create Google Calendar event first to get event ID
+    let calendarEvent = null;
+    try {
+      calendarEvent = await createCalendarEvent(client, { ...data, phone, email });
+      console.log('Calendar event created:', calendarEvent.id);
+    } catch (err) {
+      console.error('Calendar error:', err.message);
+    }
+
+    // 2. Save to Supabase with calendar event ID
     try {
       const saved = await saveToSupabase({
         full_name: name,
@@ -140,18 +149,11 @@ exports.handler = async (event) => {
         credit_qualifies: data.credit_qualifies || null,
         additional_notes: data.additional_notes || null,
         client: clientId,
+        calendar_event_id: calendarEvent?.id || null,
       });
       console.log('Supabase save result:', JSON.stringify(saved));
     } catch (err) {
       console.error('Supabase error:', err.message);
-    }
-
-    // 2. Create Google Calendar event with attendee invite
-    let calendarEvent = null;
-    try {
-      calendarEvent = await createCalendarEvent(client, { ...data, phone, email });
-    } catch (err) {
-      console.error('Calendar error:', err.message);
     }
 
     // 3. Text caller confirmation
