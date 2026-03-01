@@ -81,11 +81,13 @@ async function createCalendarEvent(client, data) {
 
   const event = await calendar.events.insert({
     calendarId: client.calendarId,
+    sendUpdates: 'all',
     resource: {
       summary: data.type || 'Appointment',
       description,
       start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
       end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
+      attendees: data.email ? [{ email: data.email }] : [],
     },
   });
 
@@ -144,10 +146,10 @@ exports.handler = async (event) => {
       console.error('Supabase error:', err.message);
     }
 
-    // 2. Create Google Calendar event
+    // 2. Create Google Calendar event with attendee invite
     let calendarEvent = null;
     try {
-      calendarEvent = await createCalendarEvent(client, { ...data, phone });
+      calendarEvent = await createCalendarEvent(client, { ...data, phone, email });
     } catch (err) {
       console.error('Calendar error:', err.message);
     }
