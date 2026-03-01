@@ -156,7 +156,7 @@ exports.handler = async (event) => {
 
     // 3. Text caller confirmation
     if (phone) {
-      const callerMsg = `Appointment confirmed!\n\n📍 ${type}\n📅 ${date} at ${time}\n\nQuestions? Call us at (201) 449-6850`;
+      const callerMsg = `Appointment confirmed!\n\n📍 ${type}\n📅 ${date} at ${time}\n\nQuestions? Call us at (862) 333-1681`;
       const callerResult = await sendSMS(phone, callerMsg);
       console.log('Caller SMS result:', JSON.stringify(callerResult));
     }
