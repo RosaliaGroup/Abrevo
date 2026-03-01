@@ -13,7 +13,7 @@ const CLIENTS = {
   }
 };
 
-const TEXTBELT_KEY = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
+const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
 
 async function sendSMS(phone, message) {
   const response = await fetch('https://textbelt.com/text', {
