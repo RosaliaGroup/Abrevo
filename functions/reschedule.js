@@ -4,10 +4,9 @@ const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
 const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
 
-const ANA_PHONE = '+16462269189';
-
 const GOOGLE_CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
 const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
+const ANA_PHONE = '+16462269189';
 
 async function sendSMS(phone, message) {
   const response = await fetch('https://textbelt.com/text', {
@@ -18,7 +17,7 @@ async function sendSMS(phone, message) {
   return response.json();
 }
 
-async function updateCalendarEvent(booking, new_date, new_time) {
+async function updateCalendarEvent(eventId, data) {
   const auth = new google.auth.GoogleAuth({
     credentials: GOOGLE_CREDENTIALS,
     scopes: ['https://www.googleapis.com/auth/calendar'],
@@ -28,9 +27,10 @@ async function updateCalendarEvent(booking, new_date, new_time) {
 
   let startDateTime;
   try {
-    startDateTime = new Date(`${new_date} ${new_time} GMT-0400`);
+    const dateStr = `${data.new_date} ${data.new_time} GMT-0400`;
+    startDateTime = new Date(dateStr);
     if (isNaN(startDateTime.getTime())) {
-      startDateTime = new Date(`${new_date} ${new_time}`);
+      startDateTime = new Date(`${data.new_date} ${data.new_time}`);
     }
   } catch(e) {
     startDateTime = new Date();
@@ -39,44 +39,31 @@ async function updateCalendarEvent(booking, new_date, new_time) {
   }
   const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
 
-  // Search for existing event by summary and original date
-  const eventsRes = await calendar.events.list({
-    calendarId: CALENDAR_ID,
-    q: booking.full_name,
-    timeMin: new Date('2026-01-01').toISOString(),
-    timeMax: new Date('2027-01-01').toISOString(),
-    singleEvents: true,
-    orderBy: 'startTime',
-  });
-
-  const events = eventsRes.data.items || [];
-  const existingEvent = events.find(e => e.summary === booking.type);
-
-  if (existingEvent) {
-    // Update existing event
-    await calendar.events.patch({
+  // If we have an eventId update existing event, otherwise create new
+  if (eventId) {
+    const updated = await calendar.events.patch({
       calendarId: CALENDAR_ID,
-      eventId: existingEvent.id,
+      eventId,
       sendUpdates: 'all',
       resource: {
         start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
         end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
       },
     });
-    console.log('Calendar event updated:', existingEvent.id);
+    return updated.data;
   } else {
-    // Create new event if original not found
-    await calendar.events.insert({
+    // Create new event if no eventId stored
+    const created = await calendar.events.insert({
       calendarId: CALENDAR_ID,
       sendUpdates: 'all',
       resource: {
-        summary: booking.type,
+        summary: data.type || 'Appointment',
         start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
         end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
-        attendees: booking.email ? [{ email: booking.email }] : [],
+        attendees: data.email ? [{ email: data.email }] : [],
       },
     });
-    console.log('New calendar event created for reschedule');
+    return created.data;
   }
 }
 
@@ -97,6 +84,7 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'phone, new_date, and new_time are required' }) };
     }
 
+    // Normalize phone
     let normalizedPhone = phone.replace(/\D/g, '');
     if (!normalizedPhone.startsWith('+')) normalizedPhone = '+1' + normalizedPhone;
 
@@ -135,24 +123,28 @@ exports.handler = async (event) => {
         body: JSON.stringify({ preferred_date: new_date, preferred_time: new_time }),
       }
     );
-    console.log('Supabase updated');
 
     // Update Google Calendar
     try {
-      await updateCalendarEvent(booking, new_date, new_time);
+      await updateCalendarEvent(booking.calendar_event_id || null, {
+        new_date,
+        new_time,
+        type: booking.type,
+        email: booking.email,
+      });
     } catch(err) {
       console.error('Calendar update error:', err.message);
     }
 
-    // Text caller — reschedule confirmation
+    // Text caller
     const callerMsg = `Appointment rescheduled!\n\n📍 ${booking.type}\n📅 ${new_date} at ${new_time}\n\nQuestions? Call us at (201) 449-6850`;
     const callerResult = await sendSMS(normalizedPhone, callerMsg);
     console.log('Caller SMS:', JSON.stringify(callerResult));
 
-    // Text Ana — reschedule notification
-    const anaMsg = `Rescheduled Appointment!\n\nName: ${booking.full_name}\nPhone: ${normalizedPhone}\nProperty: ${booking.type}\nNew Date: ${new_date} at ${new_time}`;
-    const anaResult = await sendSMS(ANA_PHONE, anaMsg);
-    console.log('Ana SMS:', JSON.stringify(anaResult));
+    // Text Ana
+    const teamMsg = `Rescheduled!\n\nName: ${booking.full_name}\nPhone: ${normalizedPhone}\nProperty: ${booking.type}\nNew Date: ${new_date} at ${new_time}`;
+    const teamResult = await sendSMS(ANA_PHONE, teamMsg);
+    console.log('Team SMS:', JSON.stringify(teamResult));
 
     return {
       statusCode: 200,
