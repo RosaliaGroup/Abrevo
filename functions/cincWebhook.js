@@ -1,7 +1,7 @@
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
 const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
-const RESPOND_URL = 'https://silver-ganache-1ee2ca.netlify.app/.netlify/functions/respondToLead';
+const RESPOND_URL = 'https://silver-ganache-1ee2ca.netlify.app/.netlify/functions/respondRosalia';
 const VAPI_API_KEY = process.env.VAPI_API_KEY;
 const VAPI_PHONE_ID = process.env.VAPI_PHONE_ID;
 const JESSICA_ASSISTANT_ID = process.env.JESSICA_ASSISTANT_ID;
@@ -120,8 +120,11 @@ exports.handler = async (event) => {
       email: leadData.email || null,
       phone: phone,
       message: leadData.message || leadData.notes || null,
-      property: leadData.property_address || leadData.search_area || 'Real Estate Inquiry',
-      source: 'cinc',
+      property: leadData.property_address || leadData.search_area || leadData.domain_name || 'Real Estate Inquiry',
+      source: leadData.lead_source || leadData.domain_name || 'cinc',
+      price: leadData.median_price || leadData.price || 0,
+      timeframe: leadData.timeframe || null,
+      pipeline: leadData.pipeline || leadData.status || null,
       type: 'inquiry',
     };
 
