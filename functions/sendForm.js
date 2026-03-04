@@ -63,18 +63,16 @@ exports.handler = async (event) => {
       const shortLink = SHORT_LINKS[formType];
       message = formType === 'reschedule'
         ? `Hi! Reschedule your Iron 65 tour: ${shortLink}\n\nQuestions? (862) 333-1681`
-        : `Hi ${name || 'there'}! Complete your Iron 65 tour booking: ${shortLink}\n\nQuestions? (862) 333-1681`;
-    } else {
-      // NO LINKS - Send confirmation only, email contains the link
-      message = formType === 'reschedule'
-        ? `Hi! To reschedule your Iron 65 tour, check your email at ${email || 'the address on file'} or call (862) 333-1681`
-        : `Hi ${name || 'there'}! Your Iron 65 tour for ${tourDay || 'your selected date'} at ${tourTime || 'your selected time'} is confirmed. Booking link sent to ${email || 'your email'}. Questions? (862) 333-1681`;
-    }
-
-    console.log('Message to send:');
-    console.log(message);
-    console.log('---');
-
+     // Build SMS message with actual link
+if (formType === 'reschedule') {
+  message = `Hi! Reschedule your Iron 65 tour:\n${formUrl}\n\nQuestions? (862) 333-1681`;
+} else {
+  message = `Hi ${name || 'there'}! `;
+  if (tourDay && tourTime) {
+    message += `Your Iron 65 tour is ${tourDay} at ${tourTime}. `;
+  }
+  message += `Complete booking:\n${formUrl}\n\nQuestions? (862) 333-1681`;
+}
     // Send via Textbelt
     const textbeltResponse = await fetch('https://textbelt.com/text', {
       method: 'POST',
