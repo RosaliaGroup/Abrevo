@@ -1,17 +1,13 @@
 // FILE: /netlify/functions/sendForm.js
-// Updated version with better link handling for carrier restrictions
+// Sends Calendly booking link via SMS using Textbelt
 
 const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
-const BASE_URL = 'https://silver-ganache-1ee2ca.netlify.app';
 
-// OPTION 1: Create short links in Bitly and use them here
-const SHORT_LINKS = {
-  booking: 'bit.ly/iron65book',      // Create this: silver-ganache-1ee2ca.netlify.app/booking-form
-  reschedule: 'bit.ly/iron65change'  // Create this: silver-ganache-1ee2ca.netlify.app/reschedule-form
-};
+// Calendly booking link
+const CALENDLY_URL = 'https://calendly.com/ana-rosaliagroup/65-iron-tour';
 
-// OPTION 2: Use link-free messages
-const USE_SHORT_LINKS = false; // Set to true when you have Bitly links set up
+// Short link (via Bitly)
+const SHORT_LINK = 'bit.ly/46Hig9I';  // Make sure this points to your Calendly in Bitly!
 
 exports.handler = async (event) => {
   const headers = { 
@@ -47,32 +43,25 @@ exports.handler = async (event) => {
     }
     console.log('Normalized phone:', normalized);
 
-    // Determine form type
-    const formType = type === 'reschedule' ? 'reschedule' : 'booking';
-    const formPath = formType === 'reschedule' ? '/reschedule-form' : '/booking-form';
-    const formUrl = `${BASE_URL}${formPath}?phone=${encodeURIComponent(normalized)}`;
-    
-    console.log('Form type:', formType);
-    console.log('Form URL:', formUrl);
-
-    // Build message based on configuration
+    // Build SMS message with SHORT LINK to Calendly
     let message;
     
-    if (USE_SHORT_LINKS) {
-      // Use shortened links (less likely to be blocked)
-      const shortLink = SHORT_LINKS[formType];
-      message = formType === 'reschedule'
-        ? `Hi! Reschedule your Iron 65 tour: ${shortLink}\n\nQuestions? (862) 333-1681`
-     // Build SMS message with actual link
-if (formType === 'reschedule') {
-  message = `Hi! Reschedule your Iron 65 tour:\n${formUrl}\n\nQuestions? (862) 333-1681`;
-} else {
-  message = `Hi ${name || 'there'}! `;
-  if (tourDay && tourTime) {
-    message += `Your Iron 65 tour is ${tourDay} at ${tourTime}. `;
-  }
-  message += `Complete booking:\n${formUrl}\n\nQuestions? (862) 333-1681`;
-}
+    if (type === 'reschedule') {
+      message = `Hi! Reschedule your Iron 65 tour: ${SHORT_LINK}`;
+    } else {
+      message = `Hi ${name || 'there'}! `;
+      if (tourDay && tourTime) {
+        message += `Your Iron 65 tour is ${tourDay} at ${tourTime}. `;
+      }
+      message += `Book your tour: ${SHORT_LINK}`;
+    }
+
+    console.log('Message to send:');
+    console.log(message);
+    console.log('Short link points to:', CALENDLY_URL);
+    console.log('Message length:', message.length, 'characters');
+    console.log('---');
+
     // Send via Textbelt
     const textbeltResponse = await fetch('https://textbelt.com/text', {
       method: 'POST',
@@ -92,37 +81,16 @@ if (formType === 'reschedule') {
       console.log('Text ID:', result.textId);
       console.log('Quota remaining:', result.quotaRemaining);
 
-      // If not using links in SMS, trigger email with the link
-      if (!USE_SHORT_LINKS && email) {
-        console.log('Triggering email with booking link...');
-        try {
-          await fetch(`${BASE_URL}/.netlify/functions/send-booking-email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: email,
-              name: name,
-              tourDay: tourDay,
-              tourTime: tourTime,
-              formUrl: formUrl,
-              formType: formType
-            })
-          });
-          console.log('✅ Email trigger sent');
-        } catch (emailErr) {
-          console.error('⚠️ Email trigger failed (non-critical):', emailErr.message);
-        }
-      }
-
       return { 
         statusCode: 200, 
         headers, 
         body: JSON.stringify({ 
           success: true, 
-          formType, 
-          formUrl,
+          calendlyUrl: CALENDLY_URL,
+          shortLink: SHORT_LINK,
           textId: result.textId,
-          quotaRemaining: result.quotaRemaining
+          quotaRemaining: result.quotaRemaining,
+          message: 'SMS sent with Calendly booking link'
         }) 
       };
     } else {
