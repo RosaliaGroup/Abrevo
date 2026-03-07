@@ -3,11 +3,12 @@ const nodemailer = require('nodemailer');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
-// const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr'; // DISABLED
+const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
 
 const CLIENTS = {
   rosalia: {
     calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com',
+    notifyPhone: '+16462269189',
     notifyEmail: 'inquiries@rosaliagroup.com',
     googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
   }
@@ -38,15 +39,14 @@ async function sendEmail(to, subject, html) {
   }
 }
 
-// SMS DISABLED TEMPORARILY
-// async function sendSMS(phone, message) {
-//   const res = await fetch('https://textbelt.com/text', {
-//     method: 'POST',
-//     headers: { 'Content-Type': 'application/json' },
-//     body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
-//   });
-//   return res.json();
-// }
+async function sendSMS(phone, message) {
+  const res = await fetch('https://textbelt.com/text', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
+  });
+  return res.json();
+}
 
 async function saveToSupabase(data) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
@@ -167,14 +167,19 @@ exports.handler = async (event) => {
       console.error('Supabase error:', err.message);
     }
 
-    // 3. SMS TO CALLER - DISABLED
-    // if (phone) {
-    //   const callerMsg = `Appointment confirmed!\n\n📍 ${type}\n📅 ${date} at ${time}\n\nQuestions? Call (862) 333-1681`;
-    //   const r = await sendSMS(phone, callerMsg);
-    //   console.log('Caller SMS:', JSON.stringify(r));
-    // }
+    // 3. Text caller confirmation
+    if (phone) {
+      const callerMsg = `Appointment confirmed!\n\n📍 ${type}\n📅 ${date} at ${time}\n\nQuestions? Call (862) 333-1681`;
+      const r = await sendSMS(phone, callerMsg);
+      console.log('Caller SMS:', JSON.stringify(r));
+    }
 
-    // 4. EMAIL TO TEAM
+    // 4. Text Ana notification
+    const teamMsg = `New Booking!\n\nName: ${name}\nPhone: ${phone}\nEmail: ${email}\nProperty: ${type}\nDate: ${date} at ${time}\nBudget: ${data.budget || 'N/A'}\nSize: ${data.apartment_size || 'N/A'}\nMove-In: ${data.move_in_date || 'N/A'}\nIncome: ${income}\nCredit: ${credit}`;
+    const r2 = await sendSMS(client.notifyPhone, teamMsg);
+    console.log('Team SMS:', JSON.stringify(r2));
+
+    // 5. Email to team (backup)
     const emailSubject = `🆕 New Booking - ${name}`;
     const emailBody = `
       <h2>New Booking Received</h2>
