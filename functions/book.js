@@ -1,25 +1,52 @@
 const { google } = require('googleapis');
+const nodemailer = require('nodemailer');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
-const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
+// const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr'; // DISABLED
 
 const CLIENTS = {
   rosalia: {
     calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com',
-    notifyPhone: '+16462269189',
+    notifyEmail: 'inquiries@rosaliagroup.com',
     googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
   }
 };
 
-async function sendSMS(phone, message) {
-  const res = await fetch('https://textbelt.com/text', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
-  });
-  return res.json();
+// Email transporter using Gmail
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
+  },
+});
+
+async function sendEmail(to, subject, html) {
+  try {
+    const info = await transporter.sendMail({
+      from: `"Rosalia Group Bookings" <${process.env.GMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    });
+    console.log('Email sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (err) {
+    console.error('Email error:', err.message);
+    return { success: false, error: err.message };
+  }
 }
+
+// SMS DISABLED TEMPORARILY
+// async function sendSMS(phone, message) {
+//   const res = await fetch('https://textbelt.com/text', {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
+//   });
+//   return res.json();
+// }
 
 async function saveToSupabase(data) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
@@ -140,17 +167,34 @@ exports.handler = async (event) => {
       console.error('Supabase error:', err.message);
     }
 
-    // 3. Text caller
-    if (phone) {
-      const callerMsg = `Appointment confirmed!\n\n📍 ${type}\n📅 ${date} at ${time}\n\nQuestions? Call (862) 333-1681`;
-      const r = await sendSMS(phone, callerMsg);
-      console.log('Caller SMS:', JSON.stringify(r));
-    }
+    // 3. SMS TO CALLER - DISABLED
+    // if (phone) {
+    //   const callerMsg = `Appointment confirmed!\n\n📍 ${type}\n📅 ${date} at ${time}\n\nQuestions? Call (862) 333-1681`;
+    //   const r = await sendSMS(phone, callerMsg);
+    //   console.log('Caller SMS:', JSON.stringify(r));
+    // }
 
-    // 4. Text Ana
-    const teamMsg = `New Booking!\n\nName: ${name}\nPhone: ${phone}\nEmail: ${email}\nProperty: ${type}\nDate: ${date} at ${time}\nBudget: ${data.budget || 'N/A'}\nSize: ${data.apartment_size || 'N/A'}\nMove-In: ${data.move_in_date || 'N/A'}\nIncome: ${income}\nCredit: ${credit}`;
-    const r2 = await sendSMS(client.notifyPhone, teamMsg);
-    console.log('Team SMS:', JSON.stringify(r2));
+    // 4. EMAIL TO TEAM
+    const emailSubject = `🆕 New Booking - ${name}`;
+    const emailBody = `
+      <h2>New Booking Received</h2>
+      <table style="border-collapse: collapse; width: 100%;">
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Name:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${name}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Phone:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${phone}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Email:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${email}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Property:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${type}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Date & Time:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${date} at ${time}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Budget:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${data.budget || 'N/A'}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Apartment Size:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${data.apartment_size || 'N/A'}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Move-In Date:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${data.move_in_date || 'N/A'}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Income Qualifies:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${income}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Credit Qualifies:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${credit}</td></tr>
+      </table>
+      <p><em>Calendar event ID: ${calendarEvent?.id || 'N/A'}</em></p>
+    `;
+    
+    const emailResult = await sendEmail(client.notifyEmail, emailSubject, emailBody);
+    console.log('Team email:', JSON.stringify(emailResult));
 
     return { statusCode: 200, headers, body: JSON.stringify({ success: true, eventId: calendarEvent?.id }) };
 
