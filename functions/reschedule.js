@@ -1,20 +1,47 @@
 const { google } = require('googleapis');
+const nodemailer = require('nodemailer');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
-const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
+// const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr'; // DISABLED
 const GOOGLE_CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
 const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
-const ANA_PHONE = '+16462269189';
+const NOTIFY_EMAIL = 'inquiries@rosaliagroup.com';
 
-async function sendSMS(phone, message) {
-  const res = await fetch('https://textbelt.com/text', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
-  });
-  return res.json();
+// Email transporter using Gmail
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
+  },
+});
+
+async function sendEmail(to, subject, html) {
+  try {
+    const info = await transporter.sendMail({
+      from: `"Rosalia Group Bookings" <${process.env.GMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    });
+    console.log('Email sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (err) {
+    console.error('Email error:', err.message);
+    return { success: false, error: err.message };
+  }
 }
+
+// SMS DISABLED TEMPORARILY
+// async function sendSMS(phone, message) {
+//   const res = await fetch('https://textbelt.com/text', {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
+//   });
+//   return res.json();
+// }
 
 async function getCalendarClient() {
   const auth = new google.auth.GoogleAuth({
@@ -158,15 +185,32 @@ exports.handler = async (event) => {
       }
     );
 
-    // Text caller
-    const callerMsg = `Appointment rescheduled!\n\n📍 ${booking.type}\n📅 ${new_date} at ${new_time}\n\nQuestions? Call (862) 333-1681`;
-    const r1 = await sendSMS(normalizedPhone, callerMsg);
-    console.log('Caller SMS:', JSON.stringify(r1));
+    // SMS TO CALLER - DISABLED
+    // const callerMsg = `Appointment rescheduled!\n\n📍 ${booking.type}\n📅 ${new_date} at ${new_time}\n\nQuestions? Call (862) 333-1681`;
+    // const r1 = await sendSMS(normalizedPhone, callerMsg);
+    // console.log('Caller SMS:', JSON.stringify(r1));
 
-    // Text Ana
-    const teamMsg = `Rescheduled!\n\nName: ${booking.full_name}\nPhone: ${normalizedPhone}\nProperty: ${booking.type}\nNew Date: ${new_date} at ${new_time}\nBudget: ${booking.budget || 'N/A'}\nSize: ${booking.apartment_size || 'N/A'}\nMove-In: ${booking.move_in_date || 'N/A'}\nIncome: ${booking.income_qualifies || 'N/A'}\nCredit: ${booking.credit_qualifies || 'N/A'}`;
-    const r2 = await sendSMS(ANA_PHONE, teamMsg);
-    console.log('Team SMS:', JSON.stringify(r2));
+    // EMAIL TO TEAM
+    const emailSubject = `🔄 Appointment Rescheduled - ${booking.full_name}`;
+    const emailBody = `
+      <h2>Appointment Rescheduled</h2>
+      <table style="border-collapse: collapse; width: 100%;">
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Name:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.full_name}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Phone:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${normalizedPhone}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Email:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.email || 'N/A'}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Property:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.type}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>New Date & Time:</strong></td><td style="padding: 8px; border: 1px solid #ddd; background-color: #fff3cd;">${new_date} at ${new_time}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Budget:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.budget || 'N/A'}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Apartment Size:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.apartment_size || 'N/A'}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Move-In Date:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.move_in_date || 'N/A'}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Income Qualifies:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.income_qualifies || 'N/A'}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Credit Qualifies:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.credit_qualifies || 'N/A'}</td></tr>
+      </table>
+      <p><em>New calendar event ID: ${newEvent?.id || 'N/A'}</em></p>
+    `;
+    
+    const emailResult = await sendEmail(NOTIFY_EMAIL, emailSubject, emailBody);
+    console.log('Team email:', JSON.stringify(emailResult));
 
     return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: `Rescheduled to ${new_date} at ${new_time}` }) };
 
