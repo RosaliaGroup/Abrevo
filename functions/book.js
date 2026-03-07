@@ -8,7 +8,7 @@ const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qi
 const CLIENTS = {
   rosalia: {
     calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com',
-    notifyPhone: '+16462269189',
+    notifyPhone: '+12014970225',
     notifyEmail: 'inquiries@rosaliagroup.com',
     googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
   }
