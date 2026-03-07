@@ -3,9 +3,10 @@ const nodemailer = require('nodemailer');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
-// const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr'; // DISABLED
+const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
 const GOOGLE_CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
 const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
+const ANA_PHONE = '+16462269189';
 const NOTIFY_EMAIL = 'inquiries@rosaliagroup.com';
 
 // Email transporter using Gmail
@@ -33,15 +34,14 @@ async function sendEmail(to, subject, html) {
   }
 }
 
-// SMS DISABLED TEMPORARILY
-// async function sendSMS(phone, message) {
-//   const res = await fetch('https://textbelt.com/text', {
-//     method: 'POST',
-//     headers: { 'Content-Type': 'application/json' },
-//     body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
-//   });
-//   return res.json();
-// }
+async function sendSMS(phone, message) {
+  const res = await fetch('https://textbelt.com/text', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
+  });
+  return res.json();
+}
 
 async function getCalendarClient() {
   const auth = new google.auth.GoogleAuth({
@@ -62,7 +62,6 @@ async function deleteEventById(calendar, eventId) {
 
 async function deleteEventsByName(calendar, name) {
   try {
-    // Search for events matching the caller name in next 60 days
     const now = new Date();
     const future = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
     const res = await calendar.events.list({
@@ -153,7 +152,6 @@ exports.handler = async (event) => {
     if (booking.calendar_event_id) {
       await deleteEventById(calendar, booking.calendar_event_id);
     }
-    // Also search by name as fallback to catch any duplicates
     if (booking.full_name) {
       await deleteEventsByName(calendar, booking.full_name);
     }
@@ -185,12 +183,17 @@ exports.handler = async (event) => {
       }
     );
 
-    // SMS TO CALLER - DISABLED
-    // const callerMsg = `Appointment rescheduled!\n\n📍 ${booking.type}\n📅 ${new_date} at ${new_time}\n\nQuestions? Call (862) 333-1681`;
-    // const r1 = await sendSMS(normalizedPhone, callerMsg);
-    // console.log('Caller SMS:', JSON.stringify(r1));
+    // Text caller
+    const callerMsg = `Appointment rescheduled!\n\n📍 ${booking.type}\n📅 ${new_date} at ${new_time}\n\nQuestions? Call (862) 333-1681`;
+    const r1 = await sendSMS(normalizedPhone, callerMsg);
+    console.log('Caller SMS:', JSON.stringify(r1));
 
-    // EMAIL TO TEAM
+    // Text Ana
+    const teamMsg = `Rescheduled!\n\nName: ${booking.full_name}\nPhone: ${normalizedPhone}\nProperty: ${booking.type}\nNew Date: ${new_date} at ${new_time}\nBudget: ${booking.budget || 'N/A'}\nSize: ${booking.apartment_size || 'N/A'}\nMove-In: ${booking.move_in_date || 'N/A'}\nIncome: ${booking.income_qualifies || 'N/A'}\nCredit: ${booking.credit_qualifies || 'N/A'}`;
+    const r2 = await sendSMS(ANA_PHONE, teamMsg);
+    console.log('Team SMS:', JSON.stringify(r2));
+
+    // Email to team (backup)
     const emailSubject = `🔄 Appointment Rescheduled - ${booking.full_name}`;
     const emailBody = `
       <h2>Appointment Rescheduled</h2>
