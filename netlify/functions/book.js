@@ -34,8 +34,26 @@ async function createCalendarEvent(client, data) {
 
   const calendar = google.calendar({ version: 'v3', auth });
 
-  // Parse date and time
-  const startDateTime = new Date(`${data.preferred_date} ${data.preferred_time}`);
+  // Parse date and time — handle various formats from Alex
+  let startDateTime;
+  try {
+    // Try direct parse first
+    startDateTime = new Date(`${data.preferred_date} ${data.preferred_time}`);
+    if (isNaN(startDateTime.getTime())) {
+      // Try with EST timezone hint
+      startDateTime = new Date(`${data.preferred_date} ${data.preferred_time} EST`);
+    }
+    if (isNaN(startDateTime.getTime())) {
+      // Fallback: use tomorrow at noon
+      startDateTime = new Date();
+      startDateTime.setDate(startDateTime.getDate() + 1);
+      startDateTime.setHours(12, 0, 0, 0);
+    }
+  } catch(e) {
+    startDateTime = new Date();
+    startDateTime.setDate(startDateTime.getDate() + 1);
+    startDateTime.setHours(12, 0, 0, 0);
+  }
   const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000); // 30 min
 
   const description = `
