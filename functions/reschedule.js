@@ -1,22 +1,15 @@
 const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 
-// Client configurations
-const CLIENTS = {
-  rosalia: {
-    calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com',
-    notifyPhone: '+12014970225',
-    notifyEmail: 'inquiries@rosaliagroup.com',
-    notifyName: 'Ana',
-    teamName: 'Rosalia Group',
-    googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
-  }
-};
-
+// Configuration
+const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
+const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
 const TEXTBELT_KEY = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
+const ANA_PHONE = '+12014970225';
 
 // Email transporter
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.GMAIL_USER,
@@ -24,115 +17,124 @@ const transporter = nodemailer.createTransporter({
   },
 });
 
+// Helper: Send SMS
 async function sendSMS(phone, message) {
-  const response = await fetch('https://textbelt.com/text', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      phone,
-      message,
-      key: TEXTBELT_KEY,
-    }),
-  });
-  const result = await response.json();
-  console.log('SMS response:', JSON.stringify(result));
-  return result;
-}
-
-async function findEventByPhone(client, phone) {
-  const auth = new google.auth.GoogleAuth({
-    credentials: client.googleCredentials,
-    scopes: ['https://www.googleapis.com/auth/calendar'],
-  });
-
-  const calendar = google.calendar({ version: 'v3', auth });
-
-  // Search for events with this phone number in the next 60 days
-  const timeMin = new Date().toISOString();
-  const timeMax = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
-
-  const response = await calendar.events.list({
-    calendarId: client.calendarId,
-    timeMin,
-    timeMax,
-    q: phone.replace('+', ''),
-    singleEvents: true,
-    orderBy: 'startTime',
-  });
-
-  const events = response.data.items || [];
-  
-  // Find the first upcoming event with this phone number
-  for (const event of events) {
-    if (event.description && event.description.includes(phone)) {
-      return event;
-    }
+  try {
+    const response = await fetch('https://textbelt.com/text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
+    });
+    const result = await response.json();
+    console.log('SMS sent to', phone, ':', result.success ? 'SUCCESS' : 'FAILED');
+    return result;
+  } catch (err) {
+    console.error('SMS error:', err.message);
+    return { success: false, error: err.message };
   }
-
-  return null;
 }
 
-async function rescheduleEvent(client, eventId, newDate, newTime, propertyAddress) {
+// Helper: Get calendar client
+async function getCalendarClient() {
   const auth = new google.auth.GoogleAuth({
-    credentials: client.googleCredentials,
+    credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
     scopes: ['https://www.googleapis.com/auth/calendar'],
   });
+  return google.calendar({ version: 'v3', auth });
+}
 
-  const calendar = google.calendar({ version: 'v3', auth });
+// Helper: Find and delete calendar events for specific property
+async function deletePropertyEvents(calendar, callerName, propertyAddress) {
+  try {
+    const now = new Date();
+    const future = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000); // 90 days ahead
 
-  // Get the existing event
-  const event = await calendar.events.get({
-    calendarId: client.calendarId,
-    eventId: eventId,
-  });
+    // Search for events matching caller name
+    const res = await calendar.events.list({
+      calendarId: CALENDAR_ID,
+      q: callerName,
+      timeMin: now.toISOString(),
+      timeMax: future.toISOString(),
+      singleEvents: true,
+    });
 
-  // Parse new date and time
+    const events = res.data.items || [];
+    console.log(`Found ${events.length} total events for ${callerName}`);
+
+    // Filter events that match the specific property
+    let deletedCount = 0;
+    for (const event of events) {
+      const summary = event.summary || '';
+      const description = event.description || '';
+      
+      // Check if this event is for the property being rescheduled
+      // Match against both summary and description
+      if (summary.includes(propertyAddress) || description.includes(propertyAddress)) {
+        await calendar.events.delete({
+          calendarId: CALENDAR_ID,
+          eventId: event.id,
+        });
+        console.log(`Deleted event for ${propertyAddress}:`, event.id, summary);
+        deletedCount++;
+      } else {
+        console.log(`Kept event (different property):`, summary);
+      }
+    }
+
+    console.log(`Deleted ${deletedCount} event(s) for ${propertyAddress}, kept ${events.length - deletedCount} other event(s)`);
+    return deletedCount;
+
+  } catch (err) {
+    console.error('Error deleting calendar events:', err.message);
+    return 0;
+  }
+}
+
+// Helper: Create new calendar event
+async function createCalendarEvent(calendar, booking, newDate, newTime) {
   let startDateTime;
   try {
-    const dateStr = `${newDate} ${newTime} EST`;
-    startDateTime = new Date(dateStr);
-
+    startDateTime = new Date(`${newDate} ${newTime} EST`);
     if (isNaN(startDateTime.getTime())) {
       startDateTime = new Date(`${newDate} ${newTime}`);
     }
-
     if (isNaN(startDateTime.getTime())) {
       throw new Error('Invalid date/time');
     }
-  } catch(e) {
-    throw new Error(`Could not parse date/time: ${newDate} ${newTime}`);
+  } catch (e) {
+    console.error('Date parsing error:', e.message);
+    throw new Error('Invalid date or time format');
   }
 
   const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
 
-  // Update the event with new time and property address
-  const updatedEvent = {
-    ...event.data,
-    start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
-    end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
-  };
+  const description = `
+RESCHEDULED APPOINTMENT
 
-  // Update summary if property address is provided
-  if (propertyAddress) {
-    const namePart = event.data.summary.split(' - ')[0] || 'Guest';
-    updatedEvent.summary = `${namePart} - ${propertyAddress}`;
-    
-    // Update property in description
-    if (updatedEvent.description) {
-      updatedEvent.description = updatedEvent.description.replace(
-        /Property: .*/,
-        `Property: ${propertyAddress}`
-      );
-    }
-  }
+Phone: ${booking.phone || 'N/A'}
+Email: ${booking.email || 'N/A'}
+Budget: ${booking.budget || 'N/A'}
+Apartment Size: ${booking.apartment_size || 'N/A'}
+Preferred Area: ${booking.preferred_area || 'N/A'}
+Move-In Date: ${booking.move_in_date || 'N/A'}
+Income: ${booking.income_qualifies || 'N/A'}
+Credit: ${booking.credit_qualifies || 'N/A'}
 
-  const result = await calendar.events.update({
-    calendarId: client.calendarId,
-    eventId: eventId,
-    resource: updatedEvent,
+Notes:
+${booking.additional_notes || 'None'}
+  `.trim();
+
+  const event = await calendar.events.insert({
+    calendarId: CALENDAR_ID,
+    resource: {
+      summary: `${booking.full_name || 'Guest'} — ${booking.type || 'Appointment'}`,
+      description,
+      start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
+      end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
+    },
   });
 
-  return result.data;
+  return event.data;
 }
 
 exports.handler = async (event) => {
@@ -146,91 +148,116 @@ exports.handler = async (event) => {
   }
 
   try {
-    const clientId = event.queryStringParameters?.client || 'rosalia';
-    const client = CLIENTS[clientId];
+    const { phone, new_date, new_time, property } = JSON.parse(event.body || '{}');
 
-    if (!client) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown client' }) };
-    }
-
-    const data = JSON.parse(event.body || '{}');
-    console.log('Reschedule data received:', JSON.stringify(data));
-
-    const { phone, new_date, new_time, property_address } = data;
-
+    // Validate required fields
     if (!phone || !new_date || !new_time) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Missing required fields: phone, new_date, new_time' })
+        body: JSON.stringify({ error: 'Missing required fields: phone, new_date, new_time' }),
       };
     }
 
-    // Find the existing event
-    const existingEvent = await findEventByPhone(client, phone);
+    // Normalize phone
+    let normalizedPhone = phone.toString().replace(/\D/g, '');
+    if (!normalizedPhone.startsWith('+')) {
+      normalizedPhone = '+1' + normalizedPhone;
+    }
 
-    if (!existingEvent) {
+    console.log('Reschedule request:', { phone: normalizedPhone, new_date, new_time, property });
+
+    // Find the booking in Supabase
+    const findUrl = `${SUPABASE_URL}/rest/v1/bookings?phone=eq.${encodeURIComponent(normalizedPhone)}&order=created_at.desc`;
+    const findRes = await fetch(findUrl, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+      },
+    });
+
+    const bookings = await findRes.json();
+
+    if (!bookings || bookings.length === 0) {
       return {
         statusCode: 404,
         headers,
-        body: JSON.stringify({ error: 'No upcoming appointment found for this phone number' })
+        body: JSON.stringify({ success: false, message: 'No booking found for this phone number' }),
       };
     }
 
-    console.log('Found existing event:', existingEvent.id);
-
-    // Get property address - use provided one or extract from existing event
-    const propertyAddress = property_address || 
-                           (existingEvent.summary.split(' - ')[1]) || 
-                           'Appointment';
-
-    // Reschedule the event
-    const updatedEvent = await rescheduleEvent(
-      client,
-      existingEvent.id,
-      new_date,
-      new_time,
-      propertyAddress
-    );
-
-    console.log('Event rescheduled:', updatedEvent.id);
-
-    // Extract customer info from existing event
-    const phoneMatch = existingEvent.description?.match(/Phone: ([^\n]+)/);
-    const emailMatch = existingEvent.description?.match(/Email: ([^\n]+)/);
-    const nameMatch = existingEvent.summary?.split(' - ')[0];
-
-    const customerPhone = phoneMatch ? phoneMatch[1] : phone;
-    const customerEmail = emailMatch ? emailMatch[1] : null;
-    const customerName = nameMatch || 'Guest';
-
-    // Send SMS to caller
-    if (customerPhone && customerPhone !== 'N/A') {
-      const callerMsg = `Your appointment has been rescheduled!\n\n${propertyAddress}\n${new_date} at ${new_time}\n\nRosalia Group will see you then!`;
-      try {
-        const smsResult = await sendSMS(customerPhone, callerMsg);
-        console.log('Caller SMS sent:', smsResult.success);
-      } catch (err) {
-        console.error('Caller SMS error:', err.message);
+    // If property specified, find the specific booking for that property
+    let booking;
+    if (property) {
+      booking = bookings.find(b => 
+        b.type && b.type.toLowerCase().includes(property.toLowerCase())
+      );
+      
+      if (!booking) {
+        console.log(`No booking found for property: ${property}. Available bookings:`, 
+          bookings.map(b => b.type));
+        // Fall back to most recent booking
+        booking = bookings[0];
+      } else {
+        console.log(`Found booking for property: ${property}`);
       }
+    } else {
+      // No property specified, use most recent
+      booking = bookings[0];
+      console.log('No property specified, using most recent booking');
     }
 
-    // Send SMS to team
-    const teamMsg = `Appointment Rescheduled!\n\nName: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nProperty: ${propertyAddress}\nNew Date: ${new_date} at ${new_time}`;
+    console.log('Selected booking:', booking.id, 'for property:', booking.type);
+
+    // Get calendar client
+    const calendar = await getCalendarClient();
+
+    // Delete OLD calendar event(s) for THIS SPECIFIC PROPERTY ONLY
+    const propertyToReschedule = property || booking.type;
+    await deletePropertyEvents(calendar, booking.full_name, propertyToReschedule);
+
+    // Create NEW calendar event
+    let newEvent = null;
     try {
-      const teamSmsResult = await sendSMS(client.notifyPhone, teamMsg);
-      console.log('Team SMS sent:', teamSmsResult.success);
+      newEvent = await createCalendarEvent(calendar, booking, new_date, new_time);
+      console.log('New calendar event created:', newEvent.id);
     } catch (err) {
-      console.error('Team SMS error:', err.message);
+      console.error('Error creating calendar event:', err.message);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'Failed to create calendar event: ' + err.message }),
+      };
     }
 
-    // Send email confirmation
-    if (customerEmail && customerEmail !== 'N/A') {
+    // Update Supabase record
+    const updateUrl = `${SUPABASE_URL}/rest/v1/bookings?id=eq.${booking.id}`;
+    await fetch(updateUrl, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+      },
+      body: JSON.stringify({
+        preferred_date: new_date,
+        preferred_time: new_time,
+        calendar_event_id: newEvent?.id || null,
+      }),
+    });
+
+    console.log('Supabase updated for booking:', booking.id);
+
+    // Send confirmation EMAIL to caller (CC inquiries)
+    if (booking.email) {
       const emailHtml = `
         <h2>Appointment Rescheduled</h2>
-        <p>Dear ${customerName},</p>
-        <p>Your showing at <strong>${propertyAddress}</strong> has been rescheduled to:</p>
+        <p>Dear ${booking.full_name},</p>
+        <p>Your showing at <strong>${booking.type}</strong> has been rescheduled to:</p>
         <p><strong>${new_date} at ${new_time}</strong></p>
+        <p>Budget: ${booking.budget || 'N/A'}<br>
+        Apartment Size: ${booking.apartment_size || 'N/A'}<br>
+        Move-In Date: ${booking.move_in_date || 'N/A'}</p>
         <p>We look forward to seeing you!</p>
         <p>Best regards,<br>Rosalia Group<br>(862) 333-1681</p>
       `;
@@ -238,24 +265,32 @@ exports.handler = async (event) => {
       try {
         await transporter.sendMail({
           from: '"Rosalia Group" <ana@rosaliagroup.com>',
-          to: customerEmail,
+          to: booking.email,
           cc: 'inquiries@rosaliagroup.com',
           subject: 'Appointment Rescheduled - Rosalia Group',
           html: emailHtml,
         });
-        console.log('Email sent to caller');
+        console.log('Reschedule email sent to:', booking.email, '+ CC inquiries');
       } catch (err) {
         console.error('Email error:', err.message);
       }
     }
 
+    // Send SMS to CALLER
+    const callerMsg = `Your appointment has been rescheduled!\n\n${booking.type || 'Appointment'}\n${new_date} at ${new_time}\n\nRosalia Group will be in touch. See you then!`;
+    await sendSMS(normalizedPhone, callerMsg);
+
+    // Send SMS to TEAM (Ana)
+    const teamMsg = `Appointment Rescheduled!\n\nName: ${booking.full_name}\nPhone: ${normalizedPhone}\nEmail: ${booking.email || 'N/A'}\nProperty: ${booking.type}\nNEW Date: ${new_date} at ${new_time}\nBudget: ${booking.budget || 'N/A'}\nSize: ${booking.apartment_size || 'N/A'}\nMove-In: ${booking.move_in_date || 'N/A'}\nIncome: ${booking.income_qualifies || 'N/A'}\nCredit: ${booking.credit_qualifies || 'N/A'}`;
+    await sendSMS(ANA_PHONE, teamMsg);
+
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ 
-        success: true, 
-        eventId: updatedEvent.id,
-        message: 'Appointment rescheduled successfully'
+      body: JSON.stringify({
+        success: true,
+        message: `Rescheduled to ${new_date} at ${new_time}`,
+        eventId: newEvent?.id,
       }),
     };
 
