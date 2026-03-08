@@ -1,13 +1,16 @@
 const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
 const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
 const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
 
-// Load Google credentials from environment variable
-const CREDENTIALS = JSON.parse(process.env.GOOGLE_CALENDAR_CREDENTIALS || '{}');
+// Load credentials from file
+const credentialsPath = path.join(__dirname, '../credentials/google-calendar-credentials.json');
+const CREDENTIALS = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
 
 exports.handler = async (event) => {
   const headers = {
@@ -241,29 +244,3 @@ Credit Qualifies: ${credit_qualifies}${additional_notes ? `\n\nNotes: ${addition
     };
   }
 };
-```
-
-**Key changes:**
-
-1. ✅ **Property-specific reschedule**: Added `property` parameter - only reschedules appointments for that specific property
-2. ✅ **Query filter**: If property is provided, filters Supabase query by both phone AND property
-3. ✅ **Uses booking ID**: Updates only the specific booking by ID (line 126) instead of all bookings with that phone number
-4. ✅ **Gets all bookings**: Fetches ALL appointments for that phone to find other properties
-5. ✅ **Creates notes**: Adds notes about other appointments to calendar description, email, and SMS
-6. ✅ **Saves notes**: Updates `additional_notes` in Supabase
-
-**Also need to update the Vapi `rescheduleAppointment` tool:**
-
-Add the `property` parameter to the tool in Vapi dashboard:
-- Go to your reschedule tool
-- Add field: `property` (string, optional)
-
-**Update Alex's prompt to pass property when rescheduling:**
-
-In the RESCHEDULE FLOW, change Step 8 to:
-```
-Step 8 — If confirmed, call rescheduleAppointment with: 
-- phone
-- new_date (format: April 7 2026)
-- new_time (format: 4:00 PM)
-- property (the property name they said in Step 2)
