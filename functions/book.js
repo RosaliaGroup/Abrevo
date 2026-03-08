@@ -1,29 +1,16 @@
 const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
 const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
 const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
 
-// Load Google credentials from environment variable
-const fs = require('fs');
-const path = require('path');
-
 // Load credentials from file
 const credentialsPath = path.join(__dirname, '../credentials/google-calendar-credentials.json');
 const CREDENTIALS = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-```
-
-## Step 3: Remove GOOGLE_CALENDAR_CREDENTIALS from Netlify
-
-Go to Netlify → Environment Variables → Delete `GOOGLE_CALENDAR_CREDENTIALS`
-
-## Step 4: Add credentials folder to .gitignore (optional security)
-
-Add to `.gitignore`:
-```
-credentials/google-calendar-credentials.json
 
 exports.handler = async (event) => {
   const headers = {
