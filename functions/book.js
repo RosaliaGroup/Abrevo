@@ -2,6 +2,8 @@ const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 
 // Client configurations
+const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const CLIENTS = {
   rosalia: {
     calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com',
@@ -138,8 +140,39 @@ exports.handler = async (event) => {
     } catch (err) {
       console.error('Calendar error:', err.message);
     }
-
-    // 2. Send SMS to caller
+// 2. Save to Supabase
+    try {
+      const supabaseRes = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify({
+          full_name: data.full_name,
+          phone: data.phone,
+          email: data.email,
+          type: data.type,
+          preferred_date: data.preferred_date,
+          preferred_time: data.preferred_time,
+          budget: data.budget,
+          apartment_size: data.apartment_size,
+          preferred_area: data.preferred_area,
+          move_in_date: data.move_in_date,
+          income_qualifies: data.income_qualifies,
+          credit_qualifies: data.credit_qualifies,
+          additional_notes: data.additional_notes,
+          client: clientId,
+          calendar_event_id: calendarEvent?.id,
+        }),
+      });
+      console.log('Saved to Supabase');
+    } catch (err) {
+      console.error('Supabase error:', err.message);
+    }
+    // . Send SMS to caller
     if (data.phone) {
       const callerMsg = `Your appointment is confirmed!\n\n${propertyAddress}\n${data.preferred_date} at ${data.preferred_time}\n\nRosalia Group will be in touch. See you then!`;
       try {
