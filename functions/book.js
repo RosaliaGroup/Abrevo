@@ -183,3 +183,19 @@ exports.handler = async (event) => {
         html: emailHtml,
       });
     }
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ success: true, eventId: calendarEvent?.id }),
+    };
+
+  } catch (err) {
+    console.error('Booking error:', err);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: err.message }),
+    };
+  }
+};
