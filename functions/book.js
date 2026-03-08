@@ -176,7 +176,7 @@ exports.handler = async (event) => {
       
       // Send to caller and CC to inquiries
       await transporter.sendMail({
-        from: '"Rosalia Group" <inquiries@rosaliagroup.com>',
+        from: '"Rosalia Group" <ana@rosaliagroup.com>',
         to: data.email,
         cc: 'inquiries@rosaliagroup.com',
         subject: 'Appointment Confirmed - Rosalia Group',
