@@ -160,7 +160,7 @@ exports.handler = async (event) => {
     const teamSmsResult = await sendSMS(client.notifyPhone, teamMsg);
     console.log('Team SMS sent:', teamSmsResult.success);
 
-    // 4. Send email confirmation to caller
+    // 4. Send email confirmation to caller (CC inquiries@rosaliagroup.com)
     if (data.email) {
       const emailHtml = `
         <h2>Appointment Confirmed</h2>
@@ -173,21 +173,13 @@ exports.handler = async (event) => {
         <p>We look forward to seeing you!</p>
         <p>Best regards,<br>Rosalia Group<br>(862) 333-1681</p>
       `;
-      await sendEmail(data.email, 'Appointment Confirmed - Rosalia Group', emailHtml);
+      
+      // Send to caller and CC to inquiries
+      await transporter.sendMail({
+        from: '"Rosalia Group" <inquiries@rosaliagroup.com>',
+        to: data.email,
+        cc: 'inquiries@rosaliagroup.com',
+        subject: 'Appointment Confirmed - Rosalia Group',
+        html: emailHtml,
+      });
     }
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ success: true, eventId: calendarEvent?.id }),
-    };
-
-  } catch (err) {
-    console.error('Booking error:', err);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: err.message }),
-    };
-  }
-};
