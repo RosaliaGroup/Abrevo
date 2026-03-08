@@ -26,12 +26,49 @@ async function sendSMS(phone, message) {
       body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
     });
     const result = await response.json();
-    console.log('SMS sent to', phone, ':', result.success ? 'SUCCESS' : 'FAILED');
+    console.log('SMS sent to', phone, ':', result.success ? 'SUCCESS' : 'FAILED', result);
     return result;
   } catch (err) {
     console.error('SMS error:', err.message);
     return { success: false, error: err.message };
   }
+}
+
+// Helper: Check if two property strings match
+function propertiesMatch(prop1, prop2) {
+  if (!prop1 || !prop2) return false;
+  
+  // Normalize both strings: lowercase, remove extra spaces
+  const normalize = (str) => str.toLowerCase().trim().replace(/\s+/g, ' ');
+  
+  const p1 = normalize(prop1);
+  const p2 = normalize(prop2);
+  
+  // Direct match
+  if (p1 === p2) return true;
+  
+  // Check if one contains the other (for partial matches like "473 Main" vs "473 Main Street, Orange NJ")
+  if (p1.includes(p2) || p2.includes(p1)) return true;
+  
+  // Extract street numbers and compare (e.g., "473" from "473 Main Street")
+  const extractNumber = (str) => {
+    const match = str.match(/^\d+/);
+    return match ? match[0] : null;
+  };
+  
+  const num1 = extractNumber(p1);
+  const num2 = extractNumber(p2);
+  
+  // If both have street numbers and they match, and both contain similar street names
+  if (num1 && num2 && num1 === num2) {
+    // Check if street names overlap (e.g., "main" appears in both)
+    const words1 = p1.split(' ');
+    const words2 = p2.split(' ');
+    const commonWords = words1.filter(w => w.length > 3 && words2.includes(w));
+    if (commonWords.length > 0) return true;
+  }
+  
+  return false;
 }
 
 // Helper: Get calendar client
@@ -48,6 +85,8 @@ async function deletePropertyEvents(calendar, callerName, propertyAddress) {
   try {
     const now = new Date();
     const future = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000); // 90 days ahead
+
+    console.log(`Searching for events: caller="${callerName}", property="${propertyAddress}"`);
 
     // Search for events matching caller name
     const res = await calendar.events.list({
@@ -67,21 +106,24 @@ async function deletePropertyEvents(calendar, callerName, propertyAddress) {
       const summary = event.summary || '';
       const description = event.description || '';
       
+      console.log(`Checking event: "${summary}"`);
+      
       // Check if this event is for the property being rescheduled
-      // Match against both summary and description
-      if (summary.includes(propertyAddress) || description.includes(propertyAddress)) {
+      // Use improved matching function
+      if (propertiesMatch(summary, propertyAddress) || 
+          propertiesMatch(description, propertyAddress)) {
         await calendar.events.delete({
           calendarId: CALENDAR_ID,
           eventId: event.id,
         });
-        console.log(`Deleted event for ${propertyAddress}:`, event.id, summary);
+        console.log(`✓ DELETED event for ${propertyAddress}:`, event.id, summary);
         deletedCount++;
       } else {
-        console.log(`Kept event (different property):`, summary);
+        console.log(`✓ KEPT event (different property):`, summary);
       }
     }
 
-    console.log(`Deleted ${deletedCount} event(s) for ${propertyAddress}, kept ${events.length - deletedCount} other event(s)`);
+    console.log(`Summary: Deleted ${deletedCount} event(s) for ${propertyAddress}, kept ${events.length - deletedCount} other event(s)`);
     return deletedCount;
 
   } catch (err) {
@@ -165,7 +207,14 @@ exports.handler = async (event) => {
       normalizedPhone = '+1' + normalizedPhone;
     }
 
-    console.log('Reschedule request:', { phone: normalizedPhone, new_date, new_time, property });
+    console.log('========================================');
+    console.log('RESCHEDULE REQUEST');
+    console.log('========================================');
+    console.log('Phone:', normalizedPhone);
+    console.log('New Date:', new_date);
+    console.log('New Time:', new_time);
+    console.log('Property:', property);
+    console.log('========================================');
 
     // Find the booking in Supabase
     const findUrl = `${SUPABASE_URL}/rest/v1/bookings?phone=eq.${encodeURIComponent(normalizedPhone)}&order=created_at.desc`;
@@ -186,43 +235,49 @@ exports.handler = async (event) => {
       };
     }
 
+    console.log(`Found ${bookings.length} booking(s) for this phone number`);
+
     // If property specified, find the specific booking for that property
     let booking;
     if (property) {
-      booking = bookings.find(b => 
-        b.type && b.type.toLowerCase().includes(property.toLowerCase())
-      );
+      booking = bookings.find(b => propertiesMatch(b.type, property));
       
       if (!booking) {
-        console.log(`No booking found for property: ${property}. Available bookings:`, 
-          bookings.map(b => b.type));
+        console.log(`❌ No booking found matching property: "${property}"`);
+        console.log('Available bookings:', bookings.map(b => `"${b.type}"`).join(', '));
         // Fall back to most recent booking
         booking = bookings[0];
+        console.log(`Using most recent booking instead: "${booking.type}"`);
       } else {
-        console.log(`Found booking for property: ${property}`);
+        console.log(`✓ Found matching booking: "${booking.type}"`);
       }
     } else {
       // No property specified, use most recent
       booking = bookings[0];
-      console.log('No property specified, using most recent booking');
+      console.log('No property specified, using most recent booking:', booking.type);
     }
 
-    console.log('Selected booking:', booking.id, 'for property:', booking.type);
+    console.log('Selected booking ID:', booking.id);
+    console.log('Selected booking property:', booking.type);
 
     // Get calendar client
     const calendar = await getCalendarClient();
 
     // Delete OLD calendar event(s) for THIS SPECIFIC PROPERTY ONLY
     const propertyToReschedule = property || booking.type;
-    await deletePropertyEvents(calendar, booking.full_name, propertyToReschedule);
+    const deletedCount = await deletePropertyEvents(calendar, booking.full_name, propertyToReschedule);
+    
+    if (deletedCount === 0) {
+      console.log('⚠️  WARNING: No calendar events were deleted. Creating new event anyway.');
+    }
 
     // Create NEW calendar event
     let newEvent = null;
     try {
       newEvent = await createCalendarEvent(calendar, booking, new_date, new_time);
-      console.log('New calendar event created:', newEvent.id);
+      console.log('✓ New calendar event created:', newEvent.id);
     } catch (err) {
-      console.error('Error creating calendar event:', err.message);
+      console.error('❌ Error creating calendar event:', err.message);
       return {
         statusCode: 500,
         headers,
@@ -246,7 +301,7 @@ exports.handler = async (event) => {
       }),
     });
 
-    console.log('Supabase updated for booking:', booking.id);
+    console.log('✓ Supabase updated for booking:', booking.id);
 
     // Send confirmation EMAIL to caller (CC inquiries)
     if (booking.email) {
@@ -270,19 +325,27 @@ exports.handler = async (event) => {
           subject: 'Appointment Rescheduled - Rosalia Group',
           html: emailHtml,
         });
-        console.log('Reschedule email sent to:', booking.email, '+ CC inquiries');
+        console.log('✓ Reschedule email sent to:', booking.email, '+ CC inquiries');
       } catch (err) {
-        console.error('Email error:', err.message);
+        console.error('❌ Email error:', err.message);
       }
     }
 
     // Send SMS to CALLER
+    console.log('Sending SMS to caller:', normalizedPhone);
     const callerMsg = `Your appointment has been rescheduled!\n\n${booking.type || 'Appointment'}\n${new_date} at ${new_time}\n\nRosalia Group will be in touch. See you then!`;
-    await sendSMS(normalizedPhone, callerMsg);
+    const callerSMS = await sendSMS(normalizedPhone, callerMsg);
+    console.log('Caller SMS result:', callerSMS);
 
     // Send SMS to TEAM (Ana)
+    console.log('Sending SMS to team:', ANA_PHONE);
     const teamMsg = `Appointment Rescheduled!\n\nName: ${booking.full_name}\nPhone: ${normalizedPhone}\nEmail: ${booking.email || 'N/A'}\nProperty: ${booking.type}\nNEW Date: ${new_date} at ${new_time}\nBudget: ${booking.budget || 'N/A'}\nSize: ${booking.apartment_size || 'N/A'}\nMove-In: ${booking.move_in_date || 'N/A'}\nIncome: ${booking.income_qualifies || 'N/A'}\nCredit: ${booking.credit_qualifies || 'N/A'}`;
-    await sendSMS(ANA_PHONE, teamMsg);
+    const teamSMS = await sendSMS(ANA_PHONE, teamMsg);
+    console.log('Team SMS result:', teamSMS);
+
+    console.log('========================================');
+    console.log('RESCHEDULE COMPLETE');
+    console.log('========================================');
 
     return {
       statusCode: 200,
@@ -291,11 +354,15 @@ exports.handler = async (event) => {
         success: true,
         message: `Rescheduled to ${new_date} at ${new_time}`,
         eventId: newEvent?.id,
+        deletedEvents: deletedCount,
       }),
     };
 
   } catch (err) {
-    console.error('Reschedule error:', err);
+    console.error('========================================');
+    console.error('RESCHEDULE ERROR');
+    console.error('========================================');
+    console.error(err);
     return {
       statusCode: 500,
       headers,
