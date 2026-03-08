@@ -63,15 +63,16 @@ async function createCalendarEvent(client, data) {
 
   const calendar = google.calendar({ version: 'v3', auth });
 
-  // Parse date and time with proper timezone handling
+  // Parse date and time - force EST timezone
   let startDateTime;
   try {
-    const dateStr = `${data.preferred_date} ${data.preferred_time}`;
+    // Parse as EST explicitly
+    const dateStr = `${data.preferred_date} ${data.preferred_time} EST`;
     startDateTime = new Date(dateStr);
     
-    // If invalid, try adding timezone
+    // If still invalid, try another format
     if (isNaN(startDateTime.getTime())) {
-      startDateTime = new Date(`${dateStr} GMT-0500`); // EST
+      startDateTime = new Date(`${data.preferred_date} ${data.preferred_time}`);
     }
     
     // Fallback to tomorrow at noon
