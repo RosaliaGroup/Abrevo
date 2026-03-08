@@ -7,7 +7,23 @@ const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qi
 const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
 
 // Load Google credentials from environment variable
-const CREDENTIALS = JSON.parse(process.env.GOOGLE_CALENDAR_CREDENTIALS || '{}');
+const fs = require('fs');
+const path = require('path');
+
+// Load credentials from file
+const credentialsPath = path.join(__dirname, '../credentials/google-calendar-credentials.json');
+const CREDENTIALS = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+```
+
+## Step 3: Remove GOOGLE_CALENDAR_CREDENTIALS from Netlify
+
+Go to Netlify → Environment Variables → Delete `GOOGLE_CALENDAR_CREDENTIALS`
+
+## Step 4: Add credentials folder to .gitignore (optional security)
+
+Add to `.gitignore`:
+```
+credentials/google-calendar-credentials.json
 
 exports.handler = async (event) => {
   const headers = {
