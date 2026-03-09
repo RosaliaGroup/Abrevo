@@ -136,28 +136,17 @@ async function deletePropertyEvents(calendar, callerName, propertyAddress) {
 async function createCalendarEvent(calendar, booking, newDate, newTime) {
   let startDateTime;
   try {
-    // Parse time components
-    const timeParts = newTime.match(/(\d+):?(\d*)\s*(AM|PM)/i);
-    if (!timeParts) throw new Error('Invalid time format');
-    
-    let hours = parseInt(timeParts[1]);
-    const minutes = parseInt(timeParts[2] || '0');
-    const period = timeParts[3].toUpperCase();
-    
-    // Convert to 24-hour format
-    if (period === 'PM' && hours !== 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-    
-    // Create date in EST/EDT
-    const dateParts = newDate.match(/(\w+)\s+(\d+)\s+(\d+)/);
-    if (!dateParts) throw new Error('Invalid date format');
-    
-    const dateStr = `${dateParts[1]} ${dateParts[2]}, ${dateParts[3]} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00 GMT-0500`;
-    startDateTime = new Date(dateStr);
-    
+    startDateTime = new Date(`${newDate} ${newTime} EST`);
+    if (isNaN(startDateTime.getTime())) {
+      startDateTime = new Date(`${newDate} ${newTime}`);
+    }
     if (isNaN(startDateTime.getTime())) {
       throw new Error('Invalid date/time');
     }
+  } catch (e) {
+    console.error('Date parsing error:', e.message);
+    throw new Error('Invalid date or time format');
+  }
 
   const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
 
