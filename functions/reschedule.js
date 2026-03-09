@@ -136,10 +136,10 @@ async function deletePropertyEvents(calendar, callerName, propertyAddress) {
 async function createCalendarEvent(calendar, booking, newDate, newTime) {
   let startDateTime;
   try {
-    startDateTime = new Date(`${newDate} ${newTime} EST`);
-    if (isNaN(startDateTime.getTime())) {
-      startDateTime = new Date(`${newDate} ${newTime}`);
-    }
+    // Use explicit America/New_York timezone
+    const dateTimeStr = `${newDate} ${newTime}`;
+    startDateTime = new Date(dateTimeStr);
+    
     if (isNaN(startDateTime.getTime())) {
       throw new Error('Invalid date/time');
     }
