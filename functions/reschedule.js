@@ -81,53 +81,48 @@ async function getCalendarClient() {
 }
 
 // Helper: Find and delete calendar events for specific property
-async function deletePropertyEvents(calendar, callerName, propertyAddress) {
+// Helper: Find and delete calendar events by phone number and property
+async function deletePropertyEvents(calendar, booking, propertyAddress) {
   try {
     const now = new Date();
     const future = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000); // 90 days ahead
-
-    console.log(`Searching for events: caller="${callerName}", property="${propertyAddress}"`);
-
-    // Search for events matching caller name
+    
+    console.log(`Searching for events with phone: ${booking.phone} and property: ${propertyAddress}`);
+    
     const res = await calendar.events.list({
       calendarId: CALENDAR_ID,
-      q: callerName,
       timeMin: now.toISOString(),
       timeMax: future.toISOString(),
       singleEvents: true,
+      orderBy: 'startTime',
     });
 
     const events = res.data.items || [];
-    console.log(`Found ${events.length} total events for ${callerName}`);
-
-    // Filter events that match the specific property
     let deletedCount = 0;
+
     for (const event of events) {
       const summary = event.summary || '';
       const description = event.description || '';
       
-      console.log(`Checking event: "${summary}"`);
+      // Check if event contains the phone number AND matches the property
+      const hasPhone = description.includes(booking.phone);
+      const matchesProperty = propertiesMatch(summary, propertyAddress);
       
-      // Check if this event is for the property being rescheduled
-      // Use improved matching function
-      if (propertiesMatch(summary, propertyAddress) || 
-          propertiesMatch(description, propertyAddress)) {
+      if (hasPhone && matchesProperty) {
+        console.log(`✓ Deleting event: ${event.id} - "${summary}"`);
         await calendar.events.delete({
           calendarId: CALENDAR_ID,
           eventId: event.id,
         });
-        console.log(`✓ DELETED event for ${propertyAddress}:`, event.id, summary);
         deletedCount++;
-      } else {
-        console.log(`✓ KEPT event (different property):`, summary);
       }
     }
 
-    console.log(`Summary: Deleted ${deletedCount} event(s) for ${propertyAddress}, kept ${events.length - deletedCount} other event(s)`);
+    console.log(`Deleted ${deletedCount} event(s)`);
     return deletedCount;
-
+    
   } catch (err) {
-    console.error('Error deleting calendar events:', err.message);
+    console.error('Error deleting events:', err.message);
     return 0;
   }
 }
@@ -290,7 +285,7 @@ exports.handler = async (event) => {
 
     // Delete OLD calendar event(s) for THIS SPECIFIC PROPERTY ONLY
     const propertyToReschedule = property || booking.type;
-    const deletedCount = await deletePropertyEvents(calendar, booking.full_name, propertyToReschedule);
+    const deletedCount = await deletePropertyEvents(calendar, booking, propertyToReschedule);
     
     if (deletedCount === 0) {
       console.log('⚠️  WARNING: No calendar events were deleted. Creating new event anyway.');
