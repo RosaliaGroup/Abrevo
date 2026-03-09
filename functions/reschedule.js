@@ -86,7 +86,9 @@ async function deletePropertyEvents(calendar, booking, propertyAddress) {
     const now = new Date();
     const future = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000); // 90 days ahead
     
-    console.log(`Searching for events with phone: ${booking.phone} and property: ${propertyAddress}`);
+    console.log(`========== DELETE SEARCH ==========`);
+    console.log(`Searching for phone: ${booking.phone}`);
+    console.log(`Searching for property: ${propertyAddress}`);
     
     const res = await calendar.events.list({
       calendarId: CALENDAR_ID,
@@ -97,31 +99,41 @@ async function deletePropertyEvents(calendar, booking, propertyAddress) {
     });
 
     const events = res.data.items || [];
+    console.log(`Found ${events.length} total events in calendar`);
     let deletedCount = 0;
 
     for (const event of events) {
       const summary = event.summary || '';
       const description = event.description || '';
       
-      // Check if event contains the phone number AND matches the property
+      console.log(`--- Checking event: "${summary}"`);
+      
+      // Check if event contains the phone number
       const hasPhone = description.includes(booking.phone);
+      console.log(`  Phone match: ${hasPhone ? 'YES' : 'NO'} (looking for "${booking.phone}")`);
       
       // Check property match in BOTH summary and description
       const matchesInSummary = propertiesMatch(summary, propertyAddress);
       const matchesInDescription = propertiesMatch(description, propertyAddress);
       const matchesProperty = matchesInSummary || matchesInDescription;
       
+      console.log(`  Property match in summary: ${matchesInSummary ? 'YES' : 'NO'}`);
+      console.log(`  Property match in description: ${matchesInDescription ? 'YES' : 'NO'}`);
+      console.log(`  Overall property match: ${matchesProperty ? 'YES' : 'NO'}`);
+      
       if (hasPhone && matchesProperty) {
-        console.log(`✓ Deleting event: ${event.id} - "${summary}"`);
+        console.log(`  ✓✓✓ DELETING THIS EVENT ✓✓✓`);
         await calendar.events.delete({
           calendarId: CALENDAR_ID,
           eventId: event.id,
         });
         deletedCount++;
+      } else {
+        console.log(`  ✗ Skipping (no match)`);
       }
     }
 
-    console.log(`Deleted ${deletedCount} event(s)`);
+    console.log(`========== DELETED ${deletedCount} EVENT(S) ==========`);
     return deletedCount;
     
   } catch (err) {
