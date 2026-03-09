@@ -80,7 +80,6 @@ async function getCalendarClient() {
   return google.calendar({ version: 'v3', auth });
 }
 
-// Helper: Find and delete calendar events for specific property
 // Helper: Find and delete calendar events by phone number and property
 async function deletePropertyEvents(calendar, booking, propertyAddress) {
   try {
@@ -106,7 +105,11 @@ async function deletePropertyEvents(calendar, booking, propertyAddress) {
       
       // Check if event contains the phone number AND matches the property
       const hasPhone = description.includes(booking.phone);
-      const matchesProperty = propertiesMatch(summary, propertyAddress);
+      
+      // Check property match in BOTH summary and description
+      const matchesInSummary = propertiesMatch(summary, propertyAddress);
+      const matchesInDescription = propertiesMatch(description, propertyAddress);
+      const matchesProperty = matchesInSummary || matchesInDescription;
       
       if (hasPhone && matchesProperty) {
         console.log(`✓ Deleting event: ${event.id} - "${summary}"`);
@@ -170,7 +173,7 @@ async function createCalendarEvent(calendar, booking, newDate, newTime) {
   
   const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
 
- const description = `
+  const description = `
 RESCHEDULED APPOINTMENT
 
 Phone: ${booking.phone || 'N/A'}
