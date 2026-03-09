@@ -50,25 +50,42 @@ async function createCalendarEvent(client, data) {
 
   const calendar = google.calendar({ version: 'v3', auth });
 
-  // Parse date and time - force EST timezone
+  // Parse date and time with proper timezone handling
   let startDateTime;
   try {
-    // Parse as EST explicitly
-    const dateStr = `${data.preferred_date} ${data.preferred_time} EST`;
-    startDateTime = new Date(dateStr);
-
-    // If still invalid, try another format
-    if (isNaN(startDateTime.getTime())) {
-      startDateTime = new Date(`${data.preferred_date} ${data.preferred_time}`);
-    }
-
-    // Fallback to tomorrow at noon
-    if (isNaN(startDateTime.getTime())) {
-      startDateTime = new Date();
-      startDateTime.setDate(startDateTime.getDate() + 1);
-      startDateTime.setHours(12, 0, 0, 0);
-    }
+    // Parse date
+    const dateParts = data.preferred_date.match(/(\w+)\s+(\d+)\s+(\d+)/);
+    if (!dateParts) throw new Error('Invalid date format');
+    const month = dateParts[1];
+    const day = parseInt(dateParts[2]);
+    const year = parseInt(dateParts[3]);
+    
+    // Parse time
+    const timeParts = data.preferred_time.match(/(\d+):?(\d*)?\s*(AM|PM)/i);
+    if (!timeParts) throw new Error('Invalid time format');
+    let hours = parseInt(timeParts[1]);
+    const minutes = parseInt(timeParts[2] || '0');
+    const period = timeParts[3].toUpperCase();
+    
+    // Convert to 24-hour format
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    
+    // Month map
+    const monthMap = {
+      'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
+      'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
+    };
+    
+    const monthNum = monthMap[month];
+    if (monthNum === undefined) throw new Error('Invalid month');
+    
+    // Create date in EDT (add 4 hours to get UTC)
+    startDateTime = new Date(Date.UTC(year, monthNum, day, hours + 4, minutes, 0));
+    
   } catch(e) {
+    console.error('Date parsing error:', e.message);
+    // Fallback to tomorrow at noon
     startDateTime = new Date();
     startDateTime.setDate(startDateTime.getDate() + 1);
     startDateTime.setHours(12, 0, 0, 0);
