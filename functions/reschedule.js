@@ -136,21 +136,46 @@ async function deletePropertyEvents(calendar, callerName, propertyAddress) {
 async function createCalendarEvent(calendar, booking, newDate, newTime) {
   let startDateTime;
   try {
-    startDateTime = new Date(`${newDate} ${newTime}`);
-    if (isNaN(startDateTime.getTime())) {
-      startDateTime = new Date(`${newDate} ${newTime}`);
-    }
-    if (isNaN(startDateTime.getTime())) {
-      throw new Error('Invalid date/time');
-    }
+    // Parse date: "April 28 2026"
+    const dateParts = newDate.match(/(\w+)\s+(\d+)\s+(\d+)/);
+    if (!dateParts) throw new Error('Invalid date format');
+    const month = dateParts[1];
+    const day = parseInt(dateParts[2]);
+    const year = parseInt(dateParts[3]);
+    
+    // Parse time: "2:00 PM"
+    const timeParts = newTime.match(/(\d+):?(\d*)?\s*(AM|PM)/i);
+    if (!timeParts) throw new Error('Invalid time format');
+    let hours = parseInt(timeParts[1]);
+    const minutes = parseInt(timeParts[2] || '0');
+    const period = timeParts[3].toUpperCase();
+    
+    // Convert to 24-hour format
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    
+    // Build ISO string manually for America/New_York
+    // Use Date.UTC then offset for EDT (-4 hours) or EST (-5 hours)
+    // For April, we're in EDT (UTC-4)
+    const monthMap = {
+      'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
+      'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
+    };
+    
+    const monthNum = monthMap[month];
+    if (monthNum === undefined) throw new Error('Invalid month');
+    
+    // Create date in EDT (add 4 hours to get UTC)
+    startDateTime = new Date(Date.UTC(year, monthNum, day, hours + 4, minutes, 0));
+    
   } catch (e) {
     console.error('Date parsing error:', e.message);
     throw new Error('Invalid date or time format');
   }
-
+  
   const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
 
-  const description = `
+ const description = `
 RESCHEDULED APPOINTMENT
 
 Phone: ${booking.phone || 'N/A'}
@@ -169,7 +194,7 @@ ${booking.additional_notes || 'None'}
   const event = await calendar.events.insert({
     calendarId: CALENDAR_ID,
     resource: {
-      summary: `${booking.full_name || 'Guest'} — ${booking.type || 'Appointment'}`,
+      summary: `${booking.full_name || 'Guest'} - ${booking.type || 'Appointment'}`,
       description,
       start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
       end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
