@@ -1,9 +1,10 @@
 const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 
-// Client configurations
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+// Client configurations
 const CLIENTS = {
   rosalia: {
     calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com',
@@ -129,6 +130,15 @@ exports.handler = async (event) => {
     const data = JSON.parse(event.body || '{}');
     console.log('Booking data received:', JSON.stringify(data));
 
+    // Normalize phone number
+    if (data.phone) {
+      let normalizedPhone = data.phone.toString().replace(/\D/g, '');
+      if (!normalizedPhone.startsWith('+')) {
+        normalizedPhone = '+1' + normalizedPhone;
+      }
+      data.phone = normalizedPhone;
+    }
+
     // Get property address for notifications
     const propertyAddress = data.property_address || data.type || 'the property';
 
@@ -140,7 +150,8 @@ exports.handler = async (event) => {
     } catch (err) {
       console.error('Calendar error:', err.message);
     }
-// 2. Save to Supabase
+
+    // 2. Save to Supabase
     try {
       const supabaseRes = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
         method: 'POST',
@@ -172,7 +183,8 @@ exports.handler = async (event) => {
     } catch (err) {
       console.error('Supabase error:', err.message);
     }
-    // . Send SMS to caller
+
+    // 3. Send SMS to caller
     if (data.phone) {
       const callerMsg = `Your appointment is confirmed!\n\n${propertyAddress}\n${data.preferred_date} at ${data.preferred_time}\n\nRosalia Group will be in touch. See you then!`;
       try {
@@ -183,7 +195,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // 3. Send SMS to team
+    // 4. Send SMS to team
     const teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${propertyAddress}\nDate: ${data.preferred_date} at ${data.preferred_time}\nBudget: ${data.budget}\nSize: ${data.apartment_size}\nMove-In: ${data.move_in_date}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
     try {
       const teamSmsResult = await sendSMS(client.notifyPhone, teamMsg);
@@ -192,7 +204,7 @@ exports.handler = async (event) => {
       console.error('Team SMS error:', err.message);
     }
 
-    // 4. Send email confirmation to caller (CC inquiries@rosaliagroup.com)
+    // 5. Send email confirmation to caller (CC inquiries@rosaliagroup.com)
     if (data.email) {
       const emailHtml = `
         <h2>Appointment Confirmed</h2>
