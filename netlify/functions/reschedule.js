@@ -129,7 +129,10 @@ exports.handler = async (event) => {
     }
 
     let normalizedPhone = phone.toString().replace(/\D/g, '');
-    if (!normalizedPhone.startsWith('+')) normalizedPhone = '+1' + normalizedPhone;
+    if (normalizedPhone.length === 10) normalizedPhone = '+1' + normalizedPhone;
+else if (normalizedPhone.length === 11 && normalizedPhone.startsWith('1')) normalizedPhone = '+' + normalizedPhone;
+else if (normalizedPhone.length === 12 && normalizedPhone.startsWith('11')) normalizedPhone = '+1' + normalizedPhone.slice(2);
+else if (!normalizedPhone.startsWith('+')) normalizedPhone = '+' + normalizedPhone;
     console.log('Reschedule for phone:', normalizedPhone);
 
     // Find latest booking
