@@ -3,7 +3,7 @@ const { google } = require('googleapis');
 // Client configurations
 const CLIENTS = {
   rosalia: {
-    calendarId: 'inquiries@rosaliagroup.com',
+    calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com',
     notifyPhone: '+16462269189',
     notifyName: 'Ana',
     teamName: 'Rosalia Group',
