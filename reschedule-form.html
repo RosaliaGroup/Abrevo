@@ -128,7 +128,11 @@
     const errorEl = document.getElementById('formError');
     errorEl.style.display = 'none';
 
-    const phone = document.getElementById('phone').value.trim();
+    let normalized = phone.replace(/\D/g, '');
+if (normalized.length === 10) normalized = '+1' + normalized;
+else if (normalized.length === 11 && normalized.startsWith('1')) normalized = '+' + normalized;
+else if (!normalized.startsWith('+')) normalized = '+' + normalized;
+const cleanPhone = normalized;
     const new_date_raw = document.getElementById('new_date').value;
     const new_time = document.getElementById('new_time').value;
 
@@ -147,7 +151,7 @@
       const res = await fetch('/.netlify/functions/reschedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, new_date, new_time })
+        body: JSON.stringify({ phone: cleanPhone, new_date, new_time })
       });
       const data = await res.json();
       if (data.success) {
