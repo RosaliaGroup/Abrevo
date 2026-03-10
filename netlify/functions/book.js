@@ -1,4 +1,47 @@
-const { google } = require('googleapis');
+﻿const { google } = require('googleapis');
+
+const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
+
+async function saveToSupabase(data, calendarEventId) {
+  let phone = String(data.phone || '').replace(/\D/g, '');
+  if (phone.length === 10) phone = '+1' + phone;
+  else if (phone.length === 11 && phone.startsWith('1')) phone = '+' + phone;
+  else if (phone.length === 12 && phone.startsWith('11')) phone = '+1' + phone.slice(2);
+  else if (!phone.startsWith('+')) phone = '+' + phone;
+
+  const row = {
+    full_name: data.full_name || null,
+    phone,
+    email: data.email || null,
+    type: data.property_address || 'Iron 65, Newark NJ',
+    preferred_date: data.preferred_date || null,
+    preferred_time: data.preferred_time || null,
+    budget: data.budget || null,
+    apartment_size: data.apartment_size || null,
+    move_in_date: data.move_in_date || null,
+    income_qualifies: data.income_qualifies || null,
+    credit_qualifies: data.credit_qualifies || null,
+    additional_notes: data.additional_notes || null,
+    client: data.client || 'rosalia',
+    calendar_event_id: calendarEventId || null,
+  };
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': 'return=representation',
+    },
+    body: JSON.stringify(row),
+  });
+  const result = await res.json();
+  console.log('Supabase save:', JSON.stringify(result));
+  return result;
+}
+
 
 // Client configurations
 const CLIENTS = {
@@ -34,7 +77,7 @@ async function createCalendarEvent(client, data) {
 
   const calendar = google.calendar({ version: 'v3', auth });
 
-  // Parse date and time — handle various formats from Alex
+  // Parse date and time â€” handle various formats from Alex
   let startDateTime;
   try {
     // Try direct parse first
@@ -112,6 +155,14 @@ exports.handler = async (event) => {
     }
 
     // 2. Text the caller confirmation
+
+    // Save to Supabase so reschedule can find it
+    try {
+      await saveToSupabase(data, calendarEvent?.id);
+    } catch (err) {
+      console.error('Supabase error:', err.message);
+    }
+
     if (data.phone) {
       const callerMsg = `Your appointment is confirmed!\n\n${data.type || 'Appointment'}\n${data.preferred_date} at ${data.preferred_time}\n\n${client.teamName} will be in touch to coordinate. See you then!`;
       await sendSMS(data.phone, callerMsg);
@@ -136,3 +187,4 @@ exports.handler = async (event) => {
     };
   }
 };
+
