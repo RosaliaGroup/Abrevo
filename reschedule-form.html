@@ -131,6 +131,7 @@
     let normalized = phone.replace(/\D/g, '');
 if (normalized.length === 10) normalized = '+1' + normalized;
 else if (normalized.length === 11 && normalized.startsWith('1')) normalized = '+' + normalized;
+else if (normalized.length === 12 && normalized.startsWith('11')) normalized = '+1' + normalized.slice(2);
 else if (!normalized.startsWith('+')) normalized = '+' + normalized;
 const cleanPhone = normalized;
     const new_date_raw = document.getElementById('new_date').value;
