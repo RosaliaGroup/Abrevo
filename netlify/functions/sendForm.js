@@ -8,7 +8,8 @@ exports.handler = async (event) => {
     const { phone, name, property, type } = JSON.parse(event.body || '{}');
     if (!phone) return { statusCode: 200, headers, body: JSON.stringify({ smsSent: false }) };
     let normalized = phone.toString().replace(/\D/g, '');
-    if (!normalized.startsWith('+')) normalized = '+1' + normalized;
+    if (normalized.length === 10) normalized = '+1' + normalized;
+else if (!normalized.startsWith('+')) normalized = '+' + normalized;
     const encodedPhone = encodeURIComponent(normalized);
     const isReschedule = type === 'reschedule';
     const link = isReschedule
