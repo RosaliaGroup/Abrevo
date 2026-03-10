@@ -38,10 +38,12 @@ async function createCalendarEvent(client, data) {
     if (meridiem === 'AM' && hours === 12) hours = 0;
   } catch(e) { hours = 10; minutes = 0; }
 
-  let startDateTime = new Date(data.preferred_date);
-  if (isNaN(startDateTime.getTime())) startDateTime = new Date();
-  startDateTime.setHours(hours, minutes, 0, 0);
-  const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
+  const pad = n => String(n).padStart(2, '0');
+const datePart = new Date(data.preferred_date).toISOString().split('T')[0];
+const startISO = `${datePart}T${pad(hours)}:${pad(minutes)}:00`;
+const endH = hours + (minutes >= 30 ? 1 : 0);
+const endM = (minutes + 30) % 60;
+const endISO = `${datePart}T${pad(endH)}:${pad(endM)}:00`;
 
   const propertyAddress = data.property_address || data.type || 'Iron 65, Newark NJ';
   const summary = `${data.full_name || 'Guest'} - ${propertyAddress}`;
@@ -61,8 +63,8 @@ async function createCalendarEvent(client, data) {
     resource: {
       summary,
       description,
-      start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
-      end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
+      start: { dateTime: startISO, timeZone: 'America/New_York' },
+      end: { dateTime: endISO, timeZone: 'America/New_York' },
     },
   });
   return event.data;
