@@ -29,7 +29,7 @@ async function saveToSupabase(data, calendarEventId) {
     full_name: data.full_name || null,
     phone,
     email: data.email || null,
-    type: data.property_address || 'Iron 65, Newark NJ',
+    type: data.type || data.property_address || 'Iron 65 | 65 Iron Street, Newark NJ',
     preferred_date: data.preferred_date || null,
     preferred_time: data.preferred_time || null,
     budget: data.budget || null,
@@ -60,7 +60,7 @@ async function saveToSupabase(data, calendarEventId) {
 const CLIENTS = {
   rosalia: {
     calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com',
-    notifyPhone: '+16462269189',
+    notifyPhone: '+12014970225',
     notifyName: 'Ana',
     teamName: 'Rosalia Group',
     googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
@@ -78,6 +78,25 @@ async function sendSMS(phone, message) {
   return response.json();
 }
 
+function buildISOString(dateStr, timeStr) {
+  // dateStr: "March 17, 2026"  timeStr: "2:00 PM"
+  const months = {January:'01',February:'02',March:'03',April:'04',May:'05',June:'06',
+    July:'07',August:'08',September:'09',October:'10',November:'11',December:'12'};
+  const m = dateStr.match(/(\w+)\s+(\d+),\s+(\d+)/);
+  if (!m) return null;
+  const mm = months[m[1]];
+  const dd = String(m[2]).padStart(2, '0');
+  const yyyy = m[3];
+  const t = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!t) return null;
+  let hh = parseInt(t[1]);
+  const min = String(t[2]).padStart(2, '0');
+  const ampm = t[3].toUpperCase();
+  if (ampm === 'PM' && hh !== 12) hh += 12;
+  if (ampm === 'AM' && hh === 12) hh = 0;
+  return `${yyyy}-${mm}-${dd}T${String(hh).padStart(2,'0')}:${min}:00`;
+}
+
 async function createCalendarEvent(client, data) {
   const auth = new google.auth.GoogleAuth({
     credentials: client.googleCredentials,
@@ -86,23 +105,27 @@ async function createCalendarEvent(client, data) {
 
   const calendar = google.calendar({ version: 'v3', auth });
 
-  let startDateTime;
-  try {
-    startDateTime = new Date(`${data.preferred_date} ${data.preferred_time}`);
-    if (isNaN(startDateTime.getTime())) {
-      startDateTime = new Date(`${data.preferred_date} ${data.preferred_time} EST`);
-    }
-    if (isNaN(startDateTime.getTime())) {
-      startDateTime = new Date();
-      startDateTime.setDate(startDateTime.getDate() + 1);
-      startDateTime.setHours(12, 0, 0, 0);
-    }
-  } catch(e) {
-    startDateTime = new Date();
-    startDateTime.setDate(startDateTime.getDate() + 1);
-    startDateTime.setHours(12, 0, 0, 0);
+  const isoStart = buildISOString(data.preferred_date, data.preferred_time);
+  let startDateTime, endDateTime;
+  if (isoStart) {
+    startDateTime = isoStart;
+    const end = new Date(new Date(isoStart).getTime() + 30 * 60 * 1000);
+    endDateTime = buildISOString(data.preferred_date, data.preferred_time);
+    // build end manually
+    const endDate = new Date(isoStart);
+    endDate.setMinutes(endDate.getMinutes() + 30);
+    const ep = isoStart.split('T');
+    const et = endDate.toTimeString().slice(0,5);
+    endDateTime = `${ep[0]}T${et}:00`;
+  } else {
+    const fallback = new Date();
+    fallback.setDate(fallback.getDate() + 1);
+    fallback.setHours(12, 0, 0, 0);
+    startDateTime = fallback.toISOString();
+    endDateTime = new Date(fallback.getTime() + 30*60*1000).toISOString();
   }
-  const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
+
+  const propertyName = data.type || data.property_address || 'Iron 65 | 65 Iron Street, Newark NJ';
 
   const description = `
 Phone: ${data.phone || 'N/A'}
@@ -121,10 +144,10 @@ ${data.additional_notes || 'N/A'}
   const event = await calendar.events.insert({
     calendarId: client.calendarId,
     resource: {
-      summary: `${data.full_name} - ${data.type || 'Iron 65'}`,
+      summary: `${data.full_name} - ${propertyName}`,
       description,
-      start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
-      end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
+      start: { dateTime: startDateTime, timeZone: 'America/New_York' },
+      end: { dateTime: endDateTime, timeZone: 'America/New_York' },
     },
   });
 
@@ -150,6 +173,7 @@ exports.handler = async (event) => {
     }
 
     const data = JSON.parse(event.body || '{}');
+    const propertyName = data.type || data.property_address || 'Iron 65 | 65 Iron Street, Newark NJ';
 
     // 1. Create Google Calendar event
     let calendarEvent = null;
@@ -168,13 +192,14 @@ exports.handler = async (event) => {
 
     // 3. SMS confirmation to caller
     if (data.phone) {
-      const callerMsg = `Your appointment is confirmed!\n\n${data.type || 'Appointment'}\n${data.preferred_date} at ${data.preferred_time}\n\n${client.teamName} will be in touch to coordinate. See you then!`;
+      const callerMsg = `Your appointment is confirmed!\n\n${propertyName}\n${data.preferred_date} at ${data.preferred_time}\n\n${client.teamName} will be in touch to coordinate. See you then!`;
       await sendSMS(data.phone, callerMsg);
     }
 
     // 4. SMS team notification
-    const teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${data.type}\nDate: ${data.preferred_date} at ${data.preferred_time}\nBudget: ${data.budget}\nArea: ${data.preferred_area}\nMove-In: ${data.move_in_date}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
-    await sendSMS(client.notifyPhone, teamMsg);
+    const teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${propertyName}\nDate: ${data.preferred_date} at ${data.preferred_time}\nBudget: ${data.budget}\nArea: ${data.preferred_area}\nMove-In: ${data.move_in_date}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
+    const smsSent = await sendSMS(client.notifyPhone, teamMsg);
+    console.log('Team SMS:', JSON.stringify(smsSent));
 
     // 5. Email confirmation to client
     if (data.email) {
@@ -190,7 +215,7 @@ exports.handler = async (event) => {
               <p>Your tour appointment has been confirmed. We look forward to seeing you!</p>
               <table style="border-collapse:collapse;width:100%;margin:20px 0;">
                 <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Date & Time</td><td style="padding:8px;border:1px solid #ddd;">${data.preferred_date} at ${data.preferred_time}</td></tr>
-                <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Property</td><td style="padding:8px;border:1px solid #ddd;">${data.type || 'Iron 65 | 65 Iron Street, Newark NJ'}</td></tr>
+                <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Property</td><td style="padding:8px;border:1px solid #ddd;">${propertyName}</td></tr>
                 <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Budget</td><td style="padding:8px;border:1px solid #ddd;">${data.budget || 'N/A'}</td></tr>
                 <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Apartment Size</td><td style="padding:8px;border:1px solid #ddd;">${data.apartment_size || 'N/A'}</td></tr>
                 <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Move-In Date</td><td style="padding:8px;border:1px solid #ddd;">${data.move_in_date || 'N/A'}</td></tr>
@@ -219,7 +244,7 @@ exports.handler = async (event) => {
               <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Name</td><td style="padding:8px;border:1px solid #ddd;">${data.full_name}</td></tr>
               <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Phone</td><td style="padding:8px;border:1px solid #ddd;">${data.phone}</td></tr>
               <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Email</td><td style="padding:8px;border:1px solid #ddd;">${data.email}</td></tr>
-              <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Property</td><td style="padding:8px;border:1px solid #ddd;">${data.type}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Property</td><td style="padding:8px;border:1px solid #ddd;">${propertyName}</td></tr>
               <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Date & Time</td><td style="padding:8px;border:1px solid #ddd;">${data.preferred_date} at ${data.preferred_time}</td></tr>
               <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Budget</td><td style="padding:8px;border:1px solid #ddd;">${data.budget}</td></tr>
               <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Apartment Size</td><td style="padding:8px;border:1px solid #ddd;">${data.apartment_size}</td></tr>
