@@ -110,7 +110,7 @@
   </div>
 
   <div class="footer">
-    Questions? Call <a href="tel:+12014970225">(862) 333-1681</a> · <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a>
+    Questions? Call <a href="tel:+12014970225">(201) 497-0225</a> · <a href="mailto:listings2@rosaliagroup.com">listings2@rosaliagroup.com</a>
   </div>
 
 </div>
@@ -128,12 +128,7 @@
     const errorEl = document.getElementById('formError');
     errorEl.style.display = 'none';
 
-    let normalized = phone.replace(/\D/g, '');
-if (normalized.length === 10) normalized = '+1' + normalized;
-else if (normalized.length === 11 && normalized.startsWith('1')) normalized = '+' + normalized;
-else if (normalized.length === 12 && normalized.startsWith('11')) normalized = '+1' + normalized.slice(2);
-else if (!normalized.startsWith('+')) normalized = '+' + normalized;
-const cleanPhone = normalized;
+    const phone = document.getElementById('phone').value.trim();
     const new_date_raw = document.getElementById('new_date').value;
     const new_time = document.getElementById('new_time').value;
 
@@ -152,7 +147,7 @@ const cleanPhone = normalized;
       const res = await fetch('/.netlify/functions/reschedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: cleanPhone, new_date, new_time })
+        body: JSON.stringify({ phone, new_date, new_time })
       });
       const data = await res.json();
       if (data.success) {
