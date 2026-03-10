@@ -170,6 +170,7 @@
                 <option>10:00 AM</option>
                 <option>11:00 AM</option>
                 <option>12:00 PM</option>
+                <option>12:30 PM</option>
                 <option>1:00 PM</option>
                 <option>2:00 PM</option>
                 <option>3:00 PM</option>
@@ -181,7 +182,7 @@
           </div>
 
           <div id="formError" class="error-msg"></div>
-          <button type="submit" class="btn" id="submitBtn">Reserve My Tour â†’</button>
+          <button type="submit" class="btn" id="submitBtn">Reserve My Tour -></button>
 
         </div>
       </form>
@@ -260,7 +261,7 @@
       errorEl.textContent = 'Something went wrong. Please call us at (862) 333-1681.';
       errorEl.style.display = 'block';
       btn.disabled = false;
-      btn.textContent = 'Reserve My Tour â†’';
+      btn.textContent = 'Reserve My Tour ->';
     }
   });
 
@@ -293,7 +294,7 @@
       if (!opt.value) continue;
       if (booked.includes(opt.value)) {
         opt.disabled = true;
-        opt.text = opt.value + ' â€” Unavailable';
+        opt.text = opt.value + ' - Unavailable';
         opt.classList.add('option-booked');
       } else {
         opt.disabled = false;
