@@ -197,7 +197,7 @@ exports.handler = async (event) => {
         console.error('Vapi call failed:', err.message);
         // Fall back to SMS
         const bookingLink = `${BOOKING_FORM_URL}?phone=${encodeURIComponent(phone)}`;
-        const smsText = `Hi ${firstName}! This is Ana from Rosalia Group. I'd love to help you find your perfect apartment. Check our available units and book a tour: ${bookingLink} — (862) 419-1814`;
+        const smsText = `Hi ${firstName}! This is Ana from Rosalia Group. I'd love to help you find your perfect apartment. Check our available units. You can book an appointment here: https://bit.ly/4uma2Oj/rosalia-tour — (862) 419-1814`;
         const smsResult = await sendSMS(phone, smsText);
         smsSent = smsResult.success;
         console.log('Fallback SMS result:', JSON.stringify(smsResult));
@@ -205,7 +205,7 @@ exports.handler = async (event) => {
     } else {
       // Outside hours — send SMS intro instead
       const bookingLink = `${BOOKING_FORM_URL}?phone=${encodeURIComponent(phone)}`;
-      const smsText = `Hi ${firstName}! This is Ana from Rosalia Group. I'd love to help you find your perfect apartment. Check our available units and book a tour: ${bookingLink} — (862) 419-1814`;
+      const smsText = `Hi ${firstName}! This is Ana from Rosalia Group. I'd love to help you find your perfect apartment. Check our available units. You can book an appointment here: https://bit.ly/4uma2Oj/rosalia-tour — (862) 419-1814`;
       const smsResult = await sendSMS(phone, smsText);
       smsSent = smsResult.success;
       console.log('Outside hours SMS result:', JSON.stringify(smsResult));
