@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schedule Your Tour — Rosalia Group</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9A96E;
+    --gold-light: #E8D5B0;
+    --dark: #0E0E0E;
+    --dark-2: #1A1A1A;
+    --dark-3: #242424;
+    --dark-4: #2E2E2E;
+    --text: #F5F0E8;
+    --text-muted: #9A9080;
+    --border: rgba(201,169,110,0.2);
+    --success: #6DBF8A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse 80% 60% at 20% 0%, rgba(201,169,110,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(201,169,110,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 60px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 56px;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .logo-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .logo-r {
+    width: 48px;
+    height: 48px;
+    border: 1px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px;
+    font-weight: 300;
+    color: var(--gold);
+    letter-spacing: 2px;
+  }
+
+  .logo-text {
+    text-align: left;
+  }
+
+  .logo-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    font-weight: 400;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .logo-sub {
+    font-size: 10px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .divider-gold {
+    width: 40px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 24px auto;
+  }
+
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(36px, 6vw, 52px);
+    font-weight: 300;
+    line-height: 1.1;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .subtitle {
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* Properties strip */
+  .properties-strip {
+    display: flex;
+    gap: 0;
+    margin-bottom: 48px;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+    animation: fadeUp 0.8s 0.1s ease both;
+  }
+  .properties-strip::-webkit-scrollbar { display: none; }
+  .prop-item { min-width: 110px; flex-shrink: 0; }
+
+  .prop-item {
+    flex: 1;
+    padding: 16px 12px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+    transition: background 0.3s;
+  }
+
+  .prop-item:last-child { border-right: none; }
+  .prop-item:hover { background: rgba(201,169,110,0.05); }
+
+  .prop-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 1px;
+    display: block;
+    margin-bottom: 3px;
+  }
+
+  .prop-detail {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* Form */
+  .form-card {
+    background: var(--dark-2);
+    border: 1px solid var(--border);
+    padding: 48px 40px;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+
+  @media (max-width: 600px) {
+    .form-card { padding: 32px 24px; }
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .field-group {
+    margin-bottom: 20px;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 500px) {
+    .field-row { grid-template-columns: 1fr; }
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  label .req {
+    color: var(--gold);
+    margin-left: 2px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    background: var(--dark-3);
+    border: 1px solid var(--dark-4);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    padding: 14px 16px;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  input::placeholder { color: var(--text-muted); }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--gold);
+    background: var(--dark-4);
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239A9080' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    cursor: pointer;
+  }
+
+  select option {
+    background: var(--dark-2);
+    color: var(--text);
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  /* Amenities checkboxes */
+  .amenities-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  @media (max-width: 500px) {
+    .amenities-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .amenity-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--dark-4);
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+
+  .amenity-check:hover { border-color: var(--gold); }
+
+  .amenity-check input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    flex-shrink: 0;
+    accent-color: var(--gold);
+    cursor: pointer;
+  }
+
+  .amenity-check span {
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    transition: color 0.2s;
+  }
+
+  .amenity-check:has(input:checked) {
+    border-color: var(--gold);
+    background: rgba(201,169,110,0.08);
+  }
+
+  .amenity-check:has(input:checked) span { color: var(--gold); }
+
+  /* Section divider */
+  .section-gap { margin-top: 36px; margin-bottom: 0; }
+
+  /* Submit */
+  .submit-wrap {
+    margin-top: 40px;
+  }
+
+  .btn-submit {
+    width: 100%;
+    background: var(--gold);
+    color: var(--dark);
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 20px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-submit:hover { background: var(--gold-light); }
+  .btn-submit:active { transform: scale(0.99); }
+
+  .btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-submit .btn-text { transition: opacity 0.2s; }
+  .btn-submit.loading .btn-text { opacity: 0; }
+
+  .spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(14,14,14,0.3);
+    border-top-color: var(--dark);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  .btn-submit.loading .spinner { display: block; }
+
+  /* Success state */
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 60px 20px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .success-screen.visible { display: block; }
+
+  .success-icon {
+    width: 64px;
+    height: 64px;
+    border: 1px solid var(--gold);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 28px;
+    font-size: 24px;
+  }
+
+  .success-screen h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px;
+    font-weight: 300;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .success-screen p {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    max-width: 360px;
+    margin: 0 auto;
+  }
+
+  /* Error */
+  .error-msg {
+    font-size: 12px;
+    color: #E07070;
+    margin-top: 8px;
+    display: none;
+  }
+
+  .error-msg.visible { display: block; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 48px;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+
+  .footer a { color: var(--gold); text-decoration: none; }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-mark">
+      <div class="logo-r">R</div>
+      <div class="logo-text">
+        <div class="logo-name">Rosalia Group</div>
+        <div class="logo-sub">Luxury Residences · New Jersey</div>
+      </div>
+    </div>
+    <div class="divider-gold"></div>
+    <h1>Schedule Your <em>Private Tour</em></h1>
+    <p class="subtitle">Available 7 Days a Week · Newark & Orange, NJ</p>
+  </div>
+
+  <!-- Properties Strip -->
+  <div class="properties-strip">
+    <div class="prop-item">
+      <span class="prop-name">Iron 65</span>
+      <span class="prop-detail">65 Iron St · Luxury</span>
+    </div>
+    <div class="prop-item">
+      <span class="prop-name">The Ballantine</span>
+      <span class="prop-detail">Newark · Boutique</span>
+    </div>
+    <div class="prop-item">
+      <span class="prop-name">River Pointe</span>
+      <span class="prop-detail">486 Market · Balconies</span>
+    </div>
+    <div class="prop-item">
+      <span class="prop-name">Iron Pointe</span>
+      <span class="prop-detail">39 Madison · Rooftop</span>
+    </div>
+    <div class="prop-item">
+      <span class="prop-name">502 Market</span>
+      <span class="prop-detail">Newark · 1 & 2 Bed</span>
+    </div>
+    <div class="prop-item">
+      <span class="prop-name">The Elks</span>
+      <span class="prop-detail">Orange · Studios+</span>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="form-card" id="formCard">
+
+    <div class="section-label">Your Information</div>
+
+    <div class="field-group">
+      <label>Full Name <span class="req">*</span></label>
+      <input type="text" id="full_name" placeholder="First and last name" autocomplete="name">
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label>Phone <span class="req">*</span></label>
+        <input type="tel" id="phone" placeholder="(646) 000-0000" autocomplete="tel">
+      </div>
+      <div class="field-group">
+        <label>Email Address <span class="req">*</span></label>
+        <input type="email" id="email" placeholder="you@email.com" autocomplete="email">
+      </div>
+    </div>
+
+    <div class="section-label section-gap">Apartment Preferences</div>
+
+    <div class="field-group">
+      <label>Which property interests you?</label>
+      <select id="type">
+        <option value="">Not sure yet — show me all options</option>
+        <option value="In Person Tour - 65 Iron Street, Newark NJ (Iron 65)">65 Iron St — Iron 65, Newark (Luxury, Rooftop, from $2,388/mo)</option>
+        <option value="In Person Tour - The Ballantine, Newark NJ">The Ballantine — Newark (Boutique Luxury)</option>
+        <option value="In Person Tour - 486 Market Street, Newark NJ (River Pointe)">486 Market St — River Pointe, Newark (Balconies, from $2,350/mo)</option>
+        <option value="In Person Tour - 39 Madison Street, Newark NJ (Iron Pointe)">39 Madison St — Iron Pointe, Newark (Rooftop, Gym, from $2,400/mo)</option>
+        <option value="In Person Tour - 502 Market Street, Newark NJ">502 Market St — Newark (1 & 2 Bed, from $1,999/mo)</option>
+        <option value="In Person Tour - 556 Market Street, Newark NJ">556 Market St — Newark (In-unit Laundry, from $2,199/mo)</option>
+        <option value="In Person Tour - 475 Main Street, Orange NJ (The Elks)">475 Main St — The Elks, Orange (Studios, 1, 2 & 3 Bed)</option>
+      </select>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label>Monthly Budget <span class="req">*</span></label>
+        <select id="budget">
+          <option value="">Select range</option>
+          <option value="Under $2,000">Under $2,000</option>
+          <option value="$2,000 - $2,500">$2,000 – $2,500</option>
+          <option value="$2,500 - $3,000">$2,500 – $3,000</option>
+          <option value="$3,000 - $3,500">$3,000 – $3,500</option>
+          <option value="$3,500+">$3,500+</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Apartment Size <span class="req">*</span></label>
+        <select id="apartment_size">
+          <option value="">Select</option>
+          <option value="Studio">Studio</option>
+          <option value="1 Bedroom">1 Bedroom</option>
+          <option value="2 Bedroom">2 Bedroom</option>
+          <option value="3 Bedroom">3 Bedroom</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label>Move-In Date <span class="req">*</span></label>
+        <input type="text" id="move_in_date" placeholder="e.g. April 2026">
+      </div>
+      <div class="field-group">
+        <label>Preferred Area</label>
+        <select id="preferred_area">
+          <option value="Newark NJ">Newark, NJ</option>
+          <option value="Orange NJ">Orange, NJ</option>
+          <option value="No preference">No preference</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Amenities -->
+    <div class="field-group">
+      <label>Amenities You Want</label>
+      <div class="amenities-grid">
+        <label class="amenity-check"><input type="checkbox" name="amenity" value="Balcony"><span>Balcony</span></label>
+        <label class="amenity-check"><input type="checkbox" name="amenity" value="Backyard"><span>Backyard</span></label>
+        <label class="amenity-check"><input type="checkbox" name="amenity" value="Rooftop"><span>Rooftop</span></label>
+        <label class="amenity-check"><input type="checkbox" name="amenity" value="Gym"><span>Gym</span></label>
+        <label class="amenity-check"><input type="checkbox" name="amenity" value="In-unit Laundry"><span>In-unit Laundry</span></label>
+        <label class="amenity-check"><input type="checkbox" name="amenity" value="Parking"><span>Parking</span></label>
+        <label class="amenity-check"><input type="checkbox" name="amenity" value="Pet Friendly"><span>Pet Friendly</span></label>
+        <label class="amenity-check"><input type="checkbox" name="amenity" value="NYC Commute"><span>NYC Commute</span></label>
+      </div>
+    </div>
+
+    <div class="section-label section-gap">Qualification</div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label>Monthly Income</label>
+        <select id="income_qualifies">
+          <option value="">Select range</option>
+          <option value="Under $5,000">Under $5,000</option>
+          <option value="$5,000 - $7,000">$5,000 – $7,000</option>
+          <option value="$7,000 - $10,000">$7,000 – $10,000</option>
+          <option value="$10,000+">$10,000+</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Credit Score</label>
+        <select id="credit_qualifies">
+          <option value="">Select range</option>
+          <option value="Below 600">Below 600</option>
+          <option value="600 - 649">600 – 649</option>
+          <option value="650 - 699">650 – 699</option>
+          <option value="700 - 749">700 – 749</option>
+          <option value="750+">750+</option>
+          <option value="Not sure">Not sure</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-label section-gap">Tour Appointment</div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label>Preferred Date <span class="req">*</span></label>
+        <input type="date" id="preferred_date">
+      </div>
+      <div class="field-group">
+        <label>Preferred Time <span class="req">*</span></label>
+        <select id="preferred_time">
+          <option value="">Select time</option>
+          <option>10:00 AM</option>
+          <option>10:30 AM</option>
+          <option>11:00 AM</option>
+          <option>11:30 AM</option>
+          <option>12:00 PM</option>
+          <option>12:30 PM</option>
+          <option>1:00 PM</option>
+          <option>1:30 PM</option>
+          <option>2:00 PM</option>
+          <option>2:30 PM</option>
+          <option>3:00 PM</option>
+          <option>3:30 PM</option>
+          <option>4:00 PM</option>
+          <option>4:30 PM</option>
+          <option>5:00 PM</option>
+          <option>5:30 PM</option>
+          <option>6:00 PM</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label>Additional Notes</label>
+      <textarea id="additional_notes" placeholder="Anything else we should know? Pet, parking needs, move-in urgency..."></textarea>
+    </div>
+
+    <div class="error-msg" id="errorMsg">Please fill in all required fields.</div>
+
+    <div class="submit-wrap">
+      <button class="btn-submit" id="submitBtn" onclick="submitForm()">
+        <span class="btn-text">Reserve My Tour &rarr;</span>
+        <div class="spinner"></div>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Success Screen -->
+  <div class="success-screen" id="successScreen">
+    <div class="success-icon">✓</div>
+    <h2>Tour Confirmed!</h2>
+    <p>You'll receive a confirmation text shortly. Ana from our leasing team will reach out to confirm everything and coordinate your visit.</p>
+    <div class="divider-gold" style="margin-top:28px"></div>
+    <p style="margin-top:20px;font-size:12px;">Questions? Call us at <a href="tel:+18624191814">(862) 419-1814</a></p>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>Rosalia Group · Newark &amp; Orange, New Jersey</p>
+    <p style="margin-top:6px"><a href="tel:+18624191814">(862) 419-1814</a> &nbsp;·&nbsp; <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a></p>
+    <p style="margin-top:8px">Tours: Mon–Fri 10AM–6PM &nbsp;·&nbsp; Sat–Sun 11AM–5PM</p>
+  </div>
+
+</div>
+
+<script>
+  // Pre-fill phone from URL param
+  const params = new URLSearchParams(window.location.search);
+  const phoneParam = params.get('phone');
+  if (phoneParam) document.getElementById('phone').value = phoneParam;
+
+  // Set min date to today
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('preferred_date').min = today;
+
+  // Restrict times based on weekday vs weekend
+  document.getElementById('preferred_date').addEventListener('change', function() {
+    const d = new Date(this.value + 'T12:00:00');
+    const day = d.getDay(); // 0=Sun, 6=Sat
+    const isWeekend = (day === 0 || day === 6);
+    const timeSelect = document.getElementById('preferred_time');
+    const current = timeSelect.value;
+
+    const weekdayTimes = [
+      '10:00 AM','10:30 AM','11:00 AM','11:30 AM',
+      '12:00 PM','12:30 PM','1:00 PM','1:30 PM',
+      '2:00 PM','2:30 PM','3:00 PM','3:30 PM',
+      '4:00 PM','4:30 PM','5:00 PM','5:30 PM','6:00 PM'
+    ];
+    const weekendTimes = [
+      '11:00 AM','11:30 AM','12:00 PM','12:30 PM',
+      '1:00 PM','1:30 PM','2:00 PM','2:30 PM',
+      '3:00 PM','3:30 PM','4:00 PM','4:30 PM','5:00 PM'
+    ];
+
+    const times = isWeekend ? weekendTimes : weekdayTimes;
+    timeSelect.innerHTML = '<option value="">Select time</option>' +
+      times.map(t => `<option${t === current ? ' selected' : ''}>${t}</option>`).join('');
+  });
+
+  async function submitForm() {
+    const btn = document.getElementById('submitBtn');
+    const errorMsg = document.getElementById('errorMsg');
+
+    // Collect values
+    const full_name = document.getElementById('full_name').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const budget = document.getElementById('budget').value;
+    const apartment_size = document.getElementById('apartment_size').value;
+    const move_in_date = document.getElementById('move_in_date').value.trim();
+    const preferred_date = document.getElementById('preferred_date').value;
+    const preferred_time = document.getElementById('preferred_time').value;
+    const income_qualifies = document.getElementById('income_qualifies').value || 'Not provided';
+    const credit_qualifies = document.getElementById('credit_qualifies').value || 'Not provided';
+    const preferred_area = document.getElementById('preferred_area').value;
+    const additional_notes = document.getElementById('additional_notes').value.trim();
+
+    // Get selected amenities
+    const amenities = [...document.querySelectorAll('input[name="amenity"]:checked')]
+      .map(cb => cb.value).join(', ');
+
+    // Get property type
+    let type = document.getElementById('type').value;
+    if (!type) type = 'In Person Tour - Rosalia Group Portfolio';
+
+    // Format date nicely
+    let formatted_date = preferred_date;
+    if (preferred_date) {
+      const d = new Date(preferred_date + 'T12:00:00');
+      formatted_date = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    }
+
+    // Validate required
+    if (!full_name || !phone || !email || !budget || !apartment_size || !move_in_date || !preferred_date || !preferred_time) {
+      errorMsg.classList.add('visible');
+      errorMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+
+    errorMsg.classList.remove('visible');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    // Build notes
+    const notes = [
+      amenities ? `Amenities wanted: ${amenities}` : '',
+      preferred_area ? `Area preference: ${preferred_area}` : '',
+      additional_notes || '',
+    ].filter(Boolean).join('\n');
+
+    const payload = {
+      full_name,
+      phone,
+      email,
+      type,
+      preferred_date: formatted_date,
+      preferred_time,
+      budget,
+      apartment_size,
+      preferred_area,
+      move_in_date,
+      income_qualifies,
+      credit_qualifies,
+      additional_notes: notes || 'None',
+    };
+
+    try {
+      const res = await fetch('/.netlify/functions/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (data.success || res.ok) {
+        document.getElementById('formCard').style.display = 'none';
+        document.getElementById('successScreen').classList.add('visible');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        throw new Error(data.error || 'Booking failed');
+      }
+    } catch (err) {
+      console.error(err);
+      errorMsg.textContent = 'Something went wrong. Please call us at (862) 419-1814.';
+      errorMsg.classList.add('visible');
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  }
+</script>
+
+</body>
+</html>
