@@ -140,7 +140,7 @@ exports.handler = async (event) => {
     console.log('Old record phone:', old_record?.phone);
 
     // Only process UPDATE events
-    if (type !== 'UPDATE') {
+    if (!test && type !== 'UPDATE') {
       return { statusCode: 200, headers, body: JSON.stringify({ skipped: 'not an update event' }) };
     }
 
