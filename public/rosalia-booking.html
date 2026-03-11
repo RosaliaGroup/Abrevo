@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Schedule Your Tour — Rosalia Group</title>
+<title>Luxury Residences Private Tour Booking — Rosalia Group</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -131,26 +131,31 @@
   /* Properties strip */
   .properties-strip {
     display: flex;
-    gap: 0;
+    flex-wrap: wrap;
     margin-bottom: 48px;
     border: 1px solid var(--border);
-    overflow-x: auto;
-    scrollbar-width: none;
     animation: fadeUp 0.8s 0.1s ease both;
   }
-  .properties-strip::-webkit-scrollbar { display: none; }
-  .prop-item { min-width: 110px; flex-shrink: 0; }
-
   .prop-item {
-    flex: 1;
+    width: 25%;
     padding: 16px 12px;
     text-align: center;
     border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
     transition: background 0.3s;
+    box-sizing: border-box;
   }
-
-  .prop-item:last-child { border-right: none; }
   .prop-item:hover { background: rgba(201,169,110,0.05); }
+  /* Top row: remove right border on 4th */
+  .prop-item:nth-child(4) { border-right: none; }
+  /* Bottom row: 3 items equal width, no bottom border */
+  .prop-item:nth-child(5),
+  .prop-item:nth-child(6),
+  .prop-item:nth-child(7) {
+    width: 33.333%;
+    border-bottom: none;
+  }
+  .prop-item:nth-child(7) { border-right: none; }
 
   .prop-name {
     font-family: 'Cormorant Garamond', serif;
@@ -452,7 +457,7 @@
     </div>
     <div class="divider-gold"></div>
     <h1>Schedule Your <em>Private Tour</em></h1>
-    <p class="subtitle">Available 7 Days a Week · Newark & Orange, NJ</p>
+    <p class="subtitle">Available 7 Days a Week</p>
   </div>
 
   <!-- Properties Strip -->
@@ -476,6 +481,10 @@
     <div class="prop-item">
       <span class="prop-name">502 Market</span>
       <span class="prop-detail">Newark · 1 & 2 Bed</span>
+    </div>
+    <div class="prop-item">
+      <span class="prop-name">556 Market</span>
+      <span class="prop-detail">Newark · In-unit Laundry</span>
     </div>
     <div class="prop-item">
       <span class="prop-name">The Elks</span>
@@ -544,19 +553,9 @@
       </div>
     </div>
 
-    <div class="field-row">
-      <div class="field-group">
-        <label>Move-In Date <span class="req">*</span></label>
-        <input type="text" id="move_in_date" placeholder="e.g. April 2026">
-      </div>
-      <div class="field-group">
-        <label>Preferred Area</label>
-        <select id="preferred_area">
-          <option value="Newark NJ">Newark, NJ</option>
-          <option value="Orange NJ">Orange, NJ</option>
-          <option value="No preference">No preference</option>
-        </select>
-      </div>
+    <div class="field-group">
+      <label>Move-In Date <span class="req">*</span></label>
+      <input type="date" id="move_in_date" placeholder="Select date">
     </div>
 
     <!-- Amenities -->
@@ -596,7 +595,6 @@
           <option value="650 - 699">650 – 699</option>
           <option value="700 - 749">700 – 749</option>
           <option value="750+">750+</option>
-          <option value="Not sure">Not sure</option>
         </select>
       </div>
     </div>
@@ -660,7 +658,7 @@
 
   <!-- Footer -->
   <div class="footer">
-    <p>Rosalia Group · Newark &amp; Orange, New Jersey</p>
+    <p>Rosalia Group</p>
     <p style="margin-top:6px"><a href="tel:+18624191814">(862) 419-1814</a> &nbsp;·&nbsp; <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a></p>
     <p style="margin-top:8px">Tours: Mon–Fri 10AM–6PM &nbsp;·&nbsp; Sat–Sun 11AM–5PM</p>
   </div>
@@ -712,13 +710,19 @@
     const email = document.getElementById('email').value.trim();
     const budget = document.getElementById('budget').value;
     const apartment_size = document.getElementById('apartment_size').value;
-    const move_in_date = document.getElementById('move_in_date').value.trim();
+    const move_in_date_raw = document.getElementById('move_in_date').value;
     const preferred_date = document.getElementById('preferred_date').value;
     const preferred_time = document.getElementById('preferred_time').value;
     const income_qualifies = document.getElementById('income_qualifies').value || 'Not provided';
     const credit_qualifies = document.getElementById('credit_qualifies').value || 'Not provided';
-    const preferred_area = document.getElementById('preferred_area').value;
     const additional_notes = document.getElementById('additional_notes').value.trim();
+
+    // Format move-in date nicely
+    let move_in_date = move_in_date_raw;
+    if (move_in_date_raw) {
+      const md = new Date(move_in_date_raw + 'T12:00:00');
+      move_in_date = md.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    }
 
     // Get selected amenities
     const amenities = [...document.querySelectorAll('input[name="amenity"]:checked')]
@@ -749,7 +753,6 @@
     // Build notes
     const notes = [
       amenities ? `Amenities wanted: ${amenities}` : '',
-      preferred_area ? `Area preference: ${preferred_area}` : '',
       additional_notes || '',
     ].filter(Boolean).join('\n');
 
@@ -762,7 +765,7 @@
       preferred_time,
       budget,
       apartment_size,
-      preferred_area,
+      preferred_area: 'Not provided',
       move_in_date,
       income_qualifies,
       credit_qualifies,
