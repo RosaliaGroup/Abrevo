@@ -175,7 +175,7 @@ exports.handler = async (event) => {
 
     console.log(`Lead: ${name} | Phone: ${phone} | Category: ${category} | Property: ${property}`);
 
-    const withinHours = isBusinessHours();
+    const withinHours = test ? true : isBusinessHours();
     console.log('Business hours:', withinHours);
 
     let callTriggered = false;
