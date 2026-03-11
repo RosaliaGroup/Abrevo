@@ -1,0 +1,8 @@
+{
+  "name": "rosalia-booking-function",
+  "version": "1.0.0",
+  "description": "Handles Vapi booking webhooks for Rosalia Group",
+  "dependencies": {
+    "nodemailer": "^6.9.8"
+  }
+}

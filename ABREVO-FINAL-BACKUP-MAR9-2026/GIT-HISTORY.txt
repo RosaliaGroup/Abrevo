@@ -1,0 +1,20 @@
+dff9411 Add detailed debug logging to delete search
+e650570 Search for property in both summary and description
+f8a838f Fix reschedule to search by phone number instead of name
+877b3fb Fix timezone in book function - match reschedule EDT parsing
+86a1b8d Fix timezone parsing - manually construct EDT datetime
+b577024 Remove hardcoded EST timezone to fix DST issue
+51af5a4 Restore working reschedule - revert timezone changes
+5fc7ac0 Fix timezone to explicitly use EST (GMT-0500)
+2d2619d Fix timezone parsing in reschedule
+e282bf9 Normalize phone numbers in book function
+a888927 Add Supabase booking save to book function
+4936dd6 Fix property matching and SMS to team - improved matching algorithm
+6710f39 Fix reschedule: property-specific updates, complete email/SMS notifications
+30bb98c Backup: Pre-reschedule-fix snapshot
+70d7fe9 Add reschedule function with SMS and email notifications
+502e645 CORRECT FIX: proper calendar ID, phone, property address, email notifications, SMS error handling
+5987780 Fix critical bugs: duplicate key, property address, SMS error handling
+dd56c6c Update Ana's phone to 2014970225 and email to inquiries
+3307f08 Fix timezone to use EST explicitly
+efaf0de Use ana@rosaliagroup.com for email sending

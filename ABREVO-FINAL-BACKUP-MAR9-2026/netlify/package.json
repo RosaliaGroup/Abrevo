@@ -1,0 +1,8 @@
+{
+  "name": "abrevo-booking",
+  "version": "1.0.0",
+  "description": "Abrevo booking engine for Netlify",
+  "dependencies": {
+    "googleapis": "^140.0.0"
+  }
+}
