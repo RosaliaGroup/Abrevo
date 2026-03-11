@@ -133,7 +133,7 @@ exports.handler = async (event) => {
     const body = JSON.parse(event.body || '{}');
 
     // Supabase sends: { type: "UPDATE", table: "leads", record: {...}, old_record: {...} }
-    const { type, record, old_record } = body;
+    const { type, record, old_record, test } = body;
 
     console.log('phoneupdated webhook fired:', type);
     console.log('New record phone:', record?.phone);
