@@ -133,14 +133,14 @@ exports.handler = async (event) => {
     const body = JSON.parse(event.body || '{}');
 
     // Supabase sends: { type: "UPDATE", table: "leads", record: {...}, old_record: {...} }
-    const { type, record, old_record, test } = body;
+    const { type, record, old_record } = body;
 
     console.log('phoneupdated webhook fired:', type);
     console.log('New record phone:', record?.phone);
     console.log('Old record phone:', old_record?.phone);
 
     // Only process UPDATE events
-    if (!test && type !== 'UPDATE') {
+    if (type !== 'UPDATE') {
       return { statusCode: 200, headers, body: JSON.stringify({ skipped: 'not an update event' }) };
     }
 
@@ -175,7 +175,7 @@ exports.handler = async (event) => {
 
     console.log(`Lead: ${name} | Phone: ${phone} | Category: ${category} | Property: ${property}`);
 
-    const withinHours = test ? true : isBusinessHours();
+    const withinHours = isBusinessHours();
     console.log('Business hours:', withinHours);
 
     let callTriggered = false;
@@ -197,7 +197,7 @@ exports.handler = async (event) => {
         console.error('Vapi call failed:', err.message);
         // Fall back to SMS
         const bookingLink = `${BOOKING_FORM_URL}?phone=${encodeURIComponent(phone)}`;
-        const smsText = `Hi ${firstName}! This is Alex from Rosalia Group. I'd love to help you find your perfect luxury apartment. Book a private tour: ${bookingLink} — (862) 419-1814`;
+        const smsText = `Hi ${firstName}! This is Ana from Rosalia Group. I'd love to help you find your perfect apartment. Check our available units and book a tour: ${bookingLink} — (862) 419-1814`;
         const smsResult = await sendSMS(phone, smsText);
         smsSent = smsResult.success;
         console.log('Fallback SMS result:', JSON.stringify(smsResult));
@@ -205,7 +205,7 @@ exports.handler = async (event) => {
     } else {
       // Outside hours — send SMS intro instead
       const bookingLink = `${BOOKING_FORM_URL}?phone=${encodeURIComponent(phone)}`;
-      const smsText = `Hi ${firstName}! This is Alex from Rosalia Group. I'd love to help you find your perfect luxury apartment. Book a private tour: ${bookingLink} — (862) 419-1814`;
+      const smsText = `Hi ${firstName}! This is Ana from Rosalia Group. I'd love to help you find your perfect apartment. Check our available units and book a tour: ${bookingLink} — (862) 419-1814`;
       const smsResult = await sendSMS(phone, smsText);
       smsSent = smsResult.success;
       console.log('Outside hours SMS result:', JSON.stringify(smsResult));

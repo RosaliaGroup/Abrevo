@@ -132,7 +132,7 @@ Phone: ${data.phone || 'N/A'}
 Email: ${data.email || 'N/A'}
 Budget: ${data.budget || 'N/A'}
 Apartment Size: ${data.apartment_size || 'N/A'}
-Preferred Area: ${data.preferred_area || 'N/A'}
+Building Selected for Tour: ${data.preferred_area || 'N/A'}
 Move-In Date: ${data.move_in_date || 'N/A'}
 Income Qualifies: ${data.income_qualifies || 'N/A'}
 Credit Qualifies: ${data.credit_qualifies || 'N/A'}
