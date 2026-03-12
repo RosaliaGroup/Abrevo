@@ -1,167 +1,182 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reschedule Your Tour — Iron 65</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <title>Reschedule Your Tour - Iron 65</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --gold: #C9A84C; --gold-light: #E8D49A; --black: #0A0A0A; --dark: #111111; --dark2: #1A1A1A; --text: #E8E8E8; --text-muted: #888; --border: rgba(201,168,76,0.2); --radius: 4px; }
+    :root { --gold: #C9A84C; --gold-light: #E8D49A; --black: #0A0A0A; --dark: #111111; --dark2: #1A1A1A; --text: #E8E8E8; --text-muted: #888; --border: rgba(201, 168, 76, 0.2); --radius: 4px; }
     html, body { min-height: 100vh; background: var(--black); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; }
     body { background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.08) 0%, transparent 60%); }
-    .page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; }
-    .header { text-align: center; margin-bottom: 36px; animation: fadeUp 0.6s ease both; }
-    .logo-mark { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 24px; }
-    .logo-icon { width: 32px; height: 32px; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; transform: rotate(45deg); }
-    .logo-icon span { transform: rotate(-45deg); font-family: 'Cormorant Garamond', serif; font-size: 13px; color: var(--gold); }
-    .logo-text { font-family: 'Cormorant Garamond', serif; font-size: 16px; letter-spacing: 0.15em; text-transform: uppercase; }
-    .header h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(26px, 5vw, 40px); font-weight: 300; color: #fff; margin-bottom: 8px; }
+    .page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 48px 24px 80px; }
+    .header { text-align: center; margin-bottom: 48px; animation: fadeUp 0.6s ease both; }
+    .logo-mark { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+    .logo-icon { width: 36px; height: 36px; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; transform: rotate(45deg); }
+    .logo-icon span { transform: rotate(-45deg); font-family: 'Cormorant Garamond', serif; font-size: 14px; color: var(--gold); font-weight: 500; }
+    .logo-text { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 400; letter-spacing: 0.15em; color: var(--text); text-transform: uppercase; }
+    .header h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(28px, 5vw, 44px); font-weight: 300; line-height: 1.1; color: #fff; margin-bottom: 12px; }
     .header h1 em { font-style: italic; color: var(--gold); }
-    .header p { font-size: 13px; color: var(--text-muted); }
-    .card { width: 100%; max-width: 420px; background: var(--dark); border: 1px solid var(--border); border-radius: 2px; padding: 36px 32px; animation: fadeUp 0.6s 0.1s ease both; position: relative; overflow: hidden; }
+    .header p { font-size: 14px; color: var(--text-muted); letter-spacing: 0.05em; }
+    .divider { display: flex; align-items: center; gap: 16px; margin: 0 auto 40px; width: 100%; max-width: 440px; }
+    .divider-line { flex: 1; height: 1px; background: var(--border); }
+    .divider-diamond { width: 6px; height: 6px; background: var(--gold); transform: rotate(45deg); flex-shrink: 0; }
+    .card { width: 100%; max-width: 440px; background: var(--dark); border: 1px solid var(--border); border-radius: 2px; padding: 40px 36px; animation: fadeUp 0.6s 0.15s ease both; position: relative; overflow: hidden; }
     .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
-    .form-grid { display: grid; gap: 18px; }
+    .form-grid { display: grid; gap: 20px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 420px) { .form-row { grid-template-columns: 1fr; } .card { padding: 28px 20px; } }
     .field { display: flex; flex-direction: column; gap: 6px; }
     .field label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); font-weight: 500; }
     .field input, .field select { background: var(--dark2); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 300; padding: 12px 14px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; width: 100%; -webkit-appearance: none; }
-    .field input[type="date"] { color-scheme: dark; }
-    .field select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; padding-right: 34px; }
+    .field select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    .field input[type="date"] { cursor: pointer; color-scheme: dark; }
     .field select option { background: var(--dark2); }
     .field input:focus, .field select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.08); }
     .field input::placeholder { color: rgba(255,255,255,0.2); }
-    .note { font-size: 12px; color: var(--text-muted); background: var(--dark2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; line-height: 1.5; }
-    .btn { width: 100%; padding: 15px; background: var(--gold); color: var(--black); border: none; border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; margin-top: 4px; }
+    .section-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+    .btn { width: 100%; padding: 16px; background: var(--gold); color: var(--black); border: none; border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: background 0.2s, transform 0.1s; margin-top: 8px; }
     .btn:hover { background: var(--gold-light); }
+    .btn:active { transform: scale(0.99); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .error-msg { font-size: 12px; color: #FF6B6B; display: none; }
-    .success-state { display: none; text-align: center; padding: 32px 16px; }
-    .success-icon { width: 52px; height: 52px; border: 1px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: var(--gold); font-size: 20px; }
-    .success-state h2 { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: #fff; margin-bottom: 10px; }
-    .success-state p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
-    .confirm-detail { margin-top: 20px; padding: 14px 16px; background: var(--dark2); border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text-muted); text-align: left; line-height: 1.8; }
-    .confirm-detail strong { color: var(--gold); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; display: block; }
-    .footer { margin-top: 24px; text-align: center; font-size: 12px; color: var(--text-muted); }
+    .success-state { display: none; }
+    .success-box { text-align: center; padding: 32px 0; }
+    .success-icon { width: 56px; height: 56px; border: 1px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; color: var(--gold); font-size: 22px; }
+    .success-box h2 { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: #fff; margin-bottom: 12px; }
+    .success-box p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+    .detail { margin-top: 24px; padding: 16px 20px; background: var(--dark2); border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text-muted); text-align: left; display: grid; gap: 10px; }
+    .detail-row strong { color: var(--gold); display: block; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2px; }
+    .footer { margin-top: 32px; text-align: center; font-size: 12px; color: var(--text-muted); animation: fadeUp 0.6s 0.3s ease both; }
     .footer a { color: var(--gold); text-decoration: none; }
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
 <div class="page">
-
   <div class="header">
     <div class="logo-mark">
       <div class="logo-icon"><span>65</span></div>
       <span class="logo-text">Iron 65</span>
     </div>
     <h1>Reschedule Your <em>Tour</em></h1>
-    <p>Pick a new date and time — we'll take care of the rest.</p>
+    <p>Luxury Apartments &middot; Newark, New Jersey</p>
   </div>
-
+  <div class="divider">
+    <div class="divider-line"></div>
+    <div class="divider-diamond"></div>
+    <div class="divider-line"></div>
+  </div>
   <div class="card">
-
-    <div class="form-state">
+    <div class="form-state" id="formState">
       <form id="rescheduleForm" novalidate>
         <div class="form-grid">
-
+          <div class="section-label">Your Information</div>
+          <div class="form-row">
+            <div class="field">
+              <label>Full Name *</label>
+              <input type="text" id="full_name" placeholder="Jane Smith" required />
+            </div>
+            <div class="field">
+              <label>Phone *</label>
+              <input type="tel" id="phone" placeholder="(646) 000-0000" required />
+            </div>
+          </div>
           <div class="field">
-            <label>Your Phone Number *</label>
-            <input type="tel" id="phone" placeholder="(646) 000-0000" required />
+            <label>Email Address *</label>
+            <input type="email" id="email" placeholder="jane@example.com" required />
           </div>
-
-          <div class="note">
-            📅 Tour hours: Mon–Fri 10AM–6PM · Sat 11AM–6PM · Sun 12PM–5PM
+          <div class="section-label" style="margin-top:4px">New Appointment</div>
+          <div class="form-row">
+            <div class="field">
+              <label>New Date *</label>
+              <input type="date" id="new_date" required />
+            </div>
+            <div class="field">
+              <label>New Time *</label>
+              <select id="new_time" required>
+                <option value="">Select time</option>
+                <option>10:00 AM</option>
+                <option>11:00 AM</option>
+                <option>12:00 PM</option>
+                <option>1:00 PM</option>
+                <option>2:00 PM</option>
+                <option>3:00 PM</option>
+                <option>4:00 PM</option>
+                <option>5:00 PM</option>
+              </select>
+            </div>
           </div>
-
-          <div class="field">
-            <label>New Date *</label>
-            <input type="date" id="new_date" required />
-          </div>
-
-          <div class="field">
-            <label>New Time *</label>
-            <select id="new_time" required>
-              <option value="" disabled selected>Select time</option>
-              <option>10:00 AM</option>
-              <option>11:00 AM</option>
-              <option>12:00 PM</option>
-              <option>1:00 PM</option>
-              <option>2:00 PM</option>
-              <option>3:00 PM</option>
-              <option>4:00 PM</option>
-              <option>5:00 PM</option>
-            </select>
-          </div>
-
           <div id="formError" class="error-msg"></div>
-          <button type="submit" class="btn" id="submitBtn">Confirm Reschedule →</button>
-
+          <button type="submit" class="btn" id="submitBtn">Confirm Reschedule &rarr;</button>
         </div>
       </form>
     </div>
-
     <div class="success-state" id="successState">
-      <div class="success-icon">✓</div>
-      <h2>All Set!</h2>
-      <p>Your tour has been rescheduled. You'll receive a confirmation text shortly.</p>
-      <div class="confirm-detail" id="confirmDetails"></div>
+      <div class="success-box">
+        <div class="success-icon">&#10003;</div>
+        <h2>Rescheduled!</h2>
+        <p>Your tour has been moved. You will receive a confirmation text shortly.</p>
+        <div class="detail" id="confirmDetails"></div>
+      </div>
     </div>
-
   </div>
-
   <div class="footer">
-    Questions? Call <a href="tel:+12014970225">(201) 497-0225</a> · <a href="mailto:listings2@rosaliagroup.com">listings2@rosaliagroup.com</a>
+    65 Mcwhorter St, Newark, NJ 07105 &middot; <a href="tel:+18623331681">(862) 333-1681</a> &middot; <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a>
   </div>
-
 </div>
 <script>
-  const params = new URLSearchParams(window.location.search);
-  const phoneParam = params.get('phone');
+  var params = new URLSearchParams(window.location.search);
+  var phoneParam = params.get('phone');
   if (phoneParam) document.getElementById('phone').value = phoneParam;
-
-  const today = new Date().toISOString().split('T')[0];
+  var today = new Date().toISOString().split('T')[0];
   document.getElementById('new_date').min = today;
-
-  document.getElementById('rescheduleForm').addEventListener('submit', async (e) => {
+  document.getElementById('rescheduleForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const btn = document.getElementById('submitBtn');
-    const errorEl = document.getElementById('formError');
-    errorEl.style.display = 'none';
-
-    const phone = document.getElementById('phone').value.trim();
-    const new_date_raw = document.getElementById('new_date').value;
-    const new_time = document.getElementById('new_time').value;
-
-    if (!phone || !new_date_raw || !new_time) {
-      errorEl.textContent = 'Please fill in all fields.';
-      errorEl.style.display = 'block';
+    var full_name = document.getElementById('full_name').value.trim();
+    var phone = document.getElementById('phone').value.trim();
+    var email = document.getElementById('email').value.trim();
+    var new_date_raw = document.getElementById('new_date').value;
+    var new_time = document.getElementById('new_time').value;
+    var errEl = document.getElementById('formError');
+    errEl.style.display = 'none';
+    if (!full_name || !phone || !email || !new_date_raw || !new_time) {
+      errEl.textContent = 'Please fill in all required fields.';
+      errEl.style.display = 'block';
       return;
     }
-
-    const new_date = new Date(new_date_raw + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
+    var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var parts = new_date_raw.split('-');
+    var new_date = months[parseInt(parts[1]) - 1] + ' ' + parseInt(parts[2]) + ' ' + parts[0];
+    var btn = document.getElementById('submitBtn');
     btn.disabled = true;
     btn.textContent = 'Rescheduling...';
-
     try {
-      const res = await fetch('/.netlify/functions/reschedule', {
+      var res = await fetch('/.netlify/functions/reschedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, new_date, new_time })
+        body: JSON.stringify({ phone: phone, new_date: new_date, new_time: new_time, full_name: full_name, email: email })
       });
-      const data = await res.json();
-      if (data.success) {
-        document.querySelector('.form-state').style.display = 'none';
+      var data = await res.json();
+      if (res.ok && data.success) {
+        document.getElementById('formState').style.display = 'none';
         document.getElementById('successState').style.display = 'block';
-        document.getElementById('confirmDetails').innerHTML = `<strong>New Appointment</strong>${new_date} at ${new_time}<br><br><strong>Property</strong>Iron 65 · 65 Iron Street, Newark NJ`;
+        document.getElementById('confirmDetails').innerHTML =
+          '<div class="detail-row"><strong>Name</strong>' + full_name + '</div>' +
+          '<div class="detail-row"><strong>New Date</strong>' + new_date + '</div>' +
+          '<div class="detail-row"><strong>New Time</strong>' + new_time + '</div>';
       } else {
-        throw new Error(data.message || data.error || 'Reschedule failed');
+        errEl.textContent = data.error || data.message || 'Something went wrong. Call us at (862) 333-1681.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Confirm Reschedule \u2192';
       }
     } catch (err) {
-      errorEl.textContent = err.message.includes('No') ? 'No booking found for that number. Please call (201) 497-0225.' : 'Something went wrong. Please call (201) 497-0225.';
-      errorEl.style.display = 'block';
+      errEl.textContent = 'Network error. Please try again or call (862) 333-1681.';
+      errEl.style.display = 'block';
       btn.disabled = false;
-      btn.textContent = 'Confirm Reschedule →';
+      btn.textContent = 'Confirm Reschedule \u2192';
     }
   });
 </script>
