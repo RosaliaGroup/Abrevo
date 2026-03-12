@@ -1,4 +1,4 @@
-﻿const { google } = require('googleapis');
+const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 
 const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
@@ -107,7 +107,7 @@ function parseDateTime(dateStr, timeStr) {
       if (!textMatch) throw new Error('Cannot parse date: ' + dateStr);
       month = months.indexOf(textMatch[1].toLowerCase());
       day = parseInt(textMatch[2]);
-      year = parseInt(textMatch[3]);
+      year = parseInt(textMatch[3] || '2026');
     }
 
     const etOffset = (month >= 2 && month <= 10) ? '-04:00' : '-05:00';
