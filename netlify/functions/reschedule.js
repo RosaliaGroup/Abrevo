@@ -6,7 +6,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
 const GOOGLE_CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
 const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
-const ANA_PHONE = '+12014970225';
+const ANA_PHONE = '+2014970225';
 const NOTIFY_EMAIL = 'inquiries@rosaliagroup.com';
 
 // Email transporter using Gmail
@@ -129,10 +129,7 @@ exports.handler = async (event) => {
     }
 
     let normalizedPhone = phone.toString().replace(/\D/g, '');
-    if (normalizedPhone.length === 10) normalizedPhone = '+1' + normalizedPhone;
-else if (normalizedPhone.length === 11 && normalizedPhone.startsWith('1')) normalizedPhone = '+' + normalizedPhone;
-else if (normalizedPhone.length === 12 && normalizedPhone.startsWith('11')) normalizedPhone = '+1' + normalizedPhone.slice(2);
-else if (!normalizedPhone.startsWith('+')) normalizedPhone = '+' + normalizedPhone;
+    if (!normalizedPhone.startsWith('+')) normalizedPhone = '+1' + normalizedPhone;
     console.log('Reschedule for phone:', normalizedPhone);
 
     // Find latest booking
