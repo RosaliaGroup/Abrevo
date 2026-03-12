@@ -4,7 +4,7 @@ const { google } = require('googleapis');
 const CLIENTS = {
   rosalia: {
     calendarId: 'inquiries@rosaliagroup.com',
-    notifyPhone: '+16462269189',
+    notifyPhone: '+12014970225',
     notifyName: 'Ana',
     teamName: 'Rosalia Group',
     googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
