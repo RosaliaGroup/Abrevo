@@ -1,40 +1,35 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Book Your Tour — Iron 65 Luxury Apartments</title>
+  <title>Book Your Tour â€” Iron 65 Luxury Apartments</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
       --gold: #C9A84C;
       --gold-light: #E8D49A;
       --black: #0A0A0A;
       --dark: #111111;
       --dark2: #1A1A1A;
-      --gray: #2A2A2A;
       --text: #E8E8E8;
       --text-muted: #888;
       --border: rgba(201, 168, 76, 0.2);
       --radius: 4px;
     }
-
     html, body {
       min-height: 100vh;
       background: var(--black);
       color: var(--text);
-      font-family: 'DM Sans', sans-serif;
+      font-family: ''DM Sans'', sans-serif;
       font-weight: 300;
     }
-
     body {
       background-image:
         radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.08) 0%, transparent 60%),
         radial-gradient(ellipse 40% 30% at 90% 90%, rgba(201,168,76,0.04) 0%, transparent 50%);
     }
-
     .page {
       min-height: 100vh;
       display: flex;
@@ -42,141 +37,24 @@
       align-items: center;
       padding: 48px 24px 80px;
     }
-
-    /* Header */
-    .header {
-      text-align: center;
-      margin-bottom: 48px;
-      animation: fadeUp 0.6s ease both;
-    }
-
-    .logo-mark {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 32px;
-      text-decoration: none;
-    }
-
-    .logo-icon {
-      width: 36px;
-      height: 36px;
-      border: 1px solid var(--gold);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transform: rotate(45deg);
-    }
-
-    .logo-icon span {
-      transform: rotate(-45deg);
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 14px;
-      color: var(--gold);
-      font-weight: 500;
-    }
-
-    .logo-text {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 18px;
-      font-weight: 400;
-      letter-spacing: 0.15em;
-      color: var(--text);
-      text-transform: uppercase;
-    }
-
-    .header h1 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(32px, 6vw, 52px);
-      font-weight: 300;
-      line-height: 1.1;
-      letter-spacing: -0.01em;
-      color: #fff;
-      margin-bottom: 12px;
-    }
-
-    .header h1 em {
-      font-style: italic;
-      color: var(--gold);
-    }
-
-    .header p {
-      font-size: 14px;
-      color: var(--text-muted);
-      letter-spacing: 0.05em;
-    }
-
-    /* Divider */
-    .divider {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin: 0 auto 40px;
-      width: 100%;
-      max-width: 480px;
-      animation: fadeUp 0.6s 0.1s ease both;
-    }
-
+    .header { text-align: center; margin-bottom: 48px; animation: fadeUp 0.6s ease both; }
+    .logo-mark { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 32px; text-decoration: none; }
+    .logo-icon { width: 36px; height: 36px; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; transform: rotate(45deg); }
+    .logo-icon span { transform: rotate(-45deg); font-family: ''Cormorant Garamond'', serif; font-size: 14px; color: var(--gold); font-weight: 500; }
+    .logo-text { font-family: ''Cormorant Garamond'', serif; font-size: 18px; font-weight: 400; letter-spacing: 0.15em; color: var(--text); text-transform: uppercase; }
+    .header h1 { font-family: ''Cormorant Garamond'', serif; font-size: clamp(32px, 6vw, 52px); font-weight: 300; line-height: 1.1; color: #fff; margin-bottom: 12px; }
+    .header h1 em { font-style: italic; color: var(--gold); }
+    .header p { font-size: 14px; color: var(--text-muted); letter-spacing: 0.05em; }
+    .divider { display: flex; align-items: center; gap: 16px; margin: 0 auto 40px; width: 100%; max-width: 480px; animation: fadeUp 0.6s 0.1s ease both; }
     .divider-line { flex: 1; height: 1px; background: var(--border); }
-    .divider-diamond {
-      width: 6px; height: 6px;
-      background: var(--gold);
-      transform: rotate(45deg);
-      flex-shrink: 0;
-    }
-
-    /* Card */
-    .card {
-      width: 100%;
-      max-width: 480px;
-      background: var(--dark);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      padding: 40px 36px;
-      animation: fadeUp 0.6s 0.15s ease both;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--gold), transparent);
-    }
-
-    /* Form */
-    .form-grid {
-      display: grid;
-      gap: 20px;
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-
-    @media (max-width: 420px) {
-      .form-row { grid-template-columns: 1fr; }
-      .card { padding: 28px 20px; }
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .field label {
-      font-size: 10px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--gold);
-      font-weight: 500;
-    }
-
+    .divider-diamond { width: 6px; height: 6px; background: var(--gold); transform: rotate(45deg); flex-shrink: 0; }
+    .card { width: 100%; max-width: 480px; background: var(--dark); border: 1px solid var(--border); border-radius: 2px; padding: 40px 36px; animation: fadeUp 0.6s 0.15s ease both; position: relative; overflow: hidden; }
+    .card::before { content: ''''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+    .form-grid { display: grid; gap: 20px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 420px) { .form-row { grid-template-columns: 1fr; } .card { padding: 28px 20px; } }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); font-weight: 500; }
     .field input,
     .field select,
     .field textarea {
@@ -184,7 +62,7 @@
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: var(--radius);
       color: var(--text);
-      font-family: 'DM Sans', sans-serif;
+      font-family: ''DM Sans'', sans-serif;
       font-size: 14px;
       font-weight: 300;
       padding: 12px 14px;
@@ -193,136 +71,28 @@
       width: 100%;
       -webkit-appearance: none;
     }
-
-    .field select {
-      cursor: pointer;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 14px center;
-      padding-right: 36px;
-    }
-
+    .field select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns=''http://www.w3.org/2000/svg'' width=''12'' height=''12'' viewBox=''0 0 12 12''%3E%3Cpath fill=''%23888'' d=''M6 8L1 3h10z''/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    .field input[type="date"] { cursor: pointer; color-scheme: dark; }
     .field select option { background: var(--dark2); }
-
-    .field input:focus,
-    .field select:focus,
-    .field textarea:focus {
-      border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(201,168,76,0.08);
-    }
-
-    .field input::placeholder,
-    .field textarea::placeholder {
-      color: rgba(255,255,255,0.2);
-    }
-
-    .field textarea {
-      resize: vertical;
-      min-height: 80px;
-    }
-
-    /* Section label */
-    .section-label {
-      font-size: 10px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 4px;
-    }
-
-    /* Submit */
-    .btn {
-      width: 100%;
-      padding: 16px;
-      background: var(--gold);
-      color: var(--black);
-      border: none;
-      border-radius: var(--radius);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
-      font-weight: 500;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-      margin-top: 8px;
-    }
-
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.08); }
+    .field input::placeholder, .field textarea::placeholder { color: rgba(255,255,255,0.2); }
+    .field textarea { resize: vertical; min-height: 80px; }
+    .section-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+    .btn { width: 100%; padding: 16px; background: var(--gold); color: var(--black); border: none; border-radius: var(--radius); font-family: ''DM Sans'', sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: background 0.2s, transform 0.1s; margin-top: 8px; }
     .btn:hover { background: var(--gold-light); }
     .btn:active { transform: scale(0.99); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    /* States */
-    .success-state, .error-state { display: none; }
-
-    .success-box {
-      text-align: center;
-      padding: 48px 24px;
-    }
-
-    .success-icon {
-      width: 56px; height: 56px;
-      border: 1px solid var(--gold);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 24px;
-      color: var(--gold);
-      font-size: 22px;
-    }
-
-    .success-box h2 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 28px;
-      font-weight: 400;
-      color: #fff;
-      margin-bottom: 12px;
-    }
-
-    .success-box p {
-      font-size: 14px;
-      color: var(--text-muted);
-      line-height: 1.6;
-    }
-
-    .success-box .detail {
-      margin-top: 28px;
-      padding: 16px 20px;
-      background: var(--dark2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      font-size: 13px;
-      color: var(--text-muted);
-      text-align: left;
-    }
-
+    .success-state { display: none; }
+    .success-box { text-align: center; padding: 48px 24px; }
+    .success-icon { width: 56px; height: 56px; border: 1px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; color: var(--gold); font-size: 22px; }
+    .success-box h2 { font-family: ''Cormorant Garamond'', serif; font-size: 28px; font-weight: 400; color: #fff; margin-bottom: 12px; }
+    .success-box p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+    .success-box .detail { margin-top: 28px; padding: 16px 20px; background: var(--dark2); border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text-muted); text-align: left; }
     .success-box .detail strong { color: var(--gold); display: block; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
-
-    .error-msg {
-      font-size: 12px;
-      color: #FF6B6B;
-      margin-top: 4px;
-      display: none;
-    }
-
-    /* Footer */
-    .footer {
-      margin-top: 32px;
-      text-align: center;
-      font-size: 12px;
-      color: var(--text-muted);
-      animation: fadeUp 0.6s 0.3s ease both;
-    }
-
+    .error-msg { font-size: 12px; color: #FF6B6B; margin-top: 4px; display: none; }
+    .footer { margin-top: 32px; text-align: center; font-size: 12px; color: var(--text-muted); animation: fadeUp 0.6s 0.3s ease both; }
     .footer a { color: var(--gold); text-decoration: none; }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(16px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
@@ -334,7 +104,7 @@
       <span class="logo-text">Iron 65</span>
     </div>
     <h1>Schedule Your <em>Private Tour</em></h1>
-    <p>Luxury Apartments · Newark, New Jersey</p>
+    <p>Luxury Apartments &middot; Newark, New Jersey</p>
   </div>
 
   <div class="divider">
@@ -344,8 +114,6 @@
   </div>
 
   <div class="card">
-
-    <!-- Form State -->
     <div class="form-state">
       <form id="bookingForm" novalidate>
         <div class="form-grid">
@@ -373,12 +141,19 @@
           <div class="form-row">
             <div class="field">
               <label>Budget / Month *</label>
-              <input type="text" id="budget" placeholder="$2,500" required />
+              <select id="budget" required>
+                <option value="">Select range</option>
+                <option>Under $2,400</option>
+                <option>$2,400 - $2,800</option>
+                <option>$2,800 - $3,200</option>
+                <option>$3,200 - $3,600</option>
+                <option>$3,600+</option>
+              </select>
             </div>
             <div class="field">
               <label>Apartment Size *</label>
               <select id="apartment_size" required>
-                <option value="" disabled selected>Select</option>
+                <option value="">Select</option>
                 <option>Studio</option>
                 <option>1-Bedroom</option>
                 <option>2-Bedroom</option>
@@ -389,17 +164,32 @@
 
           <div class="field">
             <label>Move-In Date *</label>
-            <input type="text" id="move_in_date" placeholder="May 1st, immediately, etc." required />
+            <input type="date" id="move_in_date" required />
           </div>
 
           <div class="form-row">
             <div class="field">
               <label>Monthly Income</label>
-              <input type="text" id="income" placeholder="$5,000/month" />
+              <select id="income">
+                <option value="">Select range</option>
+                <option>Under $3,000</option>
+                <option>$3,000 - $5,000</option>
+                <option>$5,000 - $8,000</option>
+                <option>$8,000 - $12,000</option>
+                <option>$12,000+</option>
+              </select>
             </div>
             <div class="field">
               <label>Credit Score</label>
-              <input type="text" id="credit" placeholder="720, good, etc." />
+              <select id="credit">
+                <option value="">Select range</option>
+                <option>Below 600</option>
+                <option>600 - 649</option>
+                <option>650 - 699</option>
+                <option>700 - 749</option>
+                <option>750+</option>
+                <option>Unsure</option>
+              </select>
             </div>
           </div>
 
@@ -413,7 +203,7 @@
             <div class="field">
               <label>Preferred Time *</label>
               <select id="preferred_time" required>
-                <option value="" disabled selected>Select time</option>
+                <option value="">Select time</option>
                 <option>10:00 AM</option>
                 <option>11:00 AM</option>
                 <option>12:00 PM</option>
@@ -433,116 +223,110 @@
 
           <div id="formError" class="error-msg"></div>
 
-          <button type="submit" class="btn" id="submitBtn">Reserve My Tour →</button>
+          <button type="submit" class="btn" id="submitBtn">Reserve My Tour &rarr;</button>
 
         </div>
       </form>
     </div>
 
-    <!-- Success State -->
     <div class="success-state" id="successState">
       <div class="success-box">
-        <div class="success-icon">✓</div>
+        <div class="success-icon">&#10003;</div>
         <h2>Tour Confirmed!</h2>
-        <p>You'll receive a confirmation text shortly. We'll also reach out the day before your appointment.</p>
+        <p>You''ll receive a confirmation text shortly. We''ll also reach out the day before your appointment.</p>
         <div class="detail" id="confirmDetails"></div>
       </div>
     </div>
-
   </div>
 
   <div class="footer">
-    65 Iron Street, Newark, NJ 07105 · <a href="tel:+12014970225">(201) 497-0225</a> · <a href="mailto:listings2@rosaliagroup.com">listings2@rosaliagroup.com</a>
+    65 Mcwhorter St, Newark, NJ 07105 &middot; <a href="tel:+18623331681">(862) 333-1681</a> &middot; <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a>
   </div>
 
 </div>
-
 <script>
-  // Pre-fill phone from URL param
   const params = new URLSearchParams(window.location.search);
-  const phoneParam = params.get('phone');
-  if (phoneParam) {
-    document.getElementById('phone').value = phoneParam;
-  }
+  const phoneParam = params.get(''phone'');
+  if (phoneParam) document.getElementById(''phone'').value = phoneParam;
 
-  // Set min date to today
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('preferred_date').min = today;
+  const today = new Date().toISOString().split(''T'')[0];
+  document.getElementById(''preferred_date'').min = today;
+  document.getElementById(''move_in_date'').min = today;
 
-  document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+  document.getElementById(''bookingForm'').addEventListener(''submit'', async function(e) {
     e.preventDefault();
+    var btn = document.getElementById(''submitBtn'');
+    var errorEl = document.getElementById(''formError'');
+    errorEl.style.display = ''none'';
 
-    const btn = document.getElementById('submitBtn');
-    const errorEl = document.getElementById('formError');
-    errorEl.style.display = 'none';
+    var full_name = document.getElementById(''full_name'').value.trim();
+    var phone = document.getElementById(''phone'').value.trim();
+    var email = document.getElementById(''email'').value.trim();
+    var budget = document.getElementById(''budget'').value;
+    var apartment_size = document.getElementById(''apartment_size'').value;
+    var move_in_date_raw = document.getElementById(''move_in_date'').value;
+    var income_qualifies = document.getElementById(''income'').value || ''Not provided'';
+    var credit_qualifies = document.getElementById(''credit'').value || ''Not provided'';
+    var preferred_date_raw = document.getElementById(''preferred_date'').value;
+    var preferred_time = document.getElementById(''preferred_time'').value;
+    var additional_notes = document.getElementById(''message'').value.trim();
 
-    // Collect values
-    const full_name = document.getElementById('full_name').value.trim();
-    const phone = document.getElementById('phone').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const budget = document.getElementById('budget').value.trim();
-    const apartment_size = document.getElementById('apartment_size').value;
-    const move_in_date = document.getElementById('move_in_date').value.trim();
-    const income_qualifies = document.getElementById('income').value.trim() || 'Not provided';
-    const credit_qualifies = document.getElementById('credit').value.trim() || 'Not provided';
-    const preferred_date_raw = document.getElementById('preferred_date').value;
-    const preferred_time = document.getElementById('preferred_time').value;
-
-    // Validate required
-    if (!full_name || !phone || !email || !budget || !apartment_size || !move_in_date || !preferred_date_raw || !preferred_time) {
-      errorEl.textContent = 'Please fill in all required fields.';
-      errorEl.style.display = 'block';
+    if (!full_name || !phone || !email || !budget || !apartment_size || !move_in_date_raw || !preferred_date_raw || !preferred_time) {
+      errorEl.textContent = ''Please fill in all required fields.'';
+      errorEl.style.display = ''block'';
       return;
     }
 
-    // Format date
-    const dateObj = new Date(preferred_date_raw + 'T12:00:00');
-    const preferred_date = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    var dateObj = new Date(preferred_date_raw + ''T12:00:00'');
+    var preferred_date = dateObj.toLocaleDateString(''en-US'', { month: ''long'', day: ''numeric'', year: ''numeric'' });
+
+    var moveObj = new Date(move_in_date_raw + ''T12:00:00'');
+    var move_in_date = moveObj.toLocaleDateString(''en-US'', { month: ''long'', day: ''numeric'', year: ''numeric'' });
 
     btn.disabled = true;
-    btn.textContent = 'Booking your tour...';
+    btn.textContent = ''Booking your tour...'';
 
     try {
-      const res = await fetch('/.netlify/functions/book', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      var res = await fetch(''/.netlify/functions/book'', {
+        method: ''POST'',
+        headers: { ''Content-Type'': ''application/json'' },
         body: JSON.stringify({
-          full_name,
-          phone,
-          email,
-          budget,
-          apartment_size,
-          move_in_date,
-          income_qualifies,
-          credit_qualifies,
-          preferred_date,
-          preferred_time,
-          property_address: 'Iron 65, Newark NJ',
-          client: 'rosalia'
+          full_name: full_name,
+          phone: phone,
+          email: email,
+          budget: budget,
+          apartment_size: apartment_size,
+          move_in_date: move_in_date,
+          income_qualifies: income_qualifies,
+          credit_qualifies: credit_qualifies,
+          preferred_date: preferred_date,
+          preferred_time: preferred_time,
+          additional_notes: additional_notes,
+          property_address: ''Iron 65 - 65 Mcwhorter St, Newark NJ'',
+          client: ''rosalia''
         })
       });
 
-      const data = await res.json();
+      var data = await res.json();
 
       if (data.success || res.ok) {
-        // Show success
-        document.querySelector('.form-state').style.display = 'none';
-        document.getElementById('successState').style.display = 'block';
-        document.getElementById('confirmDetails').innerHTML = `
-          <strong>Appointment</strong>${preferred_date} at ${preferred_time}
-          <br><br><strong>Name</strong>${full_name}
-          <br><br><strong>Property</strong>Iron 65 · 65 Iron Street, Newark NJ
-        `;
+        document.querySelector(''.form-state'').style.display = ''none'';
+        document.getElementById(''successState'').style.display = ''block'';
+        document.getElementById(''confirmDetails'').innerHTML =
+          ''<strong>Appointment</strong>'' + preferred_date + '' at '' + preferred_time +
+          ''<br><br><strong>Name</strong>'' + full_name +
+          ''<br><br><strong>Property</strong>Iron 65 &middot; 65 Mcwhorter St, Newark NJ'';
       } else {
-        throw new Error(data.error || 'Booking failed');
+        throw new Error(data.error || ''Booking failed'');
       }
-    } catch (err) {
-      errorEl.textContent = 'Something went wrong. Please call us at (201) 497-0225.';
-      errorEl.style.display = 'block';
+    } catch(err) {
+      errorEl.textContent = ''Something went wrong. Please call us at (862) 333-1681.'';
+      errorEl.style.display = ''block'';
       btn.disabled = false;
-      btn.textContent = 'Reserve My Tour →';
+      btn.textContent = ''Reserve My Tour \u2192'';
     }
   });
 </script>
 </body>
 </html>
+
