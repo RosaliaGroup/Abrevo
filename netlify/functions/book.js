@@ -107,7 +107,7 @@ function parseDateTime(dateStr, timeStr) {
       if (!textMatch) throw new Error('Cannot parse date: ' + dateStr);
       month = months.indexOf(textMatch[1].toLowerCase());
       day = parseInt(textMatch[2]);
-      year = parseInt(textMatch[3] || '2026');
+      year = parseInt(textMatch[3] && textMatch[3] > 2020 ? textMatch[3] : '2026');
     }
 
     const etOffset = (month >= 2 && month <= 10) ? '-04:00' : '-05:00';
