@@ -452,7 +452,7 @@
   </div>
 
   <div class="footer">
-    65 Mcwhorter St, Newark, NJ 07105 · <a href="tel:+18623331681">(862) 333-1681</a> · <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a>
+    65 Iron Street, Newark, NJ 07105 · <a href="tel:+12014970225">(201) 497-0225</a> · <a href="mailto:listings2@rosaliagroup.com">listings2@rosaliagroup.com</a>
   </div>
 
 </div>
@@ -531,13 +531,13 @@
         document.getElementById('confirmDetails').innerHTML = `
           <strong>Appointment</strong>${preferred_date} at ${preferred_time}
           <br><br><strong>Name</strong>${full_name}
-          <br><br><strong>Property</strong>Iron 65 · 65 Mcwhorter St, Newark NJ
+          <br><br><strong>Property</strong>Iron 65 · 65 Iron Street, Newark NJ
         `;
       } else {
         throw new Error(data.error || 'Booking failed');
       }
     } catch (err) {
-      errorEl.textContent = 'Something went wrong. Please call us at (862) 333-1681.';
+      errorEl.textContent = 'Something went wrong. Please call us at (201) 497-0225.';
       errorEl.style.display = 'block';
       btn.disabled = false;
       btn.textContent = 'Reserve My Tour →';
