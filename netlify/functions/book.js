@@ -115,7 +115,6 @@ exports.handler = async (event) => {
     if (data.phone) {
       const callerMsg = `Your appointment is confirmed!\n\n${data.type || 'Appointment'}\n${data.preferred_date} at ${data.preferred_time}\n\n${client.teamName} will be in touch to coordinate. See you then!`;
       await sendSMS(data.phone, callerMsg);
-    }
 
     // 3. Text Ana/team with full details
     const teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${data.type}\nDate: ${data.preferred_date} at ${data.preferred_time}\nBudget: ${data.budget}\nArea: ${data.preferred_area}\nMove-In: ${data.move_in_date}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
