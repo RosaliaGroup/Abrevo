@@ -1,13 +1,4 @@
-[build]
-  publish = "public"
-  functions = "netlify/functions"
-
-[functions]
-  node_bundler = "esbuild"
-
-[[headers]]
-  for = "/api/*"
-  [headers.values]
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Methods = "POST, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type"/booking-form /booking-form.html 200 
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
