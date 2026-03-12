@@ -13,7 +13,7 @@ const ASSISTANTS = {
   luxury: '1cae5323-6b83-4434-8461-6330472da140',   // Alex - Luxury Portfolio
   general: '53245859-6ed5-467f-b557-88456ee2f10b',  // Alex - General Rentals
 };
-const OUTBOUND_PHONE_ID = '339c7317-ab98-4696-8ac3-9c71349557cd';
+const OUTBOUND_PHONE_ID = '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 
 // ── FAKE / INVALID NUMBER PATTERNS TO SKIP ──
 const FAKE_PATTERNS = [
