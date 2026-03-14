@@ -1,14 +1,14 @@
 [build]
-  functions = \"functions\"
+  functions = "functions"
 
 [functions]
-  node_bundler = \"esbuild\"
+  node_bundler = "esbuild"
 
-[functions.\"fubsync\"]
-  schedule = \"* * * * *\"
+[functions."fubsync"]
+  schedule = "* * * * *"
 
-[functions.\"readmail\"]
-  schedule = \"* * * * *\"
+[functions."readmail"]
+  schedule = "* * * * *"
 
-[functions.\"autocall\"]
-  schedule = \"* * * * *\"
+[functions."autocall"]
+  schedule = "* * * * *"
