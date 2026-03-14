@@ -31,6 +31,8 @@ IMPORTANT RULES:
 - If you don't know a specific detail (exact price, availability), say you'll check and get back to them
 - Keep replies SHORT, warm, and professional â€” under 120 words
 - Never use bullet points
+- If the lead has NOT provided a phone number, naturally ask for it in your reply (e.g. "Feel free to share your phone number so I can reach out directly")
+- If the lead HAS provided a phone number, do NOT ask for it again
 - Always sign off as: Ana Haynes | Rosalia Group | (551) 249-9795 | inquiries@rosaliagroup.com
 `;
 
@@ -38,20 +40,29 @@ const SKIP_SENDERS = [
   'noreply', 'no-reply', 'donotreply', 'do-not-reply',
   'mailer-daemon', 'postmaster', 'leads@followupboss.com',
   'notifications', 'automated', 'newsletter', 'unsubscribe',
-  'zillow', 'realtor.com', 'avail.co', 'planhub', 'rentspree',
+  'realtor.com', 'avail.co', 'planhub', 'rentspree',
   'followupboss.com', 'webflow.com', 'voice.google.com',
   'txt.voice.google', 'comet.zillow', 'mail.zillow',
   'zillowrentals', 'mail.realtor', 'mail.instagram',
+  'no-reply@mail.zillow', 'market-updates@', 'recommendations@',
 ];
+
+// Zillow convo emails ARE real leads - allow them through
+function isZillowLead(from) {
+  return from.toLowerCase().includes('convo.zillow.com');
+}
 
 const LEAD_KEYWORDS = /rent|apartment|unit|tour|showing|available|bedroom|studio|price|lease|apply|application|move.in|listing|looking|interested|inquiry|inquire|buy|purchase|mortgage|home|house|sell|property|schedule|viewing|question|info|information/i;
 
 function shouldSkip(from) {
+  // Always allow Zillow convo relay emails (real lead messages)
+  if (isZillowLead(from)) return false;
   const f = (from || '').toLowerCase();
   return SKIP_SENDERS.some(s => f.includes(s));
 }
 
-function isLead(subject, body) {
+function isLead(subject, body, from) {
+  if (isZillowLead(from || '')) return true;
   return LEAD_KEYWORDS.test((subject || '') + ' ' + (body || ''));
 }
 
@@ -339,7 +350,7 @@ exports.handler = async (event) => {
           continue;
         }
 
-        if (!isLead(subject, body)) {
+        if (!isLead(subject, body, from)) {
           console.log('Skipping (not a lead):', subject);
           results.not_lead++;
           continue;
@@ -396,3 +407,5 @@ exports.handler = async (event) => {
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };
+
+
