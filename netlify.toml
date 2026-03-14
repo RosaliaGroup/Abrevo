@@ -1,1 +1,1 @@
-[[redirects]]`n  from = "/*"`n  to = "/index.html"`n  status = 200`n`n[build]`n  functions = "functions"`n`n[functions]`n  node_bundler = "esbuild"`n`n[functions."fubsync"]`n  schedule = "* * * * *"
+[[redirects]]`n  from = "/*"`n  to = "/index.html"`n  status = 200`n`n[build]`n  functions = "functions"`n`n[functions]`n  node_bundler = "esbuild"`n`n[functions."fubsync"]`n  schedule = "* * * * *"`n`n[functions."readmail"]`n  schedule = "* * * * *"
