@@ -21,7 +21,7 @@ async function getUnrepliedLeads() {
   const since = new Date();
   since.setDate(since.getDate() - 14);
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/leads?created_at=gte.${since.toISOString()}&email=not.is.null&email_reply=is.null&limit=50&order=created_at.desc`,
+    `${SUPABASE_URL}/rest/v1/leads?created_at=gte.${since.toISOString()}&email=not.is.null&email_reply=is.null&limit=10&order=created_at.desc`,
     { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
   );
   const data = await res.json();
@@ -59,7 +59,7 @@ async function sendEmail(toEmail, toName, body) {
   await transporter.sendMail({
     from: `"Rosalia Group Inquiries" <${GMAIL_USER}>`,
     to: toEmail,
-    subject: `Your Inquiry â€” Rosalia Group`,
+    subject: `Your Inquiry Ã¢â‚¬â€ Rosalia Group`,
     text: body,
   });
 }
@@ -93,7 +93,7 @@ exports.handler = async (event) => {
         console.log(`Sent to: ${lead.name} <${lead.email}>`);
 
         // Small delay to avoid Gmail rate limits
-        await new Promise(r => setTimeout(r, 1500));
+        await new Promise(r => setTimeout(r, 500));
       } catch (err) {
         console.error(`Error for ${lead.name}:`, err.message);
         results.errors++;
