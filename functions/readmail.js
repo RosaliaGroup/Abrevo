@@ -45,6 +45,7 @@ const SKIP_SENDERS = [
   'txt.voice.google', 'comet.zillow', 'mail.zillow',
   'zillowrentals', 'mail.realtor', 'mail.instagram',
   'no-reply@mail.zillow', 'market-updates@', 'recommendations@',
+  'rosaliagroup.com', 'mechanicalenterprise.com',
 ];
 
 // Zillow convo emails ARE real leads - allow them through
@@ -407,5 +408,6 @@ exports.handler = async (event) => {
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };
+
 
 
