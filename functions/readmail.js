@@ -1,4 +1,4 @@
-const Imap = require('imap');
+﻿const Imap = require('imap');
 const { simpleParser } = require('mailparser');
 const nodemailer = require('nodemailer');
 
@@ -14,7 +14,11 @@ const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form
 const SKIP_SENDERS = [
   'noreply', 'no-reply', 'donotreply', 'do-not-reply',
   'mailer-daemon', 'postmaster', 'leads@followupboss.com',
-  'notifications', 'automated', 'newsletter',
+  'notifications', 'automated', 'newsletter', 'unsubscribe',
+  'zillow', 'realtor.com', 'avail.co', 'planhub', 'rentspree',
+  'followupboss.com', 'webflow.com', 'voice.google.com',
+  'txt.voice.google', 'comet.zillow', 'mail.zillow',
+  'zillowrentals', 'mail.realtor', 'mail.instagram',
 ];
 
 function shouldSkip(from) {
@@ -22,7 +26,7 @@ function shouldSkip(from) {
   return SKIP_SENDERS.some(s => f.includes(s));
 }
 
-// ── FETCH UNREAD EMAILS VIA IMAP ──
+// â”€â”€ FETCH UNREAD EMAILS VIA IMAP â”€â”€
 function fetchUnreadEmails() {
   return new Promise((resolve, reject) => {
     const imap = new Imap({
@@ -76,7 +80,7 @@ function fetchUnreadEmails() {
   });
 }
 
-// ── GENERATE AI REPLY ──
+// â”€â”€ GENERATE AI REPLY â”€â”€
 async function generateReply(from, subject, body) {
   const isLead = /rent|apartment|unit|tour|showing|available|bedroom|studio|price|lease|apply|application|move.in|iron.?65/i.test(body + subject);
   const isBuyer = /buy|purchase|mortgage|home|house|sell/i.test(body + subject);
@@ -129,7 +133,7 @@ Under 100 words. No bullet points. Reply with ONLY the email body.`;
   return data.content?.[0]?.text || '';
 }
 
-// ── SEND REPLY VIA NODEMAILER ──
+// â”€â”€ SEND REPLY VIA NODEMAILER â”€â”€
 async function sendReply(to, subject, replyText) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -138,7 +142,7 @@ async function sendReply(to, subject, replyText) {
 
   const replySubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`;
   await transporter.sendMail({
-    from: `"Ana Haynes — Rosalia Group" <${INBOX_EMAIL}>`,
+    from: `"Ana Haynes â€” Rosalia Group" <${INBOX_EMAIL}>`,
     to,
     subject: replySubject,
     text: replyText,
@@ -146,7 +150,7 @@ async function sendReply(to, subject, replyText) {
   console.log('Reply sent to:', to);
 }
 
-// ── SAVE LEAD TO SUPABASE ──
+// â”€â”€ SAVE LEAD TO SUPABASE â”€â”€
 async function saveLead(from, subject, body, replyText) {
   const emailMatch = from.match(/<([^>]+)>/) || from.match(/([^\s]+@[^\s]+)/);
   const fromEmail = emailMatch?.[1] || from;
@@ -197,7 +201,7 @@ async function saveLead(from, subject, body, replyText) {
   } catch (e) { return null; }
 }
 
-// ── NOTIFY ANA ──
+// â”€â”€ NOTIFY ANA â”€â”€
 async function notifyAna(from, subject) {
   const msg = `AI replied to email!\nFrom: ${from}\nSubject: ${subject}`;
   try {
@@ -209,7 +213,7 @@ async function notifyAna(from, subject) {
   } catch (err) { console.error('SMS error:', err.message); }
 }
 
-// ── HANDLER ──
+// â”€â”€ HANDLER â”€â”€
 exports.handler = async (event) => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
@@ -276,5 +280,6 @@ exports.handler = async (event) => {
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };
+
 
 
