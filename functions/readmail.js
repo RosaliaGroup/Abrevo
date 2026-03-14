@@ -1,4 +1,4 @@
-ï»¿const Imap = require('imap');
+﻿Ã¯Â»Â¿const Imap = require('imap');
 const { simpleParser } = require('mailparser');
 const nodemailer = require('nodemailer');
 
@@ -29,7 +29,7 @@ IMPORTANT RULES:
 - Ask about their needs (budget, bedrooms, area, move-in date) before pitching a specific unit
 - Answer questions honestly based on what you know
 - If you don't know a specific detail (exact price, availability), say you'll check and get back to them
-- Keep replies SHORT, warm, and professional Ã¢â‚¬â€ under 120 words
+- Keep replies SHORT, warm, and professional ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â under 120 words
 - Never use bullet points
 - If the lead has NOT provided a phone number, naturally ask for it in your reply (e.g. "Feel free to share your phone number so I can reach out directly")
 - If the lead HAS provided a phone number, do NOT ask for it again
@@ -76,7 +76,7 @@ function extractPhone(text) {
   return p;
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ FETCH UNREAD EMAILS VIA IMAP Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ FETCH UNREAD EMAILS VIA IMAP ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 function fetchUnreadEmails() {
   return new Promise((resolve, reject) => {
     const imap = new Imap({
@@ -129,7 +129,7 @@ function fetchUnreadEmails() {
   });
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ GET PREVIOUS EMAIL THREAD FROM SUPABASE Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ GET PREVIOUS EMAIL THREAD FROM SUPABASE ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 async function getLeadData(fromEmail) {
   try {
     const res = await fetch(
@@ -154,7 +154,7 @@ async function repliedRecently(fromEmail) {
   return lastReply > new Date(Date.now() - 10 * 60 * 1000);
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ GENERATE AI REPLY (context-aware) Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ GENERATE AI REPLY (context-aware) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 async function generateReply(from, subject, body, previousReply) {
   const isBuyer = /buy|purchase|mortgage|home|house|sell/i.test(body + subject);
 
@@ -205,7 +205,7 @@ Write ONLY the email body. No subject line. Under 120 words. No bullet points.`;
   return data.content?.[0]?.text || '';
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ SEND EMAIL REPLY Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SEND EMAIL REPLY ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 async function sendReply(replyTo, subject, replyText) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -213,7 +213,7 @@ async function sendReply(replyTo, subject, replyText) {
   });
   const replySubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`;
   await transporter.sendMail({
-    from: `"Ana Haynes Ã¢â‚¬â€ Rosalia Group" <${INBOX_EMAIL}>`,
+    from: `"Ana Haynes ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Rosalia Group" <${INBOX_EMAIL}>`,
     to: replyTo,
     subject: replySubject,
     text: replyText,
@@ -221,7 +221,7 @@ async function sendReply(replyTo, subject, replyText) {
   console.log('Email reply sent to:', replyTo);
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ TRIGGER VAPI OUTBOUND CALL Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ TRIGGER VAPI OUTBOUND CALL ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 async function triggerCall(phone, leadName) {
   try {
     const res = await fetch('https://api.vapi.ai/call/phone', {
@@ -245,10 +245,10 @@ async function triggerCall(phone, leadName) {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ SEND SMS Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SEND SMS ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 async function sendSMS(phone, leadName) {
   const firstName = leadName?.split(' ')[0] || 'there';
-  const msg = `Hi ${firstName}! This is Ana from Rosalia Group. I just sent you an email Ã¢â‚¬â€ we have great apartments available and would love to help you find the right fit. Book a tour: ${BOOKING_FORM_URL} Ã¢â‚¬â€ (551) 249-9795`;
+  const msg = `Hi ${firstName}! This is Ana from Rosalia Group. I just sent you an email ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â we have great apartments available and would love to help you find the right fit. Book a tour: ${BOOKING_FORM_URL} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â (551) 249-9795`;
   try {
     await fetch('https://textbelt.com/text', {
       method: 'POST',
@@ -259,7 +259,7 @@ async function sendSMS(phone, leadName) {
   } catch (err) { console.error('SMS error:', err.message); }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ SAVE/UPDATE LEAD IN SUPABASE Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SAVE/UPDATE LEAD IN SUPABASE ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 async function saveLead(fromEmail, fromName, subject, body, replyText, phone) {
   const checkRes = await fetch(
     `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(fromEmail)}&limit=1`,
@@ -313,9 +313,9 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone) {
   } catch (e) { return null; }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ NOTIFY ANA Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ NOTIFY ANA ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 async function notifyAna(fromName, subject, phone) {
-  const msg = `New Lead Email!\nFrom: ${fromName}\nSubject: ${subject}${phone ? '\nPhone: ' + phone + '\nAlex calling...' : '\nNo phone Ã¢â‚¬â€ reply sent'}`;
+  const msg = `New Lead Email!\nFrom: ${fromName}\nSubject: ${subject}${phone ? '\nPhone: ' + phone + '\nAlex calling...' : '\nNo phone ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â reply sent'}`;
   try {
     await fetch('https://textbelt.com/text', {
       method: 'POST',
@@ -325,7 +325,7 @@ async function notifyAna(fromName, subject, phone) {
   } catch (err) { console.error('Ana SMS error:', err.message); }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ MAIN HANDLER Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ MAIN HANDLER ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 exports.handler = async (event) => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
@@ -380,7 +380,7 @@ exports.handler = async (event) => {
         // Get previous thread context
         const previousReply = await getPreviousThread(fromEmail);
         const isReply = subject.toLowerCase().startsWith('re:') || !!previousReply;
-        if (isReply) console.log('Thread reply detected Ã¢â‚¬â€ using conversation context');
+        if (isReply) console.log('Thread reply detected ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â using conversation context');
 
         // Generate AI reply with context
         const replyText = await generateReply(from, subject, body, previousReply);
@@ -399,13 +399,13 @@ exports.handler = async (event) => {
         // Notify Ana
         await notifyAna(fromName || from, subject, phone);
 
-        // If phone found and NOT a reply thread Ã¢â‚¬â€ trigger call + SMS
+        // If phone found and NOT a reply thread ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â trigger call + SMS
         // Trigger call if NEW phone found (even in reply thread)
         if (phone) {
           const existingLead = await getLeadData(fromEmail);
           const hadPhone = existingLead?.phone && existingLead.phone.replace(/\D/g,'').length >= 10;
           if (!hadPhone) {
-            console.log('New phone found â€” triggering call:', phone);
+            console.log('New phone found Ã¢â‚¬â€ triggering call:', phone);
             await triggerCall(phone, fromName);
             await sendSMS(phone, fromName);
           } else if (!isReply) {
@@ -434,6 +434,7 @@ exports.handler = async (event) => {
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };
+
 
 
 
