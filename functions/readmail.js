@@ -105,6 +105,7 @@ function fetchUnreadEmails() {
 
 // â”€â”€ GENERATE AI REPLY â”€â”€
 async function generateReply(from, subject, body) {
+  console.log('Calling Claude API...');
   const isBuyer = /buy|purchase|mortgage|home|house|sell/i.test(body + subject);
 
   const prompt = isBuyer
@@ -142,6 +143,7 @@ Under 100 words. No bullet points. Reply with ONLY the email body.`;
     }),
   });
   const data = await res.json();
+  console.log('Claude response:', JSON.stringify(data).substring(0, 200));
   return data.content?.[0]?.text || '';
 }
 
