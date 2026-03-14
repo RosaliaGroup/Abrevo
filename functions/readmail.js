@@ -1,4 +1,4 @@
-﻿const Imap = require('imap');
+const Imap = require('imap');
 const { simpleParser } = require('mailparser');
 const nodemailer = require('nodemailer');
 
@@ -22,7 +22,7 @@ function shouldSkip(from) {
   return SKIP_SENDERS.some(s => f.includes(s));
 }
 
-// â”€â”€ FETCH UNREAD EMAILS VIA IMAP â”€â”€
+// ── FETCH UNREAD EMAILS VIA IMAP ──
 function fetchUnreadEmails() {
   return new Promise((resolve, reject) => {
     const imap = new Imap({
@@ -41,7 +41,7 @@ function fetchUnreadEmails() {
       imap.openBox('INBOX', false, (err, box) => {
         if (err) return reject(err);
 
-        imap.search(['UNSEEN'], (err, results) => {
+        const _s=new Date();_s.setDate(_s.getDate()-14);const _ss=_s.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});imap.search(["UNSEEN",["SINCE",_ss]], (err, results) => {
           if (err) return reject(err);
           if (!results || results.length === 0) {
             imap.end();
@@ -76,7 +76,7 @@ function fetchUnreadEmails() {
   });
 }
 
-// â”€â”€ GENERATE AI REPLY â”€â”€
+// ── GENERATE AI REPLY ──
 async function generateReply(from, subject, body) {
   const isLead = /rent|apartment|unit|tour|showing|available|bedroom|studio|price|lease|apply|application|move.in|iron.?65/i.test(body + subject);
   const isBuyer = /buy|purchase|mortgage|home|house|sell/i.test(body + subject);
@@ -129,7 +129,7 @@ Under 100 words. No bullet points. Reply with ONLY the email body.`;
   return data.content?.[0]?.text || '';
 }
 
-// â”€â”€ SEND REPLY VIA NODEMAILER â”€â”€
+// ── SEND REPLY VIA NODEMAILER ──
 async function sendReply(to, subject, replyText) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -138,7 +138,7 @@ async function sendReply(to, subject, replyText) {
 
   const replySubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`;
   await transporter.sendMail({
-    from: `"Ana Haynes â€” Rosalia Group" <${INBOX_EMAIL}>`,
+    from: `"Ana Haynes — Rosalia Group" <${INBOX_EMAIL}>`,
     to,
     subject: replySubject,
     text: replyText,
@@ -146,7 +146,7 @@ async function sendReply(to, subject, replyText) {
   console.log('Reply sent to:', to);
 }
 
-// â”€â”€ SAVE LEAD TO SUPABASE â”€â”€
+// ── SAVE LEAD TO SUPABASE ──
 async function saveLead(from, subject, body, replyText) {
   const emailMatch = from.match(/<([^>]+)>/) || from.match(/([^\s]+@[^\s]+)/);
   const fromEmail = emailMatch?.[1] || from;
@@ -197,7 +197,7 @@ async function saveLead(from, subject, body, replyText) {
   } catch (e) { return null; }
 }
 
-// â”€â”€ NOTIFY ANA â”€â”€
+// ── NOTIFY ANA ──
 async function notifyAna(from, subject) {
   const msg = `AI replied to email!\nFrom: ${from}\nSubject: ${subject}`;
   try {
@@ -209,7 +209,7 @@ async function notifyAna(from, subject) {
   } catch (err) { console.error('SMS error:', err.message); }
 }
 
-// â”€â”€ HANDLER â”€â”€
+// ── HANDLER ──
 exports.handler = async (event) => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
@@ -276,4 +276,5 @@ exports.handler = async (event) => {
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };
+
 
