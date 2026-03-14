@@ -1,1 +1,1 @@
-[build]`n  functions = "functions"`n`n[functions]`n  node_bundler = "esbuild"`n`n[functions."fubsync"]`n  schedule = "* * * * *"`n`n[functions."readmail"]`n  schedule = "* * * * *"
+[build]`n  functions = "functions"`n`n[functions]`n  node_bundler = "esbuild"`n`n[functions."fubsync"]`n  schedule = "* * * * *"`n`n[functions."readmail"]`n  schedule = "* * * * *"`n  node_bundler = "zisi"
