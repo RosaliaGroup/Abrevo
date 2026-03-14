@@ -53,12 +53,24 @@ async function createCalendarEvent(client, data) {
   // Parse date and time with proper timezone handling
   let startDateTime;
   try {
-    // Parse date
-    const dateParts = data.preferred_date.match(/(\w+)\s+(\d+)\s+(\d+)/);
-    if (!dateParts) throw new Error('Invalid date format');
-    const month = dateParts[1];
-    const day = parseInt(dateParts[2]);
-    const year = parseInt(dateParts[3]);
+    // Parse date - handles both YYYY-MM-DD (form) and "March 20 2026" (Vapi)
+    let year, monthNum, day;
+    const isoMatch = data.preferred_date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const textMatch = data.preferred_date.match(/(\w+)\s+(\d+)[,\s]+(\d{4})/);
+    if (isoMatch) {
+      year = parseInt(isoMatch[1]);
+      monthNum = parseInt(isoMatch[2]) - 1;
+      day = parseInt(isoMatch[3]);
+    } else if (textMatch) {
+      const monthMap = {'January':0,'February':1,'March':2,'April':3,'May':4,'June':5,'July':6,'August':7,'September':8,'October':9,'November':10,'December':11,'Jan':0,'Feb':1,'Mar':2,'Apr':3,'Jun':5,'Jul':6,'Aug':7,'Sep':8,'Oct':9,'Nov':10,'Dec':11};
+      monthNum = monthMap[textMatch[1]];
+      day = parseInt(textMatch[2]);
+      year = parseInt(textMatch[3]);
+      if (monthNum === undefined) throw new Error('Invalid month: ' + textMatch[1]);
+    } else {
+      throw new Error('Unrecognized date format: ' + data.preferred_date);
+    }
+    console.log('Parsed date parts:', year, monthNum+1, day);
     
     // Parse time
     const timeParts = data.preferred_time.match(/(\d+):?(\d*)?\s*(AM|PM)/i);
@@ -71,17 +83,11 @@ async function createCalendarEvent(client, data) {
     if (period === 'PM' && hours !== 12) hours += 12;
     if (period === 'AM' && hours === 12) hours = 0;
     
-    // Month map
-    const monthMap = {
-      'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
-      'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
-    };
+    // monthNum and day already set above
     
-    const monthNum = monthMap[month];
-    if (monthNum === undefined) throw new Error('Invalid month');
-    
-    // Create date in EDT (add 4 hours to get UTC)
+    // Create date in Eastern Time (UTC-4 EDT)
     startDateTime = new Date(Date.UTC(year, monthNum, day, hours + 4, minutes, 0));
+    console.log('Booking date/time:', year, monthNum+1, day, hours, minutes, '-> UTC:', startDateTime.toISOString());
     
   } catch(e) {
     console.error('Date parsing error:', e.message);
