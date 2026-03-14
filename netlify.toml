@@ -1,4 +1,4 @@
-[build]
+﻿[build]
   functions = "functions"
 
 [functions]
@@ -12,3 +12,7 @@
 
 [functions."autocall"]
   schedule = "* * * * *"
+
+[functions.\"bulkemail\"]
+  timeout = 26
+
