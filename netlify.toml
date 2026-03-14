@@ -1,4 +1,4 @@
-[build]
+﻿[build]
   functions = "functions"
 
 [functions]
@@ -8,4 +8,7 @@
   schedule = "* * * * *"
 
 [functions."readmail"]
+  schedule = "* * * * *"
+
+[functions."autocall"]
   schedule = "* * * * *"
