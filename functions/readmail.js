@@ -1,4 +1,4 @@
-﻿Ã¯Â»Â¿const Imap = require('imap');
+ÃƒÂ¯Ã‚Â»Ã‚Â¿const Imap = require('imap');
 const { simpleParser } = require('mailparser');
 const nodemailer = require('nodemailer');
 
@@ -29,19 +29,20 @@ IMPORTANT RULES:
 - Ask about their needs (budget, bedrooms, area, move-in date) before pitching a specific unit
 - Answer questions honestly based on what you know
 - If you don't know a specific detail (exact price, availability), say you'll check and get back to them
-- Keep replies SHORT, warm, and professional ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â under 120 words
-- Never use bullet points
+- Keep replies SHORT, warm, and professional ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â under 120 words
+- For Q&A replies use SHORT bullet points (one answer per question)
+- ONLY offer Rosalia Group properties â€” never suggest other landlords or listings
 - If the lead has NOT provided a phone number, naturally ask for it in your reply (e.g. "Feel free to share your phone number so I can reach out directly")
 - If the lead HAS provided a phone number, do NOT ask for it again
-- Always sign off as: Ana Haynes | Rosalia Group | (551) 249-9795 | inquiries@rosaliagroup.com
+- Always sign off as: Rosalia Group | Inquiries Team | +18624191763 | inquiries@rosaliagroup.com
 `;
 
 const SKIP_SENDERS = [
   'noreply', 'no-reply', 'donotreply', 'do-not-reply',
   'mailer-daemon', 'postmaster', 'leads@followupboss.com',
   'notifications', 'automated', 'newsletter', 'unsubscribe',
-  'realtor.com', 'avail.co', 'planhub', 'rentspree',
-  'followupboss.com', 'webflow.com', 'voice.google.com',
+  'realtor.com', 'planhub', 'rentspree',
+  'followupboss.com', 'voice.google.com',
   'txt.voice.google', 'comet.zillow', 'mail.zillow',
   'zillowrentals', 'mail.realtor', 'mail.instagram',
   'no-reply@mail.zillow', 'market-updates@', 'recommendations@',
@@ -52,18 +53,72 @@ const SKIP_SENDERS = [
 function isZillowLead(from) {
   return from.toLowerCase().includes('convo.zillow.com');
 }
+function isAvailLead(from) {
+  return from.toLowerCase().includes('reply.avail.co');
+}
+
+function isWebflowLead(from, subject) {
+  const f = (from || '').toLowerCase();
+  const s = (subject || '').toLowerCase();
+  return (f.includes('webflow.com') || f.includes('resipointe')) &&
+         (s.includes('submission') || s.includes('application') || s.includes('new form') || s.includes('new lead'));
+}
+
+function parseAvailEmail(body) {
+  const lead = {};
+  const nameMatch = body.match(/Name:\s*(.+)/i);
+  const emailMatch = body.match(/Email:\s*([^\s\n]+@[^\s\n]+)/i);
+  const phoneMatch = body.match(/Phone:\s*([\(\)\d\s\-\.]+)/i);
+  const propMatch = body.match(/interested in your property at ([^\n\.]+)/i);
+  if (nameMatch) lead.name = nameMatch[1].trim();
+  if (emailMatch) lead.email = emailMatch[1].trim();
+  if (phoneMatch) {
+    let p = phoneMatch[1].replace(/\D/g, '');
+    if (p.length === 10) p = '+1' + p;
+    else if (p.length === 11) p = '+' + p;
+    lead.phone = p;
+  }
+  if (propMatch) lead.property = propMatch[1].trim();
+  return lead;
+}
+
+function parseWebflowEmail(body) {
+  const lead = {};
+  const nameMatch = body.match(/Full Name:\s*(.+)/i);
+  const emailMatch = body.match(/Email Address:\s*([^\s\n]+@[^\s\n]+)/i) || body.match(/Email:\s*([^\s\n]+@[^\s\n]+)/i);
+  const phoneMatch = body.match(/Cell Phone:\s*([\d\s\(\)\-\.]+)/i) || body.match(/Phone:\s*([\d\s\(\)\-\.]+)/i);
+  const budgetMatch = body.match(/Monthly Budget[^:]*:\s*([\d,\$]+)/i) || body.match(/Budget:\s*([\d,\$]+)/i);
+  const buildingMatch = body.match(/Building:\s*(.+)/i);
+  const bedroomsMatch = body.match(/Bedrooms:\s*(.+)/i);
+  if (nameMatch) lead.name = nameMatch[1].trim();
+  if (emailMatch) lead.email = emailMatch[1].trim();
+  if (phoneMatch) {
+    let p = phoneMatch[1].replace(/\D/g, '');
+    if (p.length === 10) p = '+1' + p;
+    else if (p.length === 11) p = '+' + p;
+    lead.phone = p;
+  }
+  if (budgetMatch) lead.budget = budgetMatch[1].trim();
+  if (buildingMatch) lead.property = buildingMatch[1].split('--')[0].trim();
+  if (bedroomsMatch) lead.bedrooms = bedroomsMatch[1].split('--')[0].trim();
+  return lead;
+}
+
 
 const LEAD_KEYWORDS = /rent|apartment|unit|tour|showing|available|bedroom|studio|price|lease|apply|application|move.in|listing|looking|interested|inquiry|inquire|buy|purchase|mortgage|home|house|sell|property|schedule|viewing|question|info|information/i;
 
-function shouldSkip(from) {
-  // Always allow Zillow convo relay emails (real lead messages)
+function shouldSkip(from, subject) {
   if (isZillowLead(from)) return false;
+  if (isAvailLead(from)) return false;
+  if (isWebflowLead(from, subject)) return false;
   const f = (from || '').toLowerCase();
   return SKIP_SENDERS.some(s => f.includes(s));
 }
 
 function isLead(subject, body, from) {
   if (isZillowLead(from || '')) return true;
+  if (isAvailLead(from || '')) return true;
+  if (isWebflowLead(from || '', subject)) return true;
   return LEAD_KEYWORDS.test((subject || '') + ' ' + (body || ''));
 }
 
@@ -76,7 +131,7 @@ function extractPhone(text) {
   return p;
 }
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ FETCH UNREAD EMAILS VIA IMAP ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ FETCH UNREAD EMAILS VIA IMAP ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 function fetchUnreadEmails() {
   return new Promise((resolve, reject) => {
     const imap = new Imap({
@@ -129,7 +184,7 @@ function fetchUnreadEmails() {
   });
 }
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ GET PREVIOUS EMAIL THREAD FROM SUPABASE ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ GET PREVIOUS EMAIL THREAD FROM SUPABASE ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 async function getLeadData(fromEmail) {
   try {
     const res = await fetch(
@@ -154,7 +209,7 @@ async function repliedRecently(fromEmail) {
   return lastReply > new Date(Date.now() - 10 * 60 * 1000);
 }
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ GENERATE AI REPLY (context-aware) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ GENERATE AI REPLY (context-aware) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 async function generateReply(from, subject, body, previousReply) {
   const isBuyer = /buy|purchase|mortgage|home|house|sell/i.test(body + subject);
 
@@ -180,7 +235,7 @@ SUBJECT: ${subject}
 THEIR EMAIL:
 ${body.substring(0, 800)}
 
-Write ONLY the email body. No subject line. Under 120 words. No bullet points.`;
+Write ONLY the email body. No subject line. Under 100 words. Use bullet points for Q&A answers.`;
 
   console.log('Calling Claude API...');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -205,7 +260,7 @@ Write ONLY the email body. No subject line. Under 120 words. No bullet points.`;
   return data.content?.[0]?.text || '';
 }
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SEND EMAIL REPLY ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ SEND EMAIL REPLY ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 async function sendReply(replyTo, subject, replyText) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -213,7 +268,7 @@ async function sendReply(replyTo, subject, replyText) {
   });
   const replySubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`;
   await transporter.sendMail({
-    from: `"Ana Haynes ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Rosalia Group" <${INBOX_EMAIL}>`,
+    from: `"Ana Haynes ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Rosalia Group" <${INBOX_EMAIL}>`,
     to: replyTo,
     subject: replySubject,
     text: replyText,
@@ -221,7 +276,7 @@ async function sendReply(replyTo, subject, replyText) {
   console.log('Email reply sent to:', replyTo);
 }
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ TRIGGER VAPI OUTBOUND CALL ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ TRIGGER VAPI OUTBOUND CALL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 async function triggerCall(phone, leadName) {
   try {
     const res = await fetch('https://api.vapi.ai/call/phone', {
@@ -245,10 +300,10 @@ async function triggerCall(phone, leadName) {
   }
 }
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SEND SMS ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ SEND SMS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 async function sendSMS(phone, leadName) {
   const firstName = leadName?.split(' ')[0] || 'there';
-  const msg = `Hi ${firstName}! This is Ana from Rosalia Group. I just sent you an email ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â we have great apartments available and would love to help you find the right fit. Book a tour: ${BOOKING_FORM_URL} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â (551) 249-9795`;
+  const msg = `Hi ${firstName}! This is Ana from Rosalia Group. I just sent you an email ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â we have great apartments available and would love to help you find the right fit. Book a tour: ${BOOKING_FORM_URL} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â (551) 249-9795`;
   try {
     await fetch('https://textbelt.com/text', {
       method: 'POST',
@@ -259,7 +314,7 @@ async function sendSMS(phone, leadName) {
   } catch (err) { console.error('SMS error:', err.message); }
 }
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SAVE/UPDATE LEAD IN SUPABASE ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ SAVE/UPDATE LEAD IN SUPABASE ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 async function saveLead(fromEmail, fromName, subject, body, replyText, phone) {
   const checkRes = await fetch(
     `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(fromEmail)}&limit=1`,
@@ -313,9 +368,9 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone) {
   } catch (e) { return null; }
 }
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ NOTIFY ANA ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ NOTIFY ANA ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 async function notifyAna(fromName, subject, phone) {
-  const msg = `New Lead Email!\nFrom: ${fromName}\nSubject: ${subject}${phone ? '\nPhone: ' + phone + '\nAlex calling...' : '\nNo phone ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â reply sent'}`;
+  const msg = `New Lead Email!\nFrom: ${fromName}\nSubject: ${subject}${phone ? '\nPhone: ' + phone + '\nAlex calling...' : '\nNo phone ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â reply sent'}`;
   try {
     await fetch('https://textbelt.com/text', {
       method: 'POST',
@@ -325,7 +380,7 @@ async function notifyAna(fromName, subject, phone) {
   } catch (err) { console.error('Ana SMS error:', err.message); }
 }
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ MAIN HANDLER ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ MAIN HANDLER ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 exports.handler = async (event) => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
@@ -355,7 +410,7 @@ exports.handler = async (event) => {
 
         console.log('Processing:', from, '|', subject);
 
-        if (shouldSkip(from)) {
+        if (shouldSkip(from, subject)) {
           console.log('Skipping (automated):', from);
           results.skipped++;
           continue;
@@ -367,7 +422,24 @@ exports.handler = async (event) => {
           continue;
         }
 
-        const phone = extractPhone(body + ' ' + subject);
+        let phone = null;
+        let realEmail = fromEmail;
+        let realName = fromName;
+        if (isAvailLead(from)) {
+          const parsed = parseAvailEmail(body);
+          if (parsed.phone) phone = parsed.phone;
+          if (parsed.email) realEmail = parsed.email;
+          if (parsed.name) realName = parsed.name;
+          console.log('Avail lead - Name:', realName, 'Email:', realEmail, 'Phone:', phone);
+        } else if (isWebflowLead(from, subject)) {
+          const parsed = parseWebflowEmail(body);
+          if (parsed.phone) phone = parsed.phone;
+          if (parsed.email) realEmail = parsed.email;
+          if (parsed.name) realName = parsed.name;
+          console.log('Webflow lead - Name:', realName, 'Email:', realEmail, 'Phone:', phone);
+        } else {
+          phone = extractPhone(body + ' ' + subject);
+        }
         console.log('Lead detected! Phone:', phone || 'none found');
 
         // Skip if replied recently (prevents double replies)
@@ -380,7 +452,7 @@ exports.handler = async (event) => {
         // Get previous thread context
         const previousReply = await getPreviousThread(fromEmail);
         const isReply = subject.toLowerCase().startsWith('re:') || !!previousReply;
-        if (isReply) console.log('Thread reply detected ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â using conversation context');
+        if (isReply) console.log('Thread reply detected ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â using conversation context');
 
         // Generate AI reply with context
         const replyText = await generateReply(from, subject, body, previousReply);
@@ -394,18 +466,18 @@ exports.handler = async (event) => {
         await sendReply(replyTo, subject, replyText);
 
         // Save to Supabase
-        await saveLead(fromEmail, fromName, subject, body, replyText, phone);
+        await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone);
 
         // Notify Ana
-        await notifyAna(fromName || from, subject, phone);
+        await notifyAna(realName || fromName || from, subject, phone);
 
-        // If phone found and NOT a reply thread ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â trigger call + SMS
+        // If phone found and NOT a reply thread ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â trigger call + SMS
         // Trigger call if NEW phone found (even in reply thread)
         if (phone) {
           const existingLead = await getLeadData(fromEmail);
           const hadPhone = existingLead?.phone && existingLead.phone.replace(/\D/g,'').length >= 10;
           if (!hadPhone) {
-            console.log('New phone found Ã¢â‚¬â€ triggering call:', phone);
+            console.log('New phone found ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â triggering call:', phone);
             await triggerCall(phone, fromName);
             await sendSMS(phone, fromName);
           } else if (!isReply) {
