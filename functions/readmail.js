@@ -11,12 +11,29 @@ const INBOX_EMAIL = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
 const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
 
-// Vapi config for outbound calls
 const VAPI_KEY = '064f441d-a388-4404-8b6c-05e91e90f1ff';
 const VAPI_ASSISTANT_ID = '1cae5323-6b83-4434-8461-6330472da140';
 const VAPI_PHONE_ID = 'fe01292e-6625-4c06-b24e-8cd2240f5453';
 
-// Skip these senders â€” not leads
+// Ana's property portfolio context (for answering questions)
+const ANA_CONTEXT = `
+You are Ana Haynes, a licensed real estate agent and leasing manager at Rosalia Group in New Jersey.
+You manage rental properties across Newark, Jersey City, East Orange, Elizabeth, and surrounding areas.
+Your properties include luxury apartments, studios, 1BR, 2BR, and 3BR units.
+You also help buyers and sellers with real estate transactions.
+Contact: (551) 249-9795 | inquiries@rosaliagroup.com
+Booking link for tours: ${BOOKING_FORM_URL}
+
+IMPORTANT RULES:
+- Never assume which specific property the lead is interested in unless they mentioned it
+- Ask about their needs (budget, bedrooms, area, move-in date) before pitching a specific unit
+- Answer questions honestly based on what you know
+- If you don't know a specific detail (exact price, availability), say you'll check and get back to them
+- Keep replies SHORT, warm, and professional â€” under 120 words
+- Never use bullet points
+- Always sign off as: Ana Haynes | Rosalia Group | (551) 249-9795 | inquiries@rosaliagroup.com
+`;
+
 const SKIP_SENDERS = [
   'noreply', 'no-reply', 'donotreply', 'do-not-reply',
   'mailer-daemon', 'postmaster', 'leads@followupboss.com',
@@ -25,11 +42,9 @@ const SKIP_SENDERS = [
   'followupboss.com', 'webflow.com', 'voice.google.com',
   'txt.voice.google', 'comet.zillow', 'mail.zillow',
   'zillowrentals', 'mail.realtor', 'mail.instagram',
-  'support@', 'info@', 'hello@', 'team@',
 ];
 
-// Only reply to emails that look like actual leads
-const LEAD_KEYWORDS = /rent|apartment|unit|tour|showing|available|bedroom|studio|price|lease|apply|application|move.in|iron.?65|listing|looking|interested|inquiry|inquire|buy|purchase|mortgage|home|house|sell|property|schedule|viewing/i;
+const LEAD_KEYWORDS = /rent|apartment|unit|tour|showing|available|bedroom|studio|price|lease|apply|application|move.in|listing|looking|interested|inquiry|inquire|buy|purchase|mortgage|home|house|sell|property|schedule|viewing|question|info|information/i;
 
 function shouldSkip(from) {
   const f = (from || '').toLowerCase();
@@ -40,7 +55,6 @@ function isLead(subject, body) {
   return LEAD_KEYWORDS.test((subject || '') + ' ' + (body || ''));
 }
 
-// Extract phone number from email body
 function extractPhone(text) {
   const match = text.match(/(\(?\d{3}\)?[\s\-.]?\d{3}[\s\-.]?\d{4})/);
   if (!match) return null;
@@ -50,7 +64,7 @@ function extractPhone(text) {
   return p;
 }
 
-// â”€â”€ FETCH UNREAD EMAILS VIA IMAP (last 14 days) â”€â”€
+// â”€â”€ FETCH UNREAD EMAILS VIA IMAP â”€â”€
 function fetchUnreadEmails() {
   return new Promise((resolve, reject) => {
     const imap = new Imap({
@@ -80,7 +94,7 @@ function fetchUnreadEmails() {
             return resolve([]);
           }
 
-          const toFetch = results.slice(0, 5); // Max 5 at a time to stay within timeout
+          const toFetch = results.slice(0, 5);
           const fetch = imap.fetch(toFetch, { bodies: '', markSeen: true });
 
           fetch.on('message', (msg) => {
@@ -103,32 +117,50 @@ function fetchUnreadEmails() {
   });
 }
 
-// â”€â”€ GENERATE AI REPLY â”€â”€
-async function generateReply(from, subject, body) {
-  console.log('Calling Claude API...');
+// â”€â”€ GET PREVIOUS EMAIL THREAD FROM SUPABASE â”€â”€
+async function getPreviousThread(fromEmail) {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(fromEmail)}&limit=1`,
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+    );
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      return data[0].email_reply || null;
+    }
+  } catch (e) {}
+  return null;
+}
+
+// â”€â”€ GENERATE AI REPLY (context-aware) â”€â”€
+async function generateReply(from, subject, body, previousReply) {
   const isBuyer = /buy|purchase|mortgage|home|house|sell/i.test(body + subject);
 
-  const prompt = isBuyer
-    ? `You are Ana Haynes, Licensed Realtor at Rosalia Group in New Jersey.
-A buyer/seller email came in. Write a SHORT warm professional reply.
-- Thank them for reaching out
-- Offer to schedule a call: ${BOOKING_FORM_URL}
-- Sign off as: Ana Haynes | Rosalia Group | (551) 249-9795 | inquiries@rosaliagroup.com
-FROM: ${from}
-SUBJECT: ${subject}
-EMAIL: ${body.substring(0, 600)}
-Under 100 words. No bullet points. Reply with ONLY the email body.`
-    : `You are Ana Haynes, Leasing Manager at Rosalia Group. You manage Iron 65 Apartments in Newark NJ and other luxury rentals.
-A rental inquiry came in. Write a SHORT warm professional reply.
-- Thank them for their interest
-- Invite them to schedule a tour: ${BOOKING_FORM_URL}
-- Mention you have units available
-- Sign off as: Ana Haynes | Rosalia Group | (551) 249-9795 | inquiries@rosaliagroup.com
-FROM: ${from}
-SUBJECT: ${subject}
-EMAIL: ${body.substring(0, 600)}
-Under 100 words. No bullet points. Reply with ONLY the email body.`;
+  // Build conversation context if this is a reply thread
+  let threadContext = '';
+  if (previousReply) {
+    threadContext = `\n\nPREVIOUS REPLY YOU SENT:\n${previousReply}\n\nThe lead is now replying to that. Answer their follow-up question or continue the conversation naturally.`;
+  }
 
+  const role = isBuyer
+    ? 'a licensed real estate agent helping buyers and sellers'
+    : 'a leasing manager helping people find rental apartments';
+
+  const prompt = `${ANA_CONTEXT}
+
+You are ${role}.
+
+${previousReply ? 'A lead is REPLYING to your previous email. Read their reply and respond to what they are asking or saying.' : 'A new inquiry email came in. Reply warmly and ask about their needs.'}
+${threadContext}
+
+FROM: ${from}
+SUBJECT: ${subject}
+THEIR EMAIL:
+${body.substring(0, 800)}
+
+Write ONLY the email body. No subject line. Under 120 words. No bullet points.`;
+
+  console.log('Calling Claude API...');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -143,7 +175,11 @@ Under 100 words. No bullet points. Reply with ONLY the email body.`;
     }),
   });
   const data = await res.json();
-  console.log('Claude response:', JSON.stringify(data).substring(0, 200));
+  console.log('Claude response type:', data.type);
+  if (data.type === 'error') {
+    console.error('Claude error:', data.error?.message);
+    return '';
+  }
   return data.content?.[0]?.text || '';
 }
 
@@ -170,15 +206,12 @@ async function triggerCall(phone, leadName) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${VAPI_KEY}`,
+        Authorization: `Bearer ${VAPI_KEY}`,
       },
       body: JSON.stringify({
         phoneNumberId: VAPI_PHONE_ID,
         assistantId: VAPI_ASSISTANT_ID,
-        customer: {
-          number: phone,
-          name: leadName || undefined,
-        },
+        customer: { number: phone, name: leadName || undefined },
       }),
     });
     const data = await res.json();
@@ -190,24 +223,21 @@ async function triggerCall(phone, leadName) {
   }
 }
 
-// â”€â”€ SEND SMS FALLBACK (if no answer) â”€â”€
-async function sendSMSFallback(phone, leadName) {
+// â”€â”€ SEND SMS â”€â”€
+async function sendSMS(phone, leadName) {
   const firstName = leadName?.split(' ')[0] || 'there';
-  const msg = `Hi ${firstName}! This is Ana from Rosalia Group. We'd love to show you one of our apartments. Book a tour here: ${BOOKING_FORM_URL} â€” (551) 249-9795`;
+  const msg = `Hi ${firstName}! This is Ana from Rosalia Group. I just sent you an email â€” we have great apartments available and would love to help you find the right fit. Book a tour: ${BOOKING_FORM_URL} â€” (551) 249-9795`;
   try {
-    const res = await fetch('https://textbelt.com/text', {
+    await fetch('https://textbelt.com/text', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, message: msg, key: TEXTBELT_KEY }),
     });
-    const result = await res.json();
-    console.log('SMS sent:', result.success ? 'OK' : result.error);
-  } catch (err) {
-    console.error('SMS error:', err.message);
-  }
+    console.log('SMS sent to:', phone);
+  } catch (err) { console.error('SMS error:', err.message); }
 }
 
-// â”€â”€ SAVE LEAD TO SUPABASE â”€â”€
+// â”€â”€ SAVE/UPDATE LEAD IN SUPABASE â”€â”€
 async function saveLead(fromEmail, fromName, subject, body, replyText, phone) {
   const checkRes = await fetch(
     `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(fromEmail)}&limit=1`,
@@ -216,13 +246,19 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone) {
   const existing = await checkRes.json();
 
   if (Array.isArray(existing) && existing.length > 0) {
-    const newNote = `[${new Date().toLocaleDateString()}] Email: ${subject}`;
+    const newNote = `[${new Date().toLocaleDateString()}] Email reply: ${subject}`;
     const mergedNotes = existing[0].notes ? existing[0].notes + '\n' + newNote : newNote;
     await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${existing[0].id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-      body: JSON.stringify({ notes: mergedNotes, replied_at: new Date().toISOString(), email_reply: replyText, phone: existing[0].phone || phone }),
+      body: JSON.stringify({
+        notes: mergedNotes,
+        replied_at: new Date().toISOString(),
+        email_reply: replyText,
+        phone: existing[0].phone || phone || null,
+      }),
     });
+    console.log('Updated existing lead:', existing[0].id);
     return existing[0];
   }
 
@@ -257,7 +293,7 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone) {
 
 // â”€â”€ NOTIFY ANA â”€â”€
 async function notifyAna(fromName, subject, phone) {
-  const msg = `New Lead Email!\nFrom: ${fromName}\nSubject: ${subject}${phone ? '\nPhone: ' + phone + '\nAlex calling now...' : '\nNo phone found'}`;
+  const msg = `New Lead Email!\nFrom: ${fromName}\nSubject: ${subject}${phone ? '\nPhone: ' + phone + '\nAlex calling...' : '\nNo phone â€” reply sent'}`;
   try {
     await fetch('https://textbelt.com/text', {
       method: 'POST',
@@ -291,63 +327,57 @@ exports.handler = async (event) => {
         const body = parsed.text || '';
         const replyTo = parsed.replyTo?.text || from;
 
-        // Extract sender email and name
         const emailMatch = from.match(/<([^>]+)>/) || from.match(/([^\s]+@[^\s]+)/);
         const fromEmail = emailMatch?.[1] || from;
         const fromName = from.replace(/<[^>]+>/, '').trim().replace(/"/g, '') || null;
 
         console.log('Processing:', from, '|', subject);
 
-        // Skip automated senders
         if (shouldSkip(from)) {
           console.log('Skipping (automated):', from);
           results.skipped++;
           continue;
         }
 
-        // Skip if not a lead
         if (!isLead(subject, body)) {
           console.log('Skipping (not a lead):', subject);
           results.not_lead++;
           continue;
         }
 
-        // Extract phone from body if present
         const phone = extractPhone(body + ' ' + subject);
         console.log('Lead detected! Phone:', phone || 'none found');
 
-        // 1. Generate AI reply
-        const replyText = await generateReply(from, subject, body);
+        // Get previous thread context
+        const previousReply = await getPreviousThread(fromEmail);
+        const isReply = subject.toLowerCase().startsWith('re:') || !!previousReply;
+        if (isReply) console.log('Thread reply detected â€” using conversation context');
+
+        // Generate AI reply with context
+        const replyText = await generateReply(from, subject, body, previousReply);
         if (!replyText) {
           console.log('No reply generated');
           results.skipped++;
           continue;
         }
 
-        // 2. Send email reply
+        // Send email reply
         await sendReply(replyTo, subject, replyText);
 
-        // 3. Save to Supabase
+        // Save to Supabase
         await saveLead(fromEmail, fromName, subject, body, replyText, phone);
 
-        // 4. Notify Ana
+        // Notify Ana
         await notifyAna(fromName || from, subject, phone);
 
-        // 5. If phone found â€” trigger Alex call + SMS fallback
-        if (phone) {
-          const callId = await triggerCall(phone, fromName);
-          if (callId) {
-            console.log('Alex call triggered:', callId);
-            // SMS fallback sent regardless â€” Alex will handle follow-up if he connects
-            await sendSMSFallback(phone, fromName);
-          } else {
-            // Call failed â€” send SMS directly
-            await sendSMSFallback(phone, fromName);
-          }
+        // If phone found and NOT a reply thread â€” trigger call + SMS
+        if (phone && !isReply) {
+          await triggerCall(phone, fromName);
+          await sendSMS(phone, fromName);
         }
 
         results.processed++;
-        console.log('Done processing lead:', subject);
+        console.log('Done:', subject);
 
       } catch (err) {
         console.error('Error processing email:', err.message);
