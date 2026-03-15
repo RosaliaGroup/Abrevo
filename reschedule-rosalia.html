@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reschedule Your Tour - Iron 65</title>
+  <title>Reschedule Your Tour â€” Rosalia Group</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -57,8 +57,8 @@
 <div class="page">
   <div class="header">
     <div class="logo-mark">
-      <div class="logo-icon"><span>65</span></div>
-      <span class="logo-text">Iron 65</span>
+      <div class="logo-icon"><span>R</span></div>
+      <span class="logo-text">Rosalia Group</span>
     </div>
     <h1>Reschedule Your <em>Tour</em></h1>
     <p>Luxury Apartments &middot; Newark, New Jersey</p>
@@ -72,6 +72,26 @@
     <div class="form-state" id="formState">
       <form id="rescheduleForm" novalidate>
         <div class="form-grid">
+          <div class="field">
+            <label>Property *</label>
+            <select id="property_name" required>
+              <option value="">Select property</option>
+              <option>486 Market St - River Pointe, Newark NJ</option>
+              <option>502 Market St, Newark NJ</option>
+              <option>39 Madison St - Iron Pointe, Newark NJ</option>
+              <option>556 Market St, Newark NJ</option>
+              <option>289 Halsey St, Newark NJ</option>
+              <option>1369 South Ave, Plainfield NJ</option>
+              <option>475 Main St - The Elks, Orange NJ</option>
+              <option>65 Mcwhorter St - Iron 65, Newark NJ</option>
+              <option>77 Christie St, Newark NJ</option>
+              <option value="other">Other (specify below)</option>
+            </select>
+          </div>
+          <div class="field" id="other_property_field" style="display:none">
+            <label>Please specify property</label>
+            <input type="text" id="other_property" placeholder="Enter property address" />
+          </div>
           <div class="section-label">Your Information</div>
           <div class="form-row">
             <div class="field">
@@ -123,7 +143,7 @@
     </div>
   </div>
   <div class="footer">
-    65 Mcwhorter St, Newark, NJ 07105 &middot; <a href="tel:+18623331681">(862) 333-1681</a> &middot; <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a>
+    Newark, NJ &middot; <a href="tel:+18624191763">(862) 419-1763</a> &middot; <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a>
   </div>
 </div>
 <script>
@@ -131,11 +151,15 @@
   var phoneParam = params.get('phone');
   if (phoneParam) document.getElementById('phone').value = phoneParam;
   var today = new Date().toISOString().split('T')[0];
+  document.getElementById('property_name').addEventListener('change', function() {
+    document.getElementById('other_property_field').style.display = this.value === 'other' ? 'block' : 'none';
   });
 
     document.getElementById('new_date').min = today;
   document.getElementById('rescheduleForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    var property_raw = document.getElementById('property_name').value;
+    var property_name = property_raw === 'other' ? (document.getElementById('other_property').value.trim() || 'Other') : property_raw;
     var full_name = document.getElementById('full_name').value.trim();
     var phone = document.getElementById('phone').value.trim();
     var email = document.getElementById('email').value.trim();
@@ -158,6 +182,7 @@
       var res = await fetch('/.netlify/functions/reschedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ property: property_name, property_name: property_name, phone: phone, new_date: new_date, new_time: new_time, full_name: full_name, email: email })
       });
       var data = await res.json();
       if (res.ok && data.success) {
