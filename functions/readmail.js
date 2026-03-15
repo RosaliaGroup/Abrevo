@@ -268,7 +268,7 @@ async function sendReply(replyTo, subject, replyText) {
   });
   const replySubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`;
   await transporter.sendMail({
-    from: `"Ana Haynes ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Rosalia Group" <${INBOX_EMAIL}>`,
+    from: `"Rosalia Group Inquiries" <${INBOX_EMAIL}>`,
     to: replyTo,
     subject: replySubject,
     text: replyText,
