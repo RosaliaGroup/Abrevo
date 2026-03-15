@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reschedule Your Tour â€” Rosalia Group</title>
+  <title>Reschedule Your Tour Ã¢â‚¬â€ Rosalia Group</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -155,7 +155,8 @@
     document.getElementById('other_property_field').style.display = this.value === 'other' ? 'block' : 'none';
   });
 
-    document.getElementById('new_date').min = today;
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  document.getElementById('new_date').min = tomorrow;
   document.getElementById('rescheduleForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     var property_raw = document.getElementById('property_name').value;

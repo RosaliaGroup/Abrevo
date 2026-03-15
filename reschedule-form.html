@@ -133,7 +133,8 @@
   var today = new Date().toISOString().split('T')[0];
   });
 
-    document.getElementById('new_date').min = today;
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  document.getElementById('new_date').min = tomorrow;
   document.getElementById('rescheduleForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     var full_name = document.getElementById('full_name').value.trim();
