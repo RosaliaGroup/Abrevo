@@ -25,8 +25,8 @@ CRITICAL RULES:
 - Anyone can schedule a tour regardless of credit score Ã¢â‚¬â€ never turn anyone away from touring
 - Credit and income requirements are discussed with the leasing agent Ã¢â‚¬â€ not a barrier to touring
 - Answer questions using the knowledge base, then redirect to booking the tour
-- Keep replies concise â€” bullet points for Q&A, under 150 words
-- Always lead with NET rent after promotions, not gross. Example: "effective ~$1,833/mo (1 month free on 13-mo lease)". Calculate: 1mo free/13mo lease = gross x 12/13. 2mo free/24mo = gross x 22/24
+- Keep replies concise Ã¢â‚¬â€ bullet points for Q&A, under 150 words
+- Always lead with NET rent after promotions. Example: "effective ~$1,833/mo (1 month free on 13-mo lease)". Calculate: 1mo free/13mo = gross x 12/13. 2mo free/24mo = gross x 22/24
 - Never use markdown bold (**text**) or italic (*text*)
 - Never suggest specific appointment times Ã¢â‚¬â€ always direct to the booking link
 - Ask for phone number if not provided
@@ -613,7 +613,8 @@ exports.handler = async (event) => {
         console.log('Lead detected! Phone:', phone || 'none found');
 
         // Skip if replied recently (prevents double replies)
-        if (await repliedRecently(fromEmail)) {
+        const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : fromEmail;
+        if (await repliedRecently(checkEmail)) {
           console.log('Skipping (replied recently):', fromEmail);
           results.skipped++;
           continue;
@@ -632,8 +633,9 @@ exports.handler = async (event) => {
           continue;
         }
 
-        // Send email reply
-        await sendReply(replyTo, subject, replyText);
+        // Send email reply â€” use real lead email for Webflow/Avail, replyTo for others
+        const effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : replyTo;
+        await sendReply(effectiveReplyTo, subject, replyText);
 
         // Save to Supabase
         await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone);
