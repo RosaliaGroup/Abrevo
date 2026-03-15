@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quick Feedback â€” Rosalia Group</title>
+  <title>Quick Feedback &mdash; Rosalia Group</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -124,7 +124,7 @@
 
     <div id="formState">
       <h1>Quick Feedback</h1>
-      <p class="subtitle">We noticed you haven't moved forward with us yet. We'd love to understand why â€” your feedback helps us improve for future residents.</p>
+      <p class="subtitle">We noticed you haven't moved forward with us yet. We'd love to understand why &mdash; your feedback helps us improve for future residents.</p>
 
       <div class="label">What was the main reason?</div>
       <div class="options" id="options">
@@ -139,9 +139,9 @@
       </div>
 
       <div class="label">Any additional comments? (optional)</div>
-      <textarea id="comments" placeholder="Tell us more â€” your feedback is valuable..."></textarea>
+      <textarea id="comments" placeholder="Tell us more &mdash; your feedback is valuable..."></textarea>
 
-      <button class="btn" id="submitBtn" onclick="submitSurvey()" disabled>Submit Feedback â†’</button>
+      <button class="btn" id="submitBtn" onclick="submitSurvey()" disabled>Submit Feedback &rarr;</button>
     </div>
 
     <div class="success" id="successState">
@@ -153,12 +153,10 @@
   </div>
 
   <script>
-    // Pre-fill lead info from URL params
     const params = new URLSearchParams(window.location.search);
     const leadId = params.get('id');
     const leadName = params.get('name');
 
-    // Option click handler
     document.querySelectorAll('.option').forEach(opt => {
       opt.addEventListener('click', function() {
         document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
@@ -171,18 +169,15 @@
       const btn = document.getElementById('submitBtn');
       btn.disabled = true;
       btn.textContent = 'Submitting...';
-
       const reason = document.querySelector('input[name="reason"]:checked')?.value;
       const comments = document.getElementById('comments').value.trim();
-
       try {
         await fetch('/.netlify/functions/survey', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ leadId, leadName, reason, comments })
+          body: JSON.stringify({ leadId, leadName, reason, comments,  })
         });
       } catch(e) { console.error(e); }
-
       document.getElementById('formState').style.display = 'none';
       document.getElementById('successState').style.display = 'block';
     }
