@@ -1,15 +1,3 @@
-const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
-const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
-const FUB_API_KEY = 'fka_0BintMy4p0REoWnt6504EBuAzvPkD7gi0h';
-const FUB_BASE = 'https://api.followupboss.com/v1';
-const ANA_PHONE = '+16462269189';
-
-// FUB auth header — Basic auth with API key as username, empty password
-const FUB_AUTH = 'Basic ' + Buffer.from(FUB_API_KEY + ':').toString('base64');
-
-// ── FETCH NEW LEADS FROM FUB ──
-// Gets people created in the last 24 hours
 async function fetchNewFUBLeads(hoursBack = 24) {
   const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
   
@@ -32,7 +20,7 @@ async function fetchNewFUBLeads(hoursBack = 24) {
   return data.people || [];
 }
 
-// ── SAVE LEAD TO SUPABASE ──
+// â”€â”€ SAVE LEAD TO SUPABASE â”€â”€
 async function saveToSupabase(fubPerson) {
   // Extract fields from FUB person object
   const name = [fubPerson.firstName, fubPerson.lastName].filter(Boolean).join(' ') || null;
@@ -119,7 +107,7 @@ async function saveToSupabase(fubPerson) {
       source: source || 'fub',
       message,
       property,
-      client: 'rosalia',
+      client: 'iron65',
       status: 'new',
       replied_at: new Date().toISOString(),
       follow_up_count: 0,
@@ -136,24 +124,26 @@ async function saveToSupabase(fubPerson) {
   } catch (e) { return null; }
 }
 
-// ── NOTIFY ANA ──
+// â”€â”€ NOTIFY ANA â”€â”€
 async function notifyAna(newLeads) {
-  if (!newLeads.length) return;
-  const msg = `FUB Sync: ${newLeads.length} new lead(s)\n` +
-    newLeads.slice(0, 3).map(l => `• ${l.name} (${l.source || 'FUB'})`).join('\n');
   try {
-    await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: ANA_PHONE, message: msg, key: TEXTBELT_KEY }),
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+    const names = newLeads.slice(0, 3).map(l => `- ${l.name} (${l.source || 'FUB'})`).join('\n');
+    await transporter.sendMail({
+      from: `"Rosalia AI System" <${GMAIL_USER}>`,
+      to: GMAIL_USER,
+      subject: `${newLeads.length} New FUB Lead(s)`,
+      text: `New leads from Follow Up Boss:\n\n${names}${newLeads.length > 3 ? `\n...and ${newLeads.length - 3} more` : ''}`,
     });
-  } catch (err) { console.error('SMS error:', err.message); }
+  } catch (err) { console.error('Email notify error:', err.message); }
 }
 
-// ── HANDLER ──
+
+// â”€â”€ HANDLER â”€â”€
 // Two modes:
-// 1. GET /fubsync — manual trigger or scheduled (pulls last 24h from FUB)
-// 2. POST /fubsync — FUB webhook (single person payload)
+// 1. GET /fubsync â€” manual trigger or scheduled (pulls last 24h from FUB)
+// 2. POST /fubsync â€” FUB webhook (single person payload)
 exports.handler = async (event) => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
@@ -162,7 +152,7 @@ exports.handler = async (event) => {
     let people = [];
 
     if (event.httpMethod === 'POST') {
-      // FUB webhook mode — receives a single person event
+      // FUB webhook mode â€” receives a single person event
       const body = JSON.parse(event.body || '{}');
       console.log('FUB webhook received:', JSON.stringify(body).substring(0, 300));
 
@@ -178,7 +168,7 @@ exports.handler = async (event) => {
         };
       }
     } else {
-      // GET mode — pull from FUB API
+      // GET mode â€” pull from FUB API
       const hoursBack = parseInt(event.queryStringParameters?.hours || '24');
       console.log(`Fetching FUB leads from last ${hoursBack} hours...`);
       people = await fetchNewFUBLeads(hoursBack);

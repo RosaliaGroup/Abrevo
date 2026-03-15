@@ -1,7 +1,10 @@
 const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-rosalia';
+const IRON65_BOOKING_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const JESSICA_ASSISTANT_ID = '35f4e4a2-aabc-47be-abfc-630cf6a85d58';
+const JESSICA_PHONE_ID = '8e91b213-7224-4246-b98c-07e5a384a7ca';
 
 // Find leads that have a phone number but haven't been called yet
-// We track this with a 'called_at' column ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â if null, not called yet
+// We track this with a 'called_at' column ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â if null, not called yet
 async function findUncalledLeads() {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/leads?phone=not.is.null&called_at=is.null&status=neq.contacted&limit=5&order=created_at.asc`,
@@ -29,7 +32,7 @@ async function markCalled(leadId, callId) {
 }
 
 // Trigger Vapi outbound call
-async function triggerCall(phone, leadName) {
+async function triggerCall(phone, leadName, assistantId, phoneId) {
   try {
     const res = await fetch('https://api.vapi.ai/call/phone', {
       method: 'POST',
@@ -38,8 +41,8 @@ async function triggerCall(phone, leadName) {
         Authorization: `Bearer ${VAPI_KEY}`,
       },
       body: JSON.stringify({
-        phoneNumberId: VAPI_PHONE_ID,
-        assistantId: VAPI_ASSISTANT_ID,
+        phoneNumberId: phoneId || VAPI_PHONE_ID,
+        assistantId: assistantId || VAPI_ASSISTANT_ID,
         customer: {
           number: phone,
           name: leadName || undefined,
@@ -56,8 +59,9 @@ async function triggerCall(phone, leadName) {
 }
 
 // Send SMS with booking link
-async function sendSMS(phone, leadName) {
+async function sendSMS(phone, leadName, bookingUrl) {
   const firstName = leadName?.split(' ')[0] || 'there';
+  const url = bookingUrl || BOOKING_FORM_URL;
   const msg = `Hi ${firstName}! This is Alex from Rosalia Group. We'd love to show you one of our apartments. Book a tour here: ${BOOKING_FORM_URL} | (862) 419-1814`;
   try {
     const res = await fetch('https://textbelt.com/text', {
@@ -113,13 +117,19 @@ exports.handler = async (event) => {
 
     for (const lead of leads) {
       try {
-        console.log(`Calling: ${lead.name} | ${lead.phone} | source: ${lead.source}`);
+        console.log(`Calling: ${lead.name} | ${lead.phone} | source: ${lead.source} | client: ${lead.client}`);
 
-        // Trigger Alex call
-        const callId = await triggerCall(lead.phone, lead.name);
+        // Use Jessica for Iron 65 leads, Alex for all others
+        const isIron65 = lead.client === 'iron65';
+        const assistantId = isIron65 ? JESSICA_ASSISTANT_ID : VAPI_ASSISTANT_ID;
+        const phoneId = isIron65 ? JESSICA_PHONE_ID : VAPI_PHONE_ID;
+        const bookingUrl = isIron65 ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
 
-        // Send SMS with booking link
-        await sendSMS(lead.phone, lead.name);
+        // Trigger call
+        const callId = await triggerCall(lead.phone, lead.name, assistantId, phoneId);
+
+        // Send SMS with correct booking link
+        await sendSMS(lead.phone, lead.name, bookingUrl);
 
         // Mark as called in Supabase
         await markCalled(lead.id, callId);
