@@ -12,3 +12,6 @@
 
 [functions."autocall"]
   schedule = "* * * * *"
+
+[functions."healthcheck"]
+  schedule = "*/30 * * * *"
