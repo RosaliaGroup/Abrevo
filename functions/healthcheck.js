@@ -58,7 +58,7 @@ async function checkAnthropicBalance() {
     });
     const data = await res.json();
     if (data.error?.type === 'billing_error') {
-      return { service: 'Anthropic API', status: 'error', value: 'Billing error â€” out of credits!', alert: true };
+      return { service: 'Anthropic API', status: 'error', value: 'Billing error Ã¢â‚¬â€ out of credits!', alert: true };
     }
     return { service: 'Anthropic API', status: 'ok', value: 'Working', alert: false };
   } catch (e) {
@@ -85,14 +85,14 @@ async function sendAlertEmail(checks) {
   const hasAlerts = alerts.length > 0;
 
   const subject = hasAlerts
-    ? `âš ï¸ ALERT: ${alerts.length} issue(s) detected â€” Rosalia AI System`
-    : `âœ… System Health OK â€” Rosalia AI`;
+    ? `Ã¢Å¡Â Ã¯Â¸Â ALERT: ${alerts.length} issue(s) detected Ã¢â‚¬â€ Rosalia AI System`
+    : `Ã¢Å“â€¦ System Health OK Ã¢â‚¬â€ Rosalia AI`;
 
-  const body = `ROSALIA GROUP â€” SYSTEM HEALTH REPORT
+  const body = `ROSALIA GROUP Ã¢â‚¬â€ SYSTEM HEALTH REPORT
 ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} ET
 
-${hasAlerts ? 'âš ï¸ ALERTS DETECTED:\n' + alerts.map(a => `â€¢ ${a.service}: ${a.value}`).join('\n') + '\n\n' : ''}ALL SERVICES STATUS:
-${checks.map(c => `${c.status === 'ok' ? 'âœ…' : c.status === 'low' ? 'âš ï¸' : 'âŒ'} ${c.service}: ${c.value}`).join('\n')}
+${hasAlerts ? 'Ã¢Å¡Â Ã¯Â¸Â ALERTS DETECTED:\n' + alerts.map(a => `Ã¢â‚¬Â¢ ${a.service}: ${a.value}`).join('\n') + '\n\n' : ''}ALL SERVICES STATUS:
+${checks.map(c => `${c.status === 'ok' ? 'Ã¢Å“â€¦' : c.status === 'low' ? 'Ã¢Å¡Â Ã¯Â¸Â' : 'Ã¢ÂÅ’'} ${c.service}: ${c.value}`).join('\n')}
 
 ${hasAlerts ? 'ACTION REQUIRED: Please top up the services listed above.' : 'All systems running normally.'}`;
 
@@ -103,6 +103,45 @@ ${hasAlerts ? 'ACTION REQUIRED: Please top up the services listed above.' : 'All
     subject,
     text: body,
   });
+}
+
+async function checkAutocallActivity() {
+  try {
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const now = new Date();
+    const etHour = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' })).getHours();
+    const etDay = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' })).getDay();
+
+    // Check if we are in business hours
+    let inHours = false;
+    if (etDay >= 1 && etDay <= 5) inHours = etHour >= 9 && etHour < 18;
+    else if (etDay === 6) inHours = etHour >= 10 && etHour < 17;
+    else if (etDay === 0) inHours = etHour >= 11 && etHour < 17;
+
+    if (!inHours) return { service: 'Autocall', status: 'ok', value: 'Outside business hours', alert: false };
+
+    // Check uncalled leads with phones
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/leads?phone=not.is.null&called_at=is.null&status=neq.contacted&limit=1`,
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer \${SUPABASE_KEY}` } }
+    );
+    const uncalled = await res.json();
+
+    // Check last call made
+    const res2 = await fetch(
+      `\${SUPABASE_URL}/rest/v1/leads?called_at=gt.\${twoHoursAgo}&limit=1&select=called_at`,
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer \${SUPABASE_KEY}` } }
+    );
+    const recentCalls = await res2.json();
+
+    if (Array.isArray(uncalled) && uncalled.length > 0 && (!Array.isArray(recentCalls) || recentCalls.length === 0)) {
+      return { service: 'Autocall', status: 'error', value: 'Leads waiting but NO calls made in 2+ hours during business hours!', alert: true };
+    }
+
+    return { service: 'Autocall', status: 'ok', value: Array.isArray(recentCalls) && recentCalls.length > 0 ? 'Calls being made' : 'No uncalled leads', alert: false };
+  } catch (e) {
+    return { service: 'Autocall', status: 'error', value: e.message, alert: true };
+  }
 }
 
 exports.handler = async (event) => {
@@ -117,6 +156,7 @@ exports.handler = async (event) => {
       checkSupabase(),
       checkAnthropicBalance(),
       checkRecentLeads(),
+      checkAutocallActivity(),
     ]);
 
     const hasAlerts = checks.some(c => c.alert);
