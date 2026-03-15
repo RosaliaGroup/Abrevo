@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Book Your Tour â€” Iron 65 Luxury Apartments</title>
+  <title>Book Your Tour Ã¢â‚¬â€ Iron 65 Luxury Apartments</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -250,7 +250,8 @@
   if (phoneParam) document.getElementById('phone').value = phoneParam;
 
   const today = new Date().toISOString().split('T')[0];
-  document.getElementById('preferred_date').min = today;
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  document.getElementById('preferred_date').min = tomorrow;
   // Show/hide other property field
   document.getElementById('move_in_date').min = today;
 
