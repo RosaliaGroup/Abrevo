@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Book Your Tour â€” Iron 65 Luxury Apartments</title>
+  <title>Book Your Tour â€” Rosalia Group</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -100,8 +100,8 @@
 
   <div class="header">
     <div class="logo-mark">
-      <div class="logo-icon"><span>65</span></div>
-      <span class="logo-text">Iron 65</span>
+      <div class="logo-icon"><span>R</span></div>
+      <span class="logo-text">Rosalia Group</span>
     </div>
     <h1>Schedule Your <em>Private Tour</em></h1>
     <p>Luxury Apartments &middot; Newark, New Jersey</p>
@@ -197,6 +197,25 @@
 
           <div class="form-row">
             <div class="field">
+              <label>Property *</label>
+              <select id="property_name" required>
+                <option value="">Select property</option>
+                <option>486 Market St - River Pointe, Newark NJ</option>
+                <option>502 Market St, Newark NJ</option>
+                <option>39 Madison St - Iron Pointe, Newark NJ</option>
+                <option>556 Market St, Newark NJ</option>
+                <option>289 Halsey St, Newark NJ</option>
+                <option>77 Christie St, Newark NJ</option>
+                <option>1369 South Ave, Plainfield NJ</option>
+                <option>475 Main St - The Elks, Orange NJ</option>
+                <option value="other">Other (specify below)</option>
+              </select>
+            </div>
+            <div class="field" id="other_property_field" style="display:none">
+              <label>Please specify property</label>
+              <input type="text" id="other_property" placeholder="Enter property address" />
+            </div>
+            <div class="field">
               <label>Preferred Date *</label>
               <input type="date" id="preferred_date" required />
             </div>
@@ -240,7 +259,7 @@
   </div>
 
   <div class="footer">
-    65 Mcwhorter St, Newark, NJ 07105 &middot; <a href="tel:+18623331681">(862) 333-1681</a> &middot; <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a>
+    Newark, NJ &middot; <a href="tel:+18624191763">(862) 419-1763</a> &middot; <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a>
   </div>
 
 </div>
@@ -250,7 +269,11 @@
   if (phoneParam) document.getElementById('phone').value = phoneParam;
 
   const today = new Date().toISOString().split('T')[0];
-  document.getElementById('preferred_date').min = today;
+  document.getElementById('property_name').addEventListener('change', function() {
+    document.getElementById('other_property_field').style.display = this.value === 'other' ? 'block' : 'none';
+  });
+
+    document.getElementById('preferred_date').min = today;
   // Show/hide other property field
   document.getElementById('move_in_date').min = today;
 
@@ -268,11 +291,13 @@
     var move_in_date_raw = document.getElementById('move_in_date').value;
     var income_qualifies = document.getElementById('income').value || 'Not provided';
     var credit_qualifies = document.getElementById('credit').value || 'Not provided';
+    var property_raw = document.getElementById('property_name').value;
+    var property_name = property_raw === 'other' ? (document.getElementById('other_property').value.trim() || 'Other') : property_raw;
     var preferred_date_raw = document.getElementById('preferred_date').value;
     var preferred_time = document.getElementById('preferred_time').value;
     var additional_notes = document.getElementById('message').value.trim();
 
-    if (!full_name || !phone || !email || !budget || !apartment_size || !move_in_date_raw || !preferred_date_raw || !preferred_time) {
+    if (!full_name || !phone || !email || !budget || !apartment_size || !move_in_date_raw || !preferred_date_raw || !preferred_time || !property_name) {
       errorEl.textContent = 'Please fill in all required fields.';
       errorEl.style.display = 'block';
       return;
@@ -303,7 +328,7 @@
           preferred_date: preferred_date,
           preferred_time: preferred_time,
           additional_notes: additional_notes,
-          property_address: 'Iron 65 - 65 Mcwhorter St, Newark NJ',
+          property_address: property_name,
           client: 'rosalia'
         })
       });
@@ -316,7 +341,7 @@
         document.getElementById('confirmDetails').innerHTML =
           '<strong>Appointment</strong>' + preferred_date + ' at ' + preferred_time +
           '<br><br><strong>Name</strong>' + full_name +
-          '<br><br><strong>Property</strong>Iron 65 &middot; 65 Mcwhorter St, Newark NJ';
+          '<br><br><strong>Property</strong>' + property_name;
       } else {
         throw new Error(data.error || 'Booking failed');
       }
