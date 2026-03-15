@@ -1,4 +1,4 @@
-﻿const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
+const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
 const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
 const VAPI_KEY = '064f441d-a388-4404-8b6c-05e91e90f1ff';
@@ -8,7 +8,7 @@ const ANA_PHONE = '+16462269189';
 const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
 
 // Find leads that have a phone number but haven't been called yet
-// We track this with a 'called_at' column â€” if null, not called yet
+// We track this with a 'called_at' column Ã¢â‚¬â€ if null, not called yet
 async function findUncalledLeads() {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/leads?phone=not.is.null&called_at=is.null&status=neq.contacted&limit=5&order=created_at.asc`,
@@ -65,7 +65,7 @@ async function triggerCall(phone, leadName) {
 // Send SMS with booking link
 async function sendSMS(phone, leadName) {
   const firstName = leadName?.split(' ')[0] || 'there';
-  const msg = `Hi ${firstName}! This is Ana from Rosalia Group. We'd love to show you one of our apartments. Book a tour here: ${BOOKING_FORM_URL} â€” (551) 249-9795`;
+  const msg = `Hi ${firstName}! This is Ana from Rosalia Group. We'd love to show you one of our apartments. Book a tour here: ${BOOKING_FORM_URL} Ã¢â‚¬â€ (551) 249-9795`;
   try {
     const res = await fetch('https://textbelt.com/text', {
       method: 'POST',
@@ -96,6 +96,22 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
 
   try {
+    // Business hours check (Eastern Time)
+    const now = new Date();
+    const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const hour = et.getHours();
+    const day = et.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+
+    let allowed = false;
+    if (day >= 1 && day <= 5) allowed = hour >= 9 && hour < 18;  // Mon-Fri 9am-6pm
+    else if (day === 6) allowed = hour >= 10 && hour < 17;         // Sat 10am-5pm
+    else if (day === 0) allowed = hour >= 11 && hour < 17;         // Sun 11am-5pm
+
+    if (!allowed) {
+      console.log('Outside business hours - skipping calls. Day:', day, 'Hour:', hour, 'ET');
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: 'Outside business hours', day, hour }) };
+    }
+
     console.log('autocall: checking for uncalled leads...');
     const leads = await findUncalledLeads();
     console.log(`Found ${leads.length} uncalled lead(s) with phone numbers`);
