@@ -1,14 +1,7 @@
-const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
-const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
-const VAPI_KEY = '064f441d-a388-4404-8b6c-05e91e90f1ff';
-const VAPI_ASSISTANT_ID = '1cae5323-6b83-4434-8461-6330472da140';
-const VAPI_PHONE_ID = 'fe01292e-6625-4c06-b24e-8cd2240f5453';
-const ANA_PHONE = '+16462269189';
-const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-rosalia';
 
 // Find leads that have a phone number but haven't been called yet
-// We track this with a 'called_at' column Ã¢â‚¬â€ if null, not called yet
+// We track this with a 'called_at' column ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â if null, not called yet
 async function findUncalledLeads() {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/leads?phone=not.is.null&called_at=is.null&status=neq.contacted&limit=5&order=created_at.asc`,
@@ -65,7 +58,7 @@ async function triggerCall(phone, leadName) {
 // Send SMS with booking link
 async function sendSMS(phone, leadName) {
   const firstName = leadName?.split(' ')[0] || 'there';
-  const msg = `Hi ${firstName}! This is Ana from Rosalia Group. We'd love to show you one of our apartments. Book a tour here: ${BOOKING_FORM_URL} Ã¢â‚¬â€ (551) 249-9795`;
+  const msg = `Hi ${firstName}! This is Alex from Rosalia Group. We'd love to show you one of our apartments. Book a tour here: ${BOOKING_FORM_URL} | (862) 419-1814`;
   try {
     const res = await fetch('https://textbelt.com/text', {
       method: 'POST',
