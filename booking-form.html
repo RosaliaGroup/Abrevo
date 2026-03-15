@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Book Your Tour â€” Rosalia Group</title>
+  <title>Book Your Tour Ã¢â‚¬â€ Rosalia Group</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -208,7 +208,13 @@
                 <option>1369 South Ave, Plainfield NJ</option>
                 <option>475 Main St - The Elks, Orange NJ</option>
                 <option>65 Mcwhorter St - Iron 65, Newark NJ</option>
+                <option>77 Christie St, Newark NJ</option>
+                <option value="Other">Other</option>
               </select>
+            </div>
+            <div class="field" id="other_property_field" style="display:none">
+              <label>Please specify property *</label>
+              <input type="text" id="other_property" placeholder="Enter property address" />
             </div>
             <div class="field">
               <label>Preferred Date *</label>
@@ -265,6 +271,18 @@
 
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('preferred_date').min = today;
+  // Show/hide other property field
+  document.getElementById('property_name').addEventListener('change', function() {
+    var otherField = document.getElementById('other_property_field');
+    if (this.value === 'Other') {
+      otherField.style.display = 'flex';
+      document.getElementById('other_property').required = true;
+    } else {
+      otherField.style.display = 'none';
+      document.getElementById('other_property').required = false;
+    }
+  });
+
   document.getElementById('move_in_date').min = today;
 
   document.getElementById('bookingForm').addEventListener('submit', async function(e) {
@@ -281,7 +299,7 @@
     var move_in_date_raw = document.getElementById('move_in_date').value;
     var income_qualifies = document.getElementById('income').value || 'Not provided';
     var credit_qualifies = document.getElementById('credit').value || 'Not provided';
-    var property_name = document.getElementById('property_name').value;
+    var property_name = document.getElementById('property_name').value === 'Other' ? (document.getElementById('other_property').value.trim() || 'Other') : document.getElementById('property_name').value;
     var preferred_date_raw = document.getElementById('preferred_date').value;
     var preferred_time = document.getElementById('preferred_time').value;
     var additional_notes = document.getElementById('message').value.trim();
