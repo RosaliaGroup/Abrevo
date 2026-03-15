@@ -2,6 +2,21 @@
 # Last updated: March 15, 2026
 # NOTE: Prices, availability, and incentives change daily. Always direct leads to schedule a tour for the most current information.
 
+## NET RENT CALCULATIONS (ALWAYS USE THESE EXACT FORMULAS)
+- 13-month lease (1 month free): gross x 12/13
+- 13-month + apply within 24hrs of tour (1.5 months free): gross x 11.5/13
+- 24-month lease (2 months free): gross x 22/24
+- 24-month + apply within 24hrs of tour (2.5 months free): gross x 21.5/24
+- Iron 65 12-month (1 month free): gross x 11/12
+- Iron 65 18-month ($4,000 credit): gross - ($4,000/18) per month
+- Iron 65 24-month (2 months free): gross x 22/24
+- The 24-hour apply bonus (extra 1/2 month free) applies at ALL properties
+- ALWAYS show both standard net AND 24hr-apply net to create urgency
+
+EXAMPLE for 556 Market Unit 5A at $2,199/mo:
+- 13-month: effective $2,029.84/mo | apply within 24hrs: $1,945/mo
+- 24-month: effective $2,016.75/mo | apply within 24hrs: $1,969.94/mo
+
 ## BOOKING LINKS
 - All Rosalia properties (general): https://silver-ganache-1ee2ca.netlify.app/booking-rosalia
 - Iron 65 specifically: https://silver-ganache-1ee2ca.netlify.app/booking-form
