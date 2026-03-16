@@ -10,7 +10,7 @@ const FROM_EMAIL = 'inquiries@rosaliagroup.com';
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  auth: { user: 'inquiries@rosaliagroup.com', pass: process.env.GMAIL_PASS_INQUIRIES },
+  auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
 });
 
 async function sendSMS(phone, message) {
@@ -93,8 +93,9 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing required fields' }) };
     }
 
-    // Create calendar event
-    const eventId = await createCalendarEvent(booking);
+    // Create calendar event - non-blocking
+    let eventId = null;
+    try { eventId = await createCalendarEvent(booking); } catch(calErr) { console.error('Calendar non-blocking:', calErr.message); }
 
     // Save to Supabase bookings table
     await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
@@ -118,21 +119,21 @@ exports.handler = async (event) => {
     }
 
     // Send email to sales team
-    await transporter.sendMail({
+    try { await transporter.sendMail({
       from: `"Mechanical Enterprise Booking" <${FROM_EMAIL}>`,
       to: SALES_EMAIL,
       subject: `New HVAC Appointment Ã¢â‚¬â€ ${full_name} | ${preferred_date} at ${preferred_time}`,
-      text: `New HVAC Appointment Booked\n\nCustomer: ${full_name}\nPhone: ${phone}\nEmail: ${email || 'N/A'}\nService: ${appointment_type || 'N/A'}\nProperty: ${property_address || 'N/A'}\nType: ${property_type || 'N/A'}\nIssue: ${issue_description || 'N/A'}\nDate: ${preferred_date} at ${preferred_time}\n\nCalendar event created Ã¢Å“â€¦`,
-    });
+      text: `New HVAC Appointment Booked\n\nCustomer: ${full_name}\nPhone: ${phone}\nEmail: ${email || 'N/A'}\nService: ${appointment_type || 'N/A'}\nProperty: ${property_address || 'N/A'}\nType: ${property_type || 'N/A'}\nIssue: ${issue_description || 'N/A'}\nDate: ${preferred_date} at ${preferred_time}\n\nCalendar event created`,
+    }); } catch(se) { console.error('Sales email non-blocking:', se.message); }
 
     // Send confirmation email to customer
     if (email) {
-      await transporter.sendMail({
+      try { await transporter.sendMail({
         from: `"Mechanical Enterprise" <${FROM_EMAIL}>`,
         to: email,
         subject: 'Your HVAC Appointment is Confirmed Ã¢â‚¬â€ Mechanical Enterprise',
         text: `Dear ${full_name},\n\nYour HVAC appointment has been confirmed.\n\nDate: ${preferred_date}\nTime: ${preferred_time}\nService: ${appointment_type || 'HVAC Appointment'}\nAddress: ${property_address || 'TBD'}\n\nOur team will confirm within 1 business hour. Questions? Call (862) 419-1763 or email sales@mechanicalenterprise.com.\n\nThank you,\nMechanical Enterprise LLC\n(862) 419-1763 | mechanicalenterprise.com`,
-      });
+      }); } catch(ce) { console.error('Cust email non-blocking:', ce.message); }
     }
 
     return { statusCode: 200, headers, body: JSON.stringify({ success: true, eventId }) };
