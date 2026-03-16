@@ -39,11 +39,18 @@ exports.handler = async (event) => {
     const isIron65 = (property || '').toLowerCase().includes('iron 65') ||
                      (property || '').toLowerCase().includes('mcwhorter') ||
                      (property || '').toLowerCase().includes('iron65');
+    const isHVAC = (property || '').toLowerCase().includes('hvac') ||
+                   (property || '').toLowerCase().includes('mechanical') ||
+                   (property || '').toLowerCase().includes('mechanical enterprise');
 
     const isReschedule = type === 'reschedule';
 
     let formUrl;
-    if (isReschedule) {
+    if (isHVAC) {
+      formUrl = isReschedule
+        ? `${SITE_URL}/reschedule-form-hvac`
+        : `${SITE_URL}/booking-form-hvac`;
+    } else if (isReschedule) {
       formUrl = isIron65
         ? `${SITE_URL}/reschedule-form`
         : `${SITE_URL}/reschedule-rosalia`;
@@ -55,7 +62,7 @@ exports.handler = async (event) => {
 
     const firstName = (name || '').split(' ')[0] || 'there';
     const actionText = isReschedule ? 'reschedule your tour' : 'book your tour';
-    const brandName = isIron65 ? 'Iron 65' : 'Rosalia Group';
+    const brandName = isHVAC ? 'Mechanical Enterprise' : (isIron65 ? 'Iron 65' : 'Rosalia Group');
 
     const message = `Hi ${firstName}! ${brandName} here. Here's your link to ${actionText}: ${formUrl}`;
 

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Book HVAC Appointment â€” Mechanical Enterprise</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .card { background: #fff; border-radius: 16px; padding: 36px 32px; max-width: 520px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .logo { text-align: center; margin-bottom: 24px; }
+    .logo h1 { font-size: 22px; font-weight: 700; color: #1a1a2e; }
+    .logo p { color: #666; font-size: 14px; margin-top: 4px; }
+    h2 { font-size: 18px; color: #1a1a2e; margin-bottom: 20px; text-align: center; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 6px; margin-top: 16px; }
+    input, select, textarea { width: 100%; padding: 12px 14px; border: 1.5px solid #e0e0e0; border-radius: 8px; font-size: 15px; color: #1a1a2e; outline: none; transition: border-color 0.2s; background: #fafafa; }
+    input:focus, select:focus, textarea:focus { border-color: #e63946; background: #fff; }
+    textarea { resize: vertical; min-height: 80px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .btn { display: block; width: 100%; padding: 14px; background: #e63946; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 24px; transition: background 0.2s; }
+    .btn:hover { background: #c62e3a; }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+    .error { color: #e63946; font-size: 13px; margin-top: 12px; display: none; }
+    .success { display: none; text-align: center; padding: 20px 0; }
+    .success h3 { color: #2d6a4f; font-size: 20px; margin-bottom: 8px; }
+    .success p { color: #555; font-size: 14px; }
+    .checkmark { font-size: 48px; margin-bottom: 12px; }
+    .note { font-size: 12px; color: #888; margin-top: 16px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>âš™ï¸ Mechanical Enterprise</h1>
+      <p>Premier HVAC Services | Newark, NJ</p>
+    </div>
+    <div id="formState">
+      <h2>Book Your HVAC Appointment</h2>
+      <form id="hvacForm">
+        <div class="row">
+          <div>
+            <label>Full Name *</label>
+            <input type="text" id="full_name" placeholder="John Smith" required/>
+          </div>
+          <div>
+            <label>Phone *</label>
+            <input type="tel" id="phone" placeholder="(862) 000-0000" required/>
+          </div>
+        </div>
+        <label>Email</label>
+        <input type="email" id="email" placeholder="john@example.com"/>
+        <label>Property Address *</label>
+        <input type="text" id="property_address" placeholder="123 Main St, Newark NJ" required/>
+        <div class="row">
+          <div>
+            <label>Property Type *</label>
+            <select id="property_type" required>
+              <option value="">Select...</option>
+              <option value="Residential">Residential</option>
+              <option value="Commercial">Commercial</option>
+            </select>
+          </div>
+          <div>
+            <label>Service Type *</label>
+            <select id="appointment_type" required>
+              <option value="">Select...</option>
+              <option value="free_consultation">Free Consultation / New System</option>
+              <option value="technician_dispatch">Repair / System Not Working</option>
+              <option value="emergency_dispatch">Emergency Dispatch</option>
+              <option value="maintenance_plan">Maintenance Plan</option>
+              <option value="commercial_assessment">Commercial Assessment</option>
+            </select>
+          </div>
+        </div>
+        <label>Issue Description</label>
+        <textarea id="issue_description" placeholder="Describe your HVAC issue or what you need..."></textarea>
+        <div class="row">
+          <div>
+            <label>Preferred Date *</label>
+            <input type="date" id="preferred_date" required/>
+          </div>
+          <div>
+            <label>Preferred Time *</label>
+            <select id="preferred_time" required>
+              <option value="">Select...</option>
+              <option>8:00 AM</option><option>9:00 AM</option><option>10:00 AM</option>
+              <option>11:00 AM</option><option>12:00 PM</option><option>1:00 PM</option>
+              <option>2:00 PM</option><option>3:00 PM</option><option>4:00 PM</option>
+              <option>5:00 PM</option><option>6:00 PM</option>
+            </select>
+          </div>
+        </div>
+        <div class="error" id="formError"></div>
+        <button type="submit" class="btn" id="submitBtn">Book Appointment â†’</button>
+        <p class="note">Our team will confirm within 1 business hour â€¢ (862) 419-1763</p>
+      </form>
+    </div>
+    <div class="success" id="successState">
+      <div class="checkmark">âœ…</div>
+      <h3>Appointment Confirmed!</h3>
+      <p>You'll receive a confirmation text and our team will reach out within 1 business hour.</p>
+      <div id="confirmDetails" style="margin-top:16px; background:#f8f8f8; border-radius:8px; padding:16px; text-align:left; font-size:14px;"></div>
+    </div>
+  </div>
+  <script>
+    // Block past dates
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('preferred_date').min = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+    // Pre-fill phone from URL
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('phone')) document.getElementById('phone').value = params.get('phone');
+    if (params.get('name')) document.getElementById('full_name').value = params.get('name');
+
+    document.getElementById('hvacForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var full_name = document.getElementById('full_name').value.trim();
+      var phone = document.getElementById('phone').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var property_address = document.getElementById('property_address').value.trim();
+      var property_type = document.getElementById('property_type').value;
+      var appointment_type = document.getElementById('appointment_type').value;
+      var issue_description = document.getElementById('issue_description').value.trim();
+      var preferred_date_raw = document.getElementById('preferred_date').value;
+      var preferred_time = document.getElementById('preferred_time').value;
+      var errEl = document.getElementById('formError');
+      errEl.style.display = 'none';
+
+      if (!full_name || !phone || !property_address || !appointment_type || !preferred_date_raw || !preferred_time) {
+        errEl.textContent = 'Please fill in all required fields.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      var parts = preferred_date_raw.split('-');
+      var preferred_date = months[parseInt(parts[1]) - 1] + ' ' + parseInt(parts[2]) + ' ' + parts[0];
+
+      var btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Booking...';
+
+      try {
+        var res = await fetch('/.netlify/functions/book-hvac', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ full_name, phone, email, property_address, property_type, appointment_type, issue_description, preferred_date, preferred_time }),
+        });
+        var data = await res.json();
+        if (res.ok && data.success) {
+          document.getElementById('formState').style.display = 'none';
+          document.getElementById('successState').style.display = 'block';
+          document.getElementById('confirmDetails').innerHTML =
+            '<div><strong>Name:</strong> ' + full_name + '</div>' +
+            '<div><strong>Date:</strong> ' + preferred_date + '</div>' +
+            '<div><strong>Time:</strong> ' + preferred_time + '</div>' +
+            '<div><strong>Service:</strong> ' + appointment_type.replace(/_/g,' ') + '</div>' +
+            '<div><strong>Address:</strong> ' + property_address + '</div>';
+        } else {
+          errEl.textContent = data.error || 'Something went wrong. Call (862) 419-1763.';
+          errEl.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Book Appointment â†’';
+        }
+      } catch(err) {
+        errEl.textContent = 'Network error. Please try again or call (862) 419-1763.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Book Appointment â†’';
+      }
+    });
+  </script>
+</body>
+</html>
