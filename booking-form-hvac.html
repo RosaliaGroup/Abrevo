@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Book HVAC Appointment â€” Mechanical Enterprise</title>
+  <title>Book HVAC Appointment  Mechanical Enterprise</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -31,7 +31,7 @@
 <body>
   <div class="card">
     <div class="logo">
-      <h1>âš™ï¸ Mechanical Enterprise</h1>
+      <h1>&#9881; Mechanical Enterprise LLC</h1>
       <p>Premier HVAC Services | Newark, NJ</p>
     </div>
     <div id="formState">
@@ -91,12 +91,12 @@
           </div>
         </div>
         <div class="error" id="formError"></div>
-        <button type="submit" class="btn" id="submitBtn">Book Appointment â†’</button>
-        <p class="note">Our team will confirm within 1 business hour â€¢ (862) 419-1763</p>
+        <button type="submit" class="btn" id="submitBtn">Book Appointment &rarr;</button>
+        <p class="note">Our team will confirm within 1 business hour &bull; (862) 419-1763</p>
       </form>
     </div>
     <div class="success" id="successState">
-      <div class="checkmark">âœ…</div>
+      <div class="checkmark"></div>
       <h3>Appointment Confirmed!</h3>
       <p>You'll receive a confirmation text and our team will reach out within 1 business hour.</p>
       <div id="confirmDetails" style="margin-top:16px; background:#f8f8f8; border-radius:8px; padding:16px; text-align:left; font-size:14px;"></div>
@@ -160,13 +160,13 @@
           errEl.textContent = data.error || 'Something went wrong. Call (862) 419-1763.';
           errEl.style.display = 'block';
           btn.disabled = false;
-          btn.textContent = 'Book Appointment â†’';
+          btn.textContent = 'Book Appointment 
         }
       } catch(err) {
         errEl.textContent = 'Network error. Please try again or call (862) 419-1763.';
         errEl.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = 'Book Appointment â†’';
+        btn.textContent = 'Book Appointment 
       }
     });
   </script>
