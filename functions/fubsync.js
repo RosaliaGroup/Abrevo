@@ -1,8 +1,9 @@
 async function fetchNewFUBLeads(hoursBack = 24) {
-  const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
+  const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
   
+  // FUB doesn't support createdAfter filter â€” fetch recent and filter by date
   const res = await fetch(
-    `${FUB_BASE}/people?sort=created&direction=desc&limit=20&createdAfter=${encodeURIComponent(since)}`,
+    `${FUB_BASE}/people?sort=created&direction=desc&limit=50`,
     {
       headers: {
         Authorization: FUB_AUTH,
@@ -17,10 +18,16 @@ async function fetchNewFUBLeads(hoursBack = 24) {
   }
 
   const data = await res.json();
-  return data.people || [];
+  const allPeople = data.people || [];
+  const people = allPeople.filter(p => {
+    if (!p.created) return false;
+    return new Date(p.created) >= since;
+  });
+  console.log('FUB: ' + allPeople.length + ' total, ' + people.length + ' within last ' + hoursBack + 'h');
+  return people;
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ SAVE LEAD TO SUPABASE Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SAVE LEAD TO SUPABASE ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 async function saveToSupabase(fubPerson) {
   // Extract fields from FUB person object
   const name = [fubPerson.firstName, fubPerson.lastName].filter(Boolean).join(' ') || null;
@@ -124,7 +131,7 @@ async function saveToSupabase(fubPerson) {
   } catch (e) { return null; }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ NOTIFY ANA Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ NOTIFY ANA ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 
 // Send SMS to lead
 async function sendSMSToLead(phone, leadName) {
@@ -161,7 +168,7 @@ async function sendEmailToLead(email, leadName, source) {
     await transporter.sendMail({
       from: `"Iron 65 Leasing Team" <${GMAIL_USER}>`,
       to: email,
-      subject: 'Your Iron 65 Inquiry â€” Let\'s Schedule Your Tour',
+      subject: 'Your Iron 65 Inquiry Ã¢â‚¬â€ Let\'s Schedule Your Tour',
       text: emailBody,
     });
     console.log('Email sent to lead:', email);
@@ -182,7 +189,7 @@ async function triggerJessicaCall(phone, leadName) {
         customer: { number: phone, name: leadName || undefined },
         assistantOverrides: {
           model: {
-            messages: [{ role: 'system', content: `TODAY IS ${today}. You are making an OUTBOUND call â€” do NOT ask for the caller phone number, you already have it. This lead came from Iron 65 â€” focus only on Iron 65.` }],
+            messages: [{ role: 'system', content: `TODAY IS ${today}. You are making an OUTBOUND call Ã¢â‚¬â€ do NOT ask for the caller phone number, you already have it. This lead came from Iron 65 Ã¢â‚¬â€ focus only on Iron 65.` }],
           },
         },
       }),
@@ -208,10 +215,10 @@ async function notifyAna(newLeads) {
 }
 
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ HANDLER Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ HANDLER ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 // Two modes:
-// 1. GET /fubsync Ã¢â‚¬â€ manual trigger or scheduled (pulls last 24h from FUB)
-// 2. POST /fubsync Ã¢â‚¬â€ FUB webhook (single person payload)
+// 1. GET /fubsync ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â manual trigger or scheduled (pulls last 24h from FUB)
+// 2. POST /fubsync ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FUB webhook (single person payload)
 exports.handler = async (event) => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
@@ -220,7 +227,7 @@ exports.handler = async (event) => {
     let people = [];
 
     if (event.httpMethod === 'POST') {
-      // FUB webhook mode Ã¢â‚¬â€ receives a single person event
+      // FUB webhook mode ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â receives a single person event
       const body = JSON.parse(event.body || '{}');
       console.log('FUB webhook received:', JSON.stringify(body).substring(0, 300));
 
@@ -236,7 +243,7 @@ exports.handler = async (event) => {
         };
       }
     } else {
-      // GET mode Ã¢â‚¬â€ pull from FUB API
+      // GET mode ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â pull from FUB API
       const hoursBack = parseInt(event.queryStringParameters?.hours || '24');
       console.log(`Fetching FUB leads from last ${hoursBack} hours...`);
       people = await fetchNewFUBLeads(hoursBack);
