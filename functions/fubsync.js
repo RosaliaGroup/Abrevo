@@ -20,7 +20,7 @@ async function fetchNewFUBLeads(hoursBack = 24) {
   return data.people || [];
 }
 
-// â”€â”€ SAVE LEAD TO SUPABASE â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬ SAVE LEAD TO SUPABASE Ã¢â€â‚¬Ã¢â€â‚¬
 async function saveToSupabase(fubPerson) {
   // Extract fields from FUB person object
   const name = [fubPerson.firstName, fubPerson.lastName].filter(Boolean).join(' ') || null;
@@ -124,7 +124,75 @@ async function saveToSupabase(fubPerson) {
   } catch (e) { return null; }
 }
 
-// â”€â”€ NOTIFY ANA â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬ NOTIFY ANA Ã¢â€â‚¬Ã¢â€â‚¬
+
+// Send SMS to lead
+async function sendSMSToLead(phone, leadName) {
+  if (!phone || !TEXTBELT_KEY) return;
+  const firstName = (leadName || '').split(' ')[0] || 'there';
+  const msg = `Hi ${firstName}! Alex from Iron 65 Luxury Apartments here. We received your inquiry and would love to show you our brand new building in Newark's Ironbound District. Book your tour: ${BOOKING_FORM_URL}`;
+  try {
+    await fetch('https://textbelt.com/text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, message: msg, key: TEXTBELT_KEY }),
+    });
+    console.log('SMS sent to lead:', phone);
+  } catch(e) { console.error('SMS error:', e.message); }
+}
+
+// Send AI email to lead
+async function sendEmailToLead(email, leadName, source) {
+  if (!email || email.includes('incomplete-') || !ANTHROPIC_KEY) return;
+  try {
+    const firstName = (leadName || '').split(' ')[0] || 'there';
+    const prompt = `Write a short warm email (max 3 sentences) to ${firstName} who just inquired about Iron 65 Luxury Apartments in Newark NJ from ${source || 'an ad'}. They are interested in luxury apartments. Ask for their move-in timeline and best phone number. End with booking link: ${BOOKING_FORM_URL}. No markdown. Sign off as: Iron 65 Leasing Team | (862) 333-1681 | inquiries@rosaliagroup.com`;
+    
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 200, messages: [{ role: 'user', content: prompt }] }),
+    });
+    const data = await res.json();
+    const emailBody = data.content?.[0]?.text || '';
+    if (!emailBody) return;
+
+    const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+    await transporter.sendMail({
+      from: `"Iron 65 Leasing Team" <${GMAIL_USER}>`,
+      to: email,
+      subject: 'Your Iron 65 Inquiry â€” Let\'s Schedule Your Tour',
+      text: emailBody,
+    });
+    console.log('Email sent to lead:', email);
+  } catch(e) { console.error('Email to lead error:', e.message); }
+}
+
+// Trigger Jessica outbound call
+async function triggerJessicaCall(phone, leadName) {
+  if (!phone || !VAPI_KEY) return;
+  try {
+    const today = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const res = await fetch('https://api.vapi.ai/call/phone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${VAPI_KEY}` },
+      body: JSON.stringify({
+        phoneNumberId: JESSICA_PHONE_ID,
+        assistantId: JESSICA_OUTBOUND_ASSISTANT_ID,
+        customer: { number: phone, name: leadName || undefined },
+        assistantOverrides: {
+          model: {
+            messages: [{ role: 'system', content: `TODAY IS ${today}. You are making an OUTBOUND call â€” do NOT ask for the caller phone number, you already have it. This lead came from Iron 65 â€” focus only on Iron 65.` }],
+          },
+        },
+      }),
+    });
+    const data = await res.json();
+    console.log('Jessica call triggered:', data.id || data.error);
+    return data.id;
+  } catch(e) { console.error('Call error:', e.message); }
+}
+
 async function notifyAna(newLeads) {
   try {
     const nodemailer = require('nodemailer');
@@ -140,10 +208,10 @@ async function notifyAna(newLeads) {
 }
 
 
-// â”€â”€ HANDLER â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬ HANDLER Ã¢â€â‚¬Ã¢â€â‚¬
 // Two modes:
-// 1. GET /fubsync â€” manual trigger or scheduled (pulls last 24h from FUB)
-// 2. POST /fubsync â€” FUB webhook (single person payload)
+// 1. GET /fubsync Ã¢â‚¬â€ manual trigger or scheduled (pulls last 24h from FUB)
+// 2. POST /fubsync Ã¢â‚¬â€ FUB webhook (single person payload)
 exports.handler = async (event) => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
@@ -152,7 +220,7 @@ exports.handler = async (event) => {
     let people = [];
 
     if (event.httpMethod === 'POST') {
-      // FUB webhook mode â€” receives a single person event
+      // FUB webhook mode Ã¢â‚¬â€ receives a single person event
       const body = JSON.parse(event.body || '{}');
       console.log('FUB webhook received:', JSON.stringify(body).substring(0, 300));
 
@@ -168,7 +236,7 @@ exports.handler = async (event) => {
         };
       }
     } else {
-      // GET mode â€” pull from FUB API
+      // GET mode Ã¢â‚¬â€ pull from FUB API
       const hoursBack = parseInt(event.queryStringParameters?.hours || '24');
       console.log(`Fetching FUB leads from last ${hoursBack} hours...`);
       people = await fetchNewFUBLeads(hoursBack);
@@ -198,6 +266,40 @@ exports.handler = async (event) => {
     // Notify Ana only if new leads were created
     if (newLeads.length > 0) {
       await notifyAna(newLeads);
+      
+      // For each new lead: send email, SMS, and trigger call during business hours
+      for (const lead of newLeads) {
+        try {
+          // Send AI email if they have an email
+          if (lead.email && !lead.email.includes('incomplete-')) {
+            await sendEmailToLead(lead.email, lead.name, lead.source);
+          }
+          // Send SMS if they have a phone
+          if (lead.phone) {
+            await sendSMSToLead(lead.phone, lead.name);
+          }
+          // Trigger Jessica call during business hours
+          if (lead.phone) {
+            const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+            const etHour = nowET.getHours();
+            const etDay = nowET.getDay();
+            let callAllowed = false;
+            if (etDay >= 1 && etDay <= 5) callAllowed = etHour >= 9 && etHour < 18;
+            else if (etDay === 6) callAllowed = etHour >= 10 && etHour < 17;
+            else if (etDay === 0) callAllowed = etHour >= 11 && etHour < 17;
+            if (callAllowed) {
+              await triggerJessicaCall(lead.phone, lead.name);
+              // Mark as called
+              await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${lead.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+                body: JSON.stringify({ called_at: new Date().toISOString(), status: 'contacted' }),
+              });
+            }
+          }
+          await new Promise(r => setTimeout(r, 1000));
+        } catch(e) { console.error('Lead outreach error:', e.message); }
+      }
     }
 
     console.log('Sync results:', JSON.stringify(results));
