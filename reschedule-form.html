@@ -156,9 +156,18 @@
     btn.disabled = true;
     btn.textContent = 'Rescheduling...';
     try {
+      var payload = {
+        full_name: full_name,
+        phone: phone,
+        email: email,
+        new_date: new_date,
+        new_time: new_time,
+        property_address: 'Iron 65, Newark NJ'
+      };
       var res = await fetch('/.netlify/functions/reschedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
       var data = await res.json();
       if (res.ok && data.success) {
