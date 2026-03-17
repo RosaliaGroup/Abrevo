@@ -108,7 +108,6 @@ exports.handler = async (event) => {
 
     // Create calendar event - non-blocking
     let eventId = null;
-    let calendarError = null;
     try { eventId = await createCalendarEvent(booking); } catch(calErr) { console.error('Calendar error:', calErr.message); }
 
     // Save to Supabase bookings table
@@ -123,7 +122,6 @@ exports.handler = async (event) => {
         apartment_size: property_type || 'HVAC',
         move_in_date: issue_description,
         calendar_event_id: eventId,
-        source: 'hvac',
       }),
     });
 
