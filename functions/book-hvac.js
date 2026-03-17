@@ -30,10 +30,11 @@ async function sendSMS(phone, message) {
 async function createCalendarEvent(booking) {
   const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
   if (!credentials.client_email) return null;
-  const auth = new google.auth.JWT(
-    credentials.client_email, null, credentials.private_key,
-    ['https://www.googleapis.com/auth/calendar']
-  );
+  const { google } = require('googleapis');
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/calendar'],
+  });
   const calendar = google.calendar({ version: 'v3', auth });
 
   // Parse date
