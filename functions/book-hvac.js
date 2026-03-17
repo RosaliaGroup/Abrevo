@@ -1,7 +1,7 @@
 const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 
-const CALENDAR_ID = 'c_1f409dda06448aec70284831065590c2ea0c7763ea02fb641e32bea7b49f4b8d@group.calendar.google.com';
+const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com'; // Rosalia calendar
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY || '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
@@ -58,7 +58,7 @@ async function createCalendarEvent(booking) {
   const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // 1 hour
 
   const event = {
-    summary: `HVAC - ${booking.full_name}`,
+    summary: `[HVAC] ${booking.full_name} - ${booking.appointment_type || "Service"} - Mechanical Enterprise`,
     location: booking.property_address || '',
     description: `Service: ${booking.appointment_type || 'HVAC Appointment'}
 Customer: ${booking.full_name}
@@ -122,8 +122,8 @@ exports.handler = async (event) => {
     try { await transporter.sendMail({
       from: `"Mechanical Enterprise Booking" <${FROM_EMAIL}>`,
       to: SALES_EMAIL,
-      subject: `New HVAC Appointment Ã¢â‚¬â€ ${full_name} | ${preferred_date} at ${preferred_time}`,
-      text: `New HVAC Appointment Booked\n\nCustomer: ${full_name}\nPhone: ${phone}\nEmail: ${email || 'N/A'}\nService: ${appointment_type || 'N/A'}\nProperty: ${property_address || 'N/A'}\nType: ${property_type || 'N/A'}\nIssue: ${issue_description || 'N/A'}\nDate: ${preferred_date} at ${preferred_time}\n\nCalendar event created`,
+      subject: `New HVAC Appointment - ${full_name} | ${preferred_date} at ${preferred_time}`,
+      text: `New HVAC Appointment - ${full_name}\nPhone: ${phone}\nEmail: ${email || 'N/A'}\nService: ${appointment_type || 'N/A'}\nProperty: ${property_address || 'N/A'}\nType: ${property_type || 'N/A'}\nIssue: ${issue_description || 'N/A'}\nDate: ${preferred_date} at ${preferred_time}\n\nCalendar event created`,
     }); } catch(se) { console.error('Sales email non-blocking:', se.message); }
 
     // Send confirmation email to customer
@@ -131,7 +131,7 @@ exports.handler = async (event) => {
       try { await transporter.sendMail({
         from: `"Mechanical Enterprise" <${FROM_EMAIL}>`,
         to: email,
-        subject: 'Your HVAC Appointment is Confirmed Ã¢â‚¬â€ Mechanical Enterprise',
+        subject: 'Your HVAC Appointment is Confirmed - Mechanical Enterprise',
         text: `Dear ${full_name},\n\nYour HVAC appointment has been confirmed.\n\nDate: ${preferred_date}\nTime: ${preferred_time}\nService: ${appointment_type || 'HVAC Appointment'}\nAddress: ${property_address || 'TBD'}\n\nOur team will confirm within 1 business hour. Questions? Call (862) 419-1763 or email sales@mechanicalenterprise.com.\n\nThank you,\nMechanical Enterprise LLC\n(862) 419-1763 | mechanicalenterprise.com`,
       }); } catch(ce) { console.error('Cust email non-blocking:', ce.message); }
     }
