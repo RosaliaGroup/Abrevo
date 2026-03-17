@@ -58,7 +58,7 @@ async function checkAnthropicBalance() {
     });
     const data = await res.json();
     if (data.error?.type === 'billing_error') {
-      return { service: 'Anthropic API', status: 'error', value: 'Billing error Ã¢â‚¬â€ out of credits!', alert: true };
+      return { service: 'Anthropic API', status: 'error', value: 'Billing error -- out of credits!', alert: true };
     }
     return { service: 'Anthropic API', status: 'ok', value: 'Working', alert: false };
   } catch (e) {
@@ -85,14 +85,14 @@ async function sendAlertEmail(checks) {
   const hasAlerts = alerts.length > 0;
 
   const subject = hasAlerts
-    ? `Ã¢Å¡Â Ã¯Â¸Â ALERT: ${alerts.length} issue(s) detected Ã¢â‚¬â€ Rosalia AI System`
-    : `Ã¢Å“â€¦ System Health OK Ã¢â‚¬â€ Rosalia AI`;
+    ? `[!] ALERT: ${alerts.length} issue(s) detected -- Rosalia AI System`
+    : `[OK] System Health OK -- Rosalia AI`;
 
-  const body = `ROSALIA GROUP Ã¢â‚¬â€ SYSTEM HEALTH REPORT
+  const body = `ROSALIA GROUP -- SYSTEM HEALTH REPORT
 ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} ET
 
-${hasAlerts ? 'Ã¢Å¡Â Ã¯Â¸Â ALERTS DETECTED:\n' + alerts.map(a => `Ã¢â‚¬Â¢ ${a.service}: ${a.value}`).join('\n') + '\n\n' : ''}ALL SERVICES STATUS:
-${checks.map(c => `${c.status === 'ok' ? 'Ã¢Å“â€¦' : c.status === 'low' ? 'Ã¢Å¡Â Ã¯Â¸Â' : 'Ã¢ÂÅ’'} ${c.service}: ${c.value}`).join('\n')}
+${hasAlerts ? '[!] ALERTS DETECTED:\n' + alerts.map(a => '* ' + a.service + ': ' + a.value).join('\n') + '\n\n' : ''}ALL SERVICES STATUS:
+${checks.map(c => (c.status === 'ok' ? '[OK]' : c.status === 'low' ? '[!]' : '[X]') + ' ' + c.service + ': ' + c.value).join('\n')}
 
 ${hasAlerts ? 'ACTION REQUIRED: Please top up the services listed above.' : 'All systems running normally.'}`;
 

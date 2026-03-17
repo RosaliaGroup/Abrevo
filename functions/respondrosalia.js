@@ -5,7 +5,7 @@ const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const ANA_PHONE = '+16462269189';
 const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
 
-// ── DETECT BUYER vs RENTAL ──
+// -- DETECT BUYER vs RENTAL --
 function detectCategory(lead) {
   const source = (lead.source || '').toLowerCase();
   const message = (lead.message || '').toLowerCase();
@@ -84,14 +84,14 @@ async function generateFollowUp(lead, followUpNumber) {
 
   if (category === 'buyer') {
     const msgs = {
-      1: `Hi ${first}, just following up from Ana at Rosalia Group! Are you still looking for a home in NJ? I'd love to help — schedule a quick call: ${bookingLink} — (551) 249-9795`,
-      2: `Hi ${first}, last follow up from Ana at Rosalia Group. The market is moving fast — if you're still looking, I'm here to help: ${bookingLink}`,
+      1: `Hi ${first}, just following up from Ana at Rosalia Group! Are you still looking for a home in NJ? I'd love to help -- schedule a quick call: ${bookingLink} -- (551) 249-9795`,
+      2: `Hi ${first}, last follow up from Ana at Rosalia Group. The market is moving fast -- if you're still looking, I'm here to help: ${bookingLink}`,
     };
     return msgs[followUpNumber] || msgs[1];
   } else {
     const msgs = {
-      1: `Hi ${first}, just following up on your inquiry about ${prop}! We still have availability. Schedule a tour: ${bookingLink} — Ana, Rosalia Group (551) 249-9795`,
-      2: `Hi ${first}, last follow up from Ana at Rosalia Group — ${prop} is still available but going fast. Book a tour: ${bookingLink}`,
+      1: `Hi ${first}, just following up on your inquiry about ${prop}! We still have availability. Schedule a tour: ${bookingLink} -- Ana, Rosalia Group (551) 249-9795`,
+      2: `Hi ${first}, last follow up from Ana at Rosalia Group -- ${prop} is still available but going fast. Book a tour: ${bookingLink}`,
     };
     return msgs[followUpNumber] || msgs[1];
   }
@@ -136,7 +136,7 @@ async function saveOrUpdateLead(lead, emailReply) {
   const existing = await findExistingLead(lead.email, lead.phone);
 
   if (existing) {
-    console.log('Existing lead found:', existing.id, '— merging');
+    console.log('Existing lead found:', existing.id, '-- merging');
     const newNote = `[${new Date().toLocaleDateString()}] ${lead.source || 'inquiry'}: ${lead.message || 'no message'}`;
     const mergedNotes = existing.notes ? existing.notes + '\n' + newNote : newNote;
     await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${existing.id}`, {
@@ -224,24 +224,24 @@ exports.handler = async (event) => {
       const savedLead = await saveOrUpdateLead(parsedLead, emailReply);
       console.log('Lead saved/merged, id:', savedLead?.id);
 
-      // SMS to lead — no URLs (Textbelt whitelist pending)
+      // SMS to lead -- no URLs (Textbelt whitelist pending)
       if (parsedLead.phone) {
         const smsText = parsedLead.category === 'buyer'
-          ? `Hi ${parsedLead.name?.split(' ')[0] || 'there'}! This is Ana from Rosalia Group following up on your real estate inquiry. I'll reach out shortly — (551) 249-9795.`
-          : `Hi ${parsedLead.name?.split(' ')[0] || 'there'}! This is Ana from Rosalia Group following up on your rental inquiry. I'll reach out shortly — (551) 249-9795.`;
+          ? `Hi ${parsedLead.name?.split(' ')[0] || 'there'}! This is Ana from Rosalia Group following up on your real estate inquiry. I'll reach out shortly -- (551) 249-9795.`
+          : `Hi ${parsedLead.name?.split(' ')[0] || 'there'}! This is Ana from Rosalia Group following up on your rental inquiry. I'll reach out shortly -- (551) 249-9795.`;
         const smsResult = await sendSMS(parsedLead.phone, smsText);
         console.log('Lead SMS:', JSON.stringify(smsResult));
       }
 
-      // Notify Ana — no URLs
+      // Notify Ana -- no URLs
       const anaMsg = `New ${(parsedLead.category || 'lead').toUpperCase()} Lead! (${parsedLead.source || 'rosalia'})\nName: ${parsedLead.name || 'N/A'}\nEmail: ${parsedLead.email || 'N/A'}\nPhone: ${parsedLead.phone || 'N/A'}\nProperty: ${parsedLead.property || 'N/A'}`;
       const anaResult = await sendSMS(ANA_PHONE, anaMsg);
       console.log('Ana SMS:', JSON.stringify(anaResult));
 
       const subject = parsedLead.category === 'buyer'
-        ? `Re: Your real estate inquiry — Rosalia Group`
+        ? `Re: Your real estate inquiry -- Rosalia Group`
         : parsedLead.type === 'application'
-        ? `Application received — ${parsedLead.property || 'your property'}`
+        ? `Application received -- ${parsedLead.property || 'your property'}`
         : `Re: Your inquiry about ${parsedLead.property || 'the property'}`;
 
       return {
@@ -263,8 +263,8 @@ exports.handler = async (event) => {
       if (parsedLead.phone) await sendSMS(parsedLead.phone, followUpText);
       if (lead_id) await updateLeadFollowUp(lead_id, follow_up_number);
       const subject = follow_up_number === 1
-        ? `Following up — ${parsedLead.property || 'your inquiry'}`
-        : `Still interested? — ${parsedLead.property || 'the property'}`;
+        ? `Following up -- ${parsedLead.property || 'your inquiry'}`
+        : `Still interested? -- ${parsedLead.property || 'the property'}`;
       return {
         statusCode: 200,
         headers,

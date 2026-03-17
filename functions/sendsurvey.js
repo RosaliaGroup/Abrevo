@@ -54,9 +54,9 @@ async function sendSurveyEmail(lead) {
   const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
   const htmlBody = `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.8;color:#333;max-width:600px;">
 <p>Hi ${firstName},</p>
-<p>We noticed you were looking at apartments with us recently but haven't moved forward yet. We completely understand â€” finding the right home takes time!</p>
+<p>We noticed you were looking at apartments with us recently but haven't moved forward yet. We completely understand -- finding the right home takes time!</p>
 <p>We'd love to hear your feedback so we can improve. It takes less than 60 seconds:</p>
-<p><a href="${surveyUrl}" style="background:#c9a84c;color:#0a0a0a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:500;display:inline-block;">Share Quick Feedback â†’</a></p>
+<p><a href="${surveyUrl}" style="background:#c9a84c;color:#0a0a0a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:500;display:inline-block;">Share Quick Feedback >'</a></p>
 <p style="color:#888;font-size:13px;">If your situation changes, we'd love to have you visit. We add new units and promotions regularly.</p>
 <br/>
 <p>Rosalia Group | Inquiries Team | +18624191763 | inquiries@rosaliagroup.com</p>
@@ -65,9 +65,9 @@ async function sendSurveyEmail(lead) {
   await transporter.sendMail({
     from: `"Rosalia Group Inquiries" <${GMAIL_USER}>`,
     to: lead.email,
-    subject: `Quick question for you â€” Rosalia Group`,
+    subject: `Quick question for you -- Rosalia Group`,
     html: htmlBody,
-    text: `Hi ${firstName},\n\nWe noticed you were looking at apartments with us recently. We'd love your feedback â€” it takes less than 60 seconds:\n\n${surveyUrl}\n\nRosalia Group | Inquiries Team | +18624191763`,
+    text: `Hi ${firstName},\n\nWe noticed you were looking at apartments with us recently. We'd love your feedback -- it takes less than 60 seconds:\n\n${surveyUrl}\n\nRosalia Group | Inquiries Team | +18624191763`,
   });
 }
 
@@ -75,7 +75,7 @@ async function sendSurveySMS(lead) {
   if (!lead.phone || !TEXTBELT_KEY) return;
   const surveyUrl = `${SITE_URL}/survey?id=${lead.id}&name=${encodeURIComponent(lead.name || '')}`;
   const firstName = (lead.name || '').split(' ')[0] || 'there';
-  const msg = `Hi ${firstName}! Rosalia Group here. We'd love your feedback on your apartment search â€” takes 60 seconds: ${surveyUrl}`;
+  const msg = `Hi ${firstName}! Rosalia Group here. We'd love your feedback on your apartment search -- takes 60 seconds: ${surveyUrl}`;
 
   await fetch('https://textbelt.com/text', {
     method: 'POST',

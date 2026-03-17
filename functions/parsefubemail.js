@@ -3,14 +3,14 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
 const ANA_PHONE = '+16462269189';
 
-// ── PARSE FUB EMAIL BODY ──
+// -- PARSE FUB EMAIL BODY --
 // Handles format:
 // "You've received a new lead named Sam Lippin from Facebook
 //  (929) 523-3064
 //  sam.lippin@gmail.com
 //  Which residence layout are you most interested in?: loft_(starting_at_$2,999)
 //  Ad: AD - 1  Ad Set: Rental Intent Ad  Campaign: Luxury Apartments Leads Campaign
-//  Form: Winter Collection – Luxury Pre-Leasing Form  Platform: Instagram"
+//  Form: Winter Collection -- Luxury Pre-Leasing Form  Platform: Instagram"
 
 function parseFUBEmail(text) {
   if (!text) return null;
@@ -42,23 +42,23 @@ function parseFUBEmail(text) {
     lead.email = emailMatch[1].trim();
   }
 
-  // Property / layout interest — stop before "Ad:" if present on same line
+  // Property / layout interest -- stop before "Ad:" if present on same line
   const layoutMatch = text.match(/(?:layout|interested in|unit|apartment)[^:]*:\s*([^\n]+)/i);
   if (layoutMatch) {
     // Stop at "Ad:" or "Campaign:" if they appear on the same line
     let prop = layoutMatch[1].trim();
     prop = prop.split(/\s+(?:Ad:|Campaign:|Form:|Platform:)/i)[0].trim();
-    // Clean up underscores: "loft_(starting_at_$2,999)" → "loft (starting at $2,999)"
+    // Clean up underscores: "loft_(starting_at_$2,999)" -> "loft (starting at $2,999)"
     lead.property = prop.replace(/_/g, ' ');
   }
 
-  // Budget — extract price from layout string if present
+  // Budget -- extract price from layout string if present
   const priceMatch = text.match(/\$[\d,]+/);
   if (priceMatch) {
     lead.budget = priceMatch[0];
   }
 
-  // Campaign / ad info → notes
+  // Campaign / ad info -> notes
   const notes = [];
   const adMatch = text.match(/Ad:\s*([^\n]+?)(?:\s+Ad Set:|$)/i);
   const adSetMatch = text.match(/Ad Set:\s*([^\n]+?)(?:\s+Campaign:|$)/i);
@@ -87,7 +87,7 @@ function parseFUBEmail(text) {
   return lead;
 }
 
-// ── SAVE TO SUPABASE ──
+// -- SAVE TO SUPABASE --
 async function saveToSupabase(lead) {
   // Check for existing lead by email or phone
   if (lead.email) {
@@ -97,7 +97,7 @@ async function saveToSupabase(lead) {
     );
     const existing = await checkRes.json();
     if (Array.isArray(existing) && existing.length > 0) {
-      // Update existing — append new note
+      // Update existing -- append new note
       const existingLead = existing[0];
       const newNote = `[${new Date().toLocaleDateString()}] FUB: ${lead.message || 'new inquiry'}`;
       const mergedNotes = existingLead.notes
@@ -171,7 +171,7 @@ async function saveToSupabase(lead) {
   }
 }
 
-// ── NOTIFY ANA ──
+// -- NOTIFY ANA --
 async function notifyAna(lead, action) {
   if (!ANA_PHONE) return;
   const emoji = action === 'created' ? 'New' : 'Updated';
@@ -189,7 +189,7 @@ async function notifyAna(lead, action) {
   }
 }
 
-// ── HANDLER ──
+// -- HANDLER --
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -204,8 +204,8 @@ exports.handler = async (event) => {
     let emailText = '';
 
     // Accept multiple input formats:
-    // 1. { "text": "You've received a new lead..." }  — raw text
-    // 2. { "body": "..." }  — some email forwarders use this
+    // 1. { "text": "You've received a new lead..." }  -- raw text
+    // 2. { "body": "..." }  -- some email forwarders use this
     // 3. Plain string body
     const body = JSON.parse(event.body || '{}');
     emailText = body.text || body.body || body.email_text || body.plain || '';

@@ -1,9 +1,9 @@
-// ─────────────────────────────────────────────
-// outbound.js — Rosalia Group Outbound Call Trigger
+// ---------------------------------------------
+// outbound.js -- Rosalia Group Outbound Call Trigger
 // Triggers Alex (Vapi) to call any lead from any source
 // POST body: { phone, name, email, source, property, category }
 // category: "luxury" | "general" (defaults to "general")
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 
 const VAPI_API_KEY = process.env.VAPI_API_KEY;
 const TEXTBELT_KEY = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
@@ -23,7 +23,7 @@ const VAPI_CONFIG = {
   },
 };
 
-// ── BUSINESS HOURS (Eastern Time) ──
+// -- BUSINESS HOURS (Eastern Time) --
 function isBusinessHours() {
   const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
   const day = et.getDay();
@@ -33,7 +33,7 @@ function isBusinessHours() {
   return time >= 9 && time < 18;                  // Weekday
 }
 
-// ── NORMALIZE PHONE ──
+// -- NORMALIZE PHONE --
 function normalizePhone(phone) {
   if (!phone) return null;
   let p = phone.toString().replace(/\D/g, '');
@@ -42,7 +42,7 @@ function normalizePhone(phone) {
   return p;
 }
 
-// ── SEND SMS ──
+// -- SEND SMS --
 async function sendSMS(phone, message) {
   if (!phone) return null;
   try {
@@ -60,7 +60,7 @@ async function sendSMS(phone, message) {
   }
 }
 
-// ── TRIGGER VAPI OUTBOUND CALL ──
+// -- TRIGGER VAPI OUTBOUND CALL --
 async function triggerCall(phone, name, config, leadMeta = {}) {
   if (!VAPI_API_KEY) {
     console.error('Missing VAPI_API_KEY');
@@ -102,18 +102,18 @@ async function triggerCall(phone, name, config, leadMeta = {}) {
   }
 }
 
-// ── VOICEMAIL / NO-ANSWER TEXT ──
+// -- VOICEMAIL / NO-ANSWER TEXT --
 // Mirrors Alex's voicemail script + booking link
 function buildNoAnswerSMS(name, bookingLink) {
   const first = name?.split(' ')[0] || 'there';
-  return `Hi ${first} — this is Alex from Rosalia Group. I tried reaching you about luxury apartments in New Jersey. We have brand new buildings in Newark and Orange with balconies, backyards, rooftop access, and stunning finishes — starting at $1,999/mo with up to 2 months free right now. Availability is very limited! Book a tour here: ${bookingLink} or call us at (862) 419-1814.`;
+  return `Hi ${first} -- this is Alex from Rosalia Group. I tried reaching you about luxury apartments in New Jersey. We have brand new buildings in Newark and Orange with balconies, backyards, rooftop access, and stunning finishes -- starting at $1,999/mo with up to 2 months free right now. Availability is very limited! Book a tour here: ${bookingLink} or call us at (862) 419-1814.`;
 }
 
-// ── INTERESTED LEAD TEXT ──
+// -- INTERESTED LEAD TEXT --
 // Sent when lead confirms interest on live call
 function buildInterestedSMS(name, bookingLink) {
   const first = name?.split(' ')[0] || 'there';
-  return `Hi ${first}! Here's your tour booking link for Rosalia Group: ${bookingLink}\n\nAs soon as we receive your booking we'll be in touch to confirm everything. See you soon! — Alex, Rosalia Group (862) 419-1814`;
+  return `Hi ${first}! Here's your tour booking link for Rosalia Group: ${bookingLink}\n\nAs soon as we receive your booking we'll be in touch to confirm everything. See you soon! -- Alex, Rosalia Group (862) 419-1814`;
 }
 
 exports.handler = async (event) => {
@@ -148,7 +148,7 @@ exports.handler = async (event) => {
 
     console.log('Outbound request:', { action, category, phone: normalizedPhone, name, source });
 
-    // ── ACTION: text_interested (sent by Alex during live call) ──
+    // -- ACTION: text_interested (sent by Alex during live call) --
     if (action === 'text_interested') {
       const msg = buildInterestedSMS(name, bookingLink);
       const smsResult = await sendSMS(normalizedPhone, msg);
@@ -159,7 +159,7 @@ exports.handler = async (event) => {
       };
     }
 
-    // ── ACTION: text_no_answer (sent after missed call) ──
+    // -- ACTION: text_no_answer (sent after missed call) --
     if (action === 'text_no_answer') {
       const msg = buildNoAnswerSMS(name, bookingLink);
       const smsResult = await sendSMS(normalizedPhone, msg);
@@ -170,11 +170,11 @@ exports.handler = async (event) => {
       };
     }
 
-    // ── ACTION: call (default) ──
+    // -- ACTION: call (default) --
     const withinHours = isBusinessHours();
 
     if (!withinHours) {
-      // Outside business hours — send text instead
+      // Outside business hours -- send text instead
       const msg = buildNoAnswerSMS(name, bookingLink);
       const smsResult = await sendSMS(normalizedPhone, msg);
       return {
@@ -183,7 +183,7 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           success: true,
           action: 'text_outside_hours',
-          message: 'Outside business hours — SMS sent instead of call',
+          message: 'Outside business hours -- SMS sent instead of call',
           sms: smsResult,
         }),
       };
@@ -194,7 +194,7 @@ exports.handler = async (event) => {
 
     // If call fails, fall back to SMS
     if (!callResult.success) {
-      console.warn('Call failed — falling back to SMS');
+      console.warn('Call failed -- falling back to SMS');
       const msg = buildNoAnswerSMS(name, bookingLink);
       const smsResult = await sendSMS(normalizedPhone, msg);
       return {

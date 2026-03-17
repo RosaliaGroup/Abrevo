@@ -19,8 +19,8 @@ exports.handler = async (event) => {
       call_summary, outcome
     } = body;
 
-    const subject = `Call Recap â€” ${caller_name || 'Unknown'} â€” ${outcome || 'info_only'}`;
-    const text = `CALL RECAP â€” Mechanical Enterprise AI
+    const subject = `Call Recap -- ${caller_name || 'Unknown'} -- ${outcome || 'info_only'}`;
+    const text = `CALL RECAP -- Mechanical Enterprise AI
 
 Caller: ${caller_name || 'N/A'}
 Phone: ${caller_phone || 'N/A'}

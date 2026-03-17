@@ -1,8 +1,8 @@
-// ─────────────────────────────────────────────
-// followup.js — 24hr Follow-Up Scheduler
+// ---------------------------------------------
+// followup.js -- 24hr Follow-Up Scheduler
 // Called by a Netlify scheduled function or external cron
 // Finds leads with no reply in 24hrs and triggers Alex call + SMS
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
@@ -21,7 +21,7 @@ const VAPI_CONFIG = {
   },
 };
 
-// ── BUSINESS HOURS ──
+// -- BUSINESS HOURS --
 function isBusinessHours() {
   const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
   const day = et.getDay();
@@ -108,7 +108,7 @@ exports.handler = async (event) => {
 
   // Only run during business hours
   if (!isBusinessHours()) {
-    console.log('Outside business hours — follow-up skipped');
+    console.log('Outside business hours -- follow-up skipped');
     return {
       statusCode: 200,
       headers,
@@ -172,8 +172,8 @@ exports.handler = async (event) => {
 
       // Build follow-up SMS
       const smsMessages = {
-        1: `Hi ${first} — this is Alex from Rosalia Group following up on your apartment inquiry! We still have availability${prop ? ' at ' + prop : ''} and would love to show you around. Book a tour here: ${bookingLink} or call (862) 419-1814`,
-        2: `Hi ${first} — last follow-up from Alex at Rosalia Group. ${prop ? prop + ' is' : 'Units are'} still available but going fast. Book your tour: ${bookingLink}`,
+        1: `Hi ${first} -- this is Alex from Rosalia Group following up on your apartment inquiry! We still have availability${prop ? ' at ' + prop : ''} and would love to show you around. Book a tour here: ${bookingLink} or call (862) 419-1814`,
+        2: `Hi ${first} -- last follow-up from Alex at Rosalia Group. ${prop ? prop + ' is' : 'Units are'} still available but going fast. Book your tour: ${bookingLink}`,
       };
 
       const smsText = smsMessages[followUpNumber] || smsMessages[1];

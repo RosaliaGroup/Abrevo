@@ -51,7 +51,7 @@ function buildIron65Email(firstName) {
   <tr><td style="padding:32px;">
     <p style="color:#333;font-size:16px;margin:0 0 16px;">Hi ${firstName},</p>
     <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 16px;">
-      We noticed you previously inquired about Iron 65 â€” we'd love to show you around our brand new luxury building in Newark's vibrant Ironbound District.
+      We noticed you previously inquired about Iron 65 -- we'd love to show you around our brand new luxury building in Newark's vibrant Ironbound District.
     </p>
     <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 16px;">
       <strong>Current Move-In Specials:</strong><br>
@@ -82,7 +82,7 @@ function buildIron65Email(firstName) {
 </body>
 </html>`;
 
-  const text = `Hi ${firstName},\n\nWe noticed you previously inquired about Iron 65 Luxury Apartments in Newark's Ironbound District â€” we'd love to show you around!\n\nCurrent Move-In Specials:\n- 1 month free on a 12-month lease\n- $4,000 rent credit on an 18-month lease\n- Amenity fee waived 12 months\n- Free high-speed internet 1 year (apply within 24hrs of tour)\n\nStudios from $2,199/mo | 1BR from $2,724/mo | Lofts from $3,488/mo\nRooftop with NYC skyline views | Yoga studio | Cold plunge | Steps from Newark Penn Station\n\nBook your free tour: ${bookingUrl}\n\nOr call (862) 333-1681\n\nIron 65 Leasing Team\ninquiries@rosaliagroup.com\n65 McWhorter Street, Newark NJ 07105`;
+  const text = `Hi ${firstName},\n\nWe noticed you previously inquired about Iron 65 Luxury Apartments in Newark's Ironbound District -- we'd love to show you around!\n\nCurrent Move-In Specials:\n- 1 month free on a 12-month lease\n- $4,000 rent credit on an 18-month lease\n- Amenity fee waived 12 months\n- Free high-speed internet 1 year (apply within 24hrs of tour)\n\nStudios from $2,199/mo | 1BR from $2,724/mo | Lofts from $3,488/mo\nRooftop with NYC skyline views | Yoga studio | Cold plunge | Steps from Newark Penn Station\n\nBook your free tour: ${bookingUrl}\n\nOr call (862) 333-1681\n\nIron 65 Leasing Team\ninquiries@rosaliagroup.com\n65 McWhorter Street, Newark NJ 07105`;
 
   return { html, text };
 }
@@ -117,7 +117,7 @@ exports.handler = async (event) => {
     await transporter.sendMail({
       from: '"Iron 65 Leasing Team" <inquiries@rosaliagroup.com>',
       to,
-      subject: `Hi ${firstName} â€” Your Iron 65 Tour Awaits`,
+      subject: `Hi ${firstName} -- Your Iron 65 Tour Awaits`,
       html,
       text,
     });

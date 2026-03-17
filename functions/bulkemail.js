@@ -59,7 +59,7 @@ async function sendEmail(toEmail, toName, body) {
   await transporter.sendMail({
     from: `"Rosalia Group Inquiries" <${GMAIL_USER}>`,
     to: toEmail,
-    subject: `Your Inquiry Ã¢â‚¬â€ Rosalia Group`,
+    subject: `Your Inquiry -- Rosalia Group`,
     text: body,
   });
 }

@@ -226,6 +226,39 @@ const SKIP_SENDERS = [
   'no-reply@mail.zillow', 'market-updates@', 'recommendations@',
   'rosaliagroup.com', 'mechanicalenterprise.com',
   'no-reply@webflow.com', 'no-reply-forms@webflow.com',
+  // FUB system emails and notifications
+  'followupboss.com', 'fub.com',
+  // Common notification senders
+  'alert@', 'alerts@', 'billing@', 'invoice@', 'receipt@',
+  'support@', 'help@', 'info@', 'admin@', 'system@',
+  'update@', 'updates@', 'digest@', 'summary@', 'report@',
+  'notification@', 'notify@', 'bounce@', 'feedback@',
+  // Marketing / bulk senders
+  'mailchimp', 'sendgrid', 'constantcontact', 'hubspot',
+  'campaign', 'promo@', 'marketing@', 'news@',
+  // Social media notifications
+  'facebookmail.com', 'instagram.com', 'twitter.com',
+  'linkedin.com', 'pinterest.com', 'tiktok.com',
+  // Payment / service notifications
+  'paypal.com', 'stripe.com', 'square.com', 'venmo.com',
+  'google.com', 'apple.com', 'microsoft.com', 'amazon.com',
+  // Property listing site notifications (not lead emails)
+  'apartments.com', 'trulia.com', 'hotpads.com', 'rent.com',
+  'streeteasy.com', 'compass.com', 'redfin.com',
+];
+
+// Subjects that indicate system/notification emails, not lead inquiries
+const SKIP_SUBJECTS = [
+  'password reset', 'verify your email', 'confirm your',
+  'receipt for', 'invoice', 'payment received', 'billing',
+  'scheduled report', 'daily digest', 'weekly summary',
+  'out of office', 'auto-reply', 'automatic reply',
+  'delivery status', 'undeliverable', 'returned mail',
+  'security alert', 'sign-in', 'login notification',
+  'subscription', 'unsubscribe', 'opt out',
+  'new lead from', // FUB notification - we process these separately
+  'lead assigned', 'task reminder', 'action plan',
+  'stage changed', 'deal updated', 'note added',
 ];
 
 function isZillowLead(from) {
@@ -309,19 +342,55 @@ function parseWebflowEmail(body) {
 const LEAD_KEYWORDS = /rent|apartment|unit|tour|showing|available|bedroom|studio|price|lease|apply|application|move.in|listing|looking|interested|inquiry|inquire|buy|purchase|mortgage|home|house|sell|property|schedule|viewing|question|info|information/i;
 
 function shouldSkip(from, subject) {
+  // Known lead sources always pass through
   if (isZillowLead(from)) return false;
-  if (isAvailDigest(subject)) return true;
   if (isAvailLead(from)) return false;
   if (isWebflowLead(from, subject)) return false;
+
+  // Avail digest is a notification, not a lead
+  if (isAvailDigest(subject)) return true;
+
   const f = (from || '').toLowerCase();
-  return SKIP_SENDERS.some(s => f.includes(s));
+  const s = (subject || '').toLowerCase();
+
+  // Skip any sender matching skip list
+  if (SKIP_SENDERS.some(skip => f.includes(skip))) return true;
+
+  // Skip system/notification subjects
+  if (SKIP_SUBJECTS.some(skip => s.includes(skip))) return true;
+
+  // Skip FUB notification emails (these are processed by fubsync/parsefubemail)
+  if (isFUBLead(from, subject)) return true;
+
+  // Skip emails from our own domains
+  if (f.includes('useabrevo.co') || f.includes('abrevo.co')) return true;
+
+  // Skip emails with no real sender name (likely automated)
+  if (f.match(/^[a-f0-9]{8,}@/)) return true;
+
+  return false;
 }
 
 function isLead(subject, body, from) {
+  // Known lead sources
   if (isZillowLead(from || '')) return true;
   if (isAvailLead(from || '')) return true;
   if (isWebflowLead(from || '', subject)) return true;
-  return LEAD_KEYWORDS.test((subject || '') + ' ' + (body || ''));
+
+  const s = (subject || '').toLowerCase();
+  const b = (body || '').toLowerCase();
+  const combined = s + ' ' + b;
+
+  // Must match lead keywords
+  if (!LEAD_KEYWORDS.test(combined)) return false;
+
+  // Reject if subject looks like a notification/system email
+  if (/unsubscribe|opt.out|do not reply|automated|no.reply/i.test(combined)) return false;
+
+  // Reject if body is too short to be a real inquiry (likely a notification)
+  if (b.length < 20) return false;
+
+  return true;
 }
 
 function extractPhone(text) {

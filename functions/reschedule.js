@@ -122,14 +122,14 @@ async function deletePropertyEvents(calendar, booking, propertyAddress) {
       console.log(`  Overall property match: ${matchesProperty ? 'YES' : 'NO'}`);
       
       if (hasPhone && matchesProperty) {
-        console.log(`  ✓✓✓ DELETING THIS EVENT ✓✓✓`);
+        console.log(`  [OK][OK][OK] DELETING THIS EVENT [OK][OK][OK]`);
         await calendar.events.delete({
           calendarId: CALENDAR_ID,
           eventId: event.id,
         });
         deletedCount++;
       } else {
-        console.log(`  ✗ Skipping (no match)`);
+        console.log(`  [X] Skipping (no match)`);
       }
     }
 
@@ -278,13 +278,13 @@ exports.handler = async (event) => {
       booking = bookings.find(b => propertiesMatch(b.type, property));
       
       if (!booking) {
-        console.log(`❌ No booking found matching property: "${property}"`);
+        console.log(`[X] No booking found matching property: "${property}"`);
         console.log('Available bookings:', bookings.map(b => `"${b.type}"`).join(', '));
         // Fall back to most recent booking
         booking = bookings[0];
         console.log(`Using most recent booking instead: "${booking.type}"`);
       } else {
-        console.log(`✓ Found matching booking: "${booking.type}"`);
+        console.log(`[OK] Found matching booking: "${booking.type}"`);
       }
     } else {
       // No property specified, use most recent
@@ -303,16 +303,16 @@ exports.handler = async (event) => {
     const deletedCount = await deletePropertyEvents(calendar, booking, propertyToReschedule);
     
     if (deletedCount === 0) {
-      console.log('⚠️  WARNING: No calendar events were deleted. Creating new event anyway.');
+      console.log('[!]  WARNING: No calendar events were deleted. Creating new event anyway.');
     }
 
     // Create NEW calendar event
     let newEvent = null;
     try {
       newEvent = await createCalendarEvent(calendar, booking, new_date, new_time);
-      console.log('✓ New calendar event created:', newEvent.id);
+      console.log('[OK] New calendar event created:', newEvent.id);
     } catch (err) {
-      console.error('❌ Error creating calendar event:', err.message);
+      console.error('[X] Error creating calendar event:', err.message);
       return {
         statusCode: 500,
         headers,
@@ -336,7 +336,7 @@ exports.handler = async (event) => {
       }),
     });
 
-    console.log('✓ Supabase updated for booking:', booking.id);
+    console.log('[OK] Supabase updated for booking:', booking.id);
 
     // Send confirmation EMAIL to caller (CC inquiries)
     if (booking.email) {
@@ -360,9 +360,9 @@ exports.handler = async (event) => {
           subject: 'Appointment Rescheduled - Rosalia Group',
           html: emailHtml,
         });
-        console.log('✓ Reschedule email sent to:', booking.email, '+ CC inquiries');
+        console.log('[OK] Reschedule email sent to:', booking.email, '+ CC inquiries');
       } catch (err) {
-        console.error('❌ Email error:', err.message);
+        console.error('[X] Email error:', err.message);
       }
     }
 

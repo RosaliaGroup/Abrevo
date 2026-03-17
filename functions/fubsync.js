@@ -1,7 +1,7 @@
 async function fetchNewFUBLeads(hoursBack = 24) {
   const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
   
-  // FUB doesn't support createdAfter filter â€” fetch recent and filter by date
+  // FUB doesn't support createdAfter filter -- fetch recent and filter by date
   const res = await fetch(
     `${FUB_BASE}/people?sort=created&direction=desc&limit=50`,
     {
@@ -27,7 +27,7 @@ async function fetchNewFUBLeads(hoursBack = 24) {
   return people;
 }
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SAVE LEAD TO SUPABASE ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// -- SAVE LEAD TO SUPABASE --
 async function saveToSupabase(fubPerson) {
   // Extract fields from FUB person object
   const name = [fubPerson.firstName, fubPerson.lastName].filter(Boolean).join(' ') || null;
@@ -131,7 +131,7 @@ async function saveToSupabase(fubPerson) {
   } catch (e) { return null; }
 }
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ NOTIFY ANA ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// -- NOTIFY ANA --
 
 // Send SMS to lead
 async function sendSMSToLead(phone, leadName) {
@@ -168,7 +168,7 @@ async function sendEmailToLead(email, leadName, source) {
     await transporter.sendMail({
       from: `"Iron 65 Leasing Team" <${GMAIL_USER}>`,
       to: email,
-      subject: 'Your Iron 65 Inquiry Ã¢â‚¬â€ Let\'s Schedule Your Tour',
+      subject: 'Your Iron 65 Inquiry -- Let\'s Schedule Your Tour',
       text: emailBody,
     });
     console.log('Email sent to lead:', email);
@@ -188,8 +188,10 @@ async function triggerJessicaCall(phone, leadName) {
         assistantId: JESSICA_OUTBOUND_ASSISTANT_ID,
         customer: { number: phone, name: leadName || undefined },
         assistantOverrides: {
-          model: {
-            messages: [{ role: 'system', content: `TODAY IS ${today}. You are making an OUTBOUND call Ã¢â‚¬â€ do NOT ask for the caller phone number, you already have it. This lead came from Iron 65 Ã¢â‚¬â€ focus only on Iron 65.` }],
+          variableValues: {
+            today: today,
+            call_type: 'outbound',
+            property: 'Iron 65',
           },
         },
       }),
@@ -215,10 +217,10 @@ async function notifyAna(newLeads) {
 }
 
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ HANDLER ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// -- HANDLER --
 // Two modes:
-// 1. GET /fubsync ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â manual trigger or scheduled (pulls last 24h from FUB)
-// 2. POST /fubsync ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FUB webhook (single person payload)
+// 1. GET /fubsync -- manual trigger or scheduled (pulls last 24h from FUB)
+// 2. POST /fubsync -- FUB webhook (single person payload)
 exports.handler = async (event) => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
@@ -227,7 +229,7 @@ exports.handler = async (event) => {
     let people = [];
 
     if (event.httpMethod === 'POST') {
-      // FUB webhook mode ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â receives a single person event
+      // FUB webhook mode -- receives a single person event
       const body = JSON.parse(event.body || '{}');
       console.log('FUB webhook received:', JSON.stringify(body).substring(0, 300));
 
@@ -243,7 +245,7 @@ exports.handler = async (event) => {
         };
       }
     } else {
-      // GET mode ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â pull from FUB API
+      // GET mode -- pull from FUB API
       const hoursBack = parseInt(event.queryStringParameters?.hours || '24');
       console.log(`Fetching FUB leads from last ${hoursBack} hours...`);
       people = await fetchNewFUBLeads(hoursBack);

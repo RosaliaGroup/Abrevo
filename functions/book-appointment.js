@@ -63,10 +63,10 @@ ${additional_notes}
     });
 
     await transporter.sendMail({
-      from: '"Alex — Rosalia Group" <alex@useabrevo.co>',
+      from: '"Alex -- Rosalia Group" <alex@useabrevo.co>',
       to: "ana@rosaliagroup.com",
       cc: "listings@rosaliagroup.com",
-      subject: `New Showing — ${full_name} — ${type}`,
+      subject: `New Showing -- ${full_name} -- ${type}`,
       text: emailBody,
     });
   } catch (emailErr) {

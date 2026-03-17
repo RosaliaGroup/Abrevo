@@ -41,7 +41,7 @@ exports.handler = async (event) => {
     await transporter.sendMail({
       from: `"Rosalia AI System" <${GMAIL_USER}>`,
       to: GMAIL_USER,
-      subject: `Survey Response: ${leadName || 'Lead'} â€” ${reasonText}`,
+      subject: `Survey Response: ${leadName || 'Lead'} -- ${reasonText}`,
       text: `Survey feedback received!\n\nLead: ${leadName || 'Unknown'}\nReason: ${reasonText}\nComments: ${comments || 'None'}\n\nLead ID: ${leadId || 'N/A'}`,
     });
 

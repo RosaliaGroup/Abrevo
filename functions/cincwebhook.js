@@ -8,7 +8,7 @@ const JESSICA_ASSISTANT_ID = process.env.JESSICA_ASSISTANT_ID;
 const ANA_PHONE = '+16462269189';
 const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
 
-// ── BUSINESS HOURS CHECK (Eastern Time) ──
+// -- BUSINESS HOURS CHECK (Eastern Time) --
 // Weekdays: 9AM-6PM | Weekends: 10AM-5PM
 function isBusinessHours() {
   const now = new Date();
@@ -131,32 +131,32 @@ exports.handler = async (event) => {
     console.log('Parsed lead:', JSON.stringify(lead));
 
     if (!lead.email && !lead.phone) {
-      console.log('No contact info — skipping');
+      console.log('No contact info -- skipping');
       return { statusCode: 200, headers, body: JSON.stringify({ received: true, skipped: 'no contact info' }) };
     }
 
-    // 1 — Save to Supabase always (regardless of business hours)
+    // 1 -- Save to Supabase always (regardless of business hours)
     const savedLead = await saveLeadToSupabase(lead);
     console.log('Saved lead ID:', savedLead?.id);
 
     const withinHours = isBusinessHours();
     console.log('Business hours:', withinHours);
 
-    // 2 — Notify Ana always (SMS)
-    const anaMsg = `New CINC Lead!\nName: ${lead.name || 'N/A'}\nEmail: ${lead.email || 'N/A'}\nPhone: ${lead.phone || 'N/A'}\nProperty: ${lead.property}${!withinHours ? '\n⏰ Outside business hours — call/text queued' : ''}`;
+    // 2 -- Notify Ana always (SMS)
+    const anaMsg = `New CINC Lead!\nName: ${lead.name || 'N/A'}\nEmail: ${lead.email || 'N/A'}\nPhone: ${lead.phone || 'N/A'}\nProperty: ${lead.property}${!withinHours ? '\n[CLOCK] Outside business hours -- call/text queued' : ''}`;
     const anaResult = await sendSMS(ANA_PHONE, anaMsg);
     console.log('Ana SMS:', JSON.stringify(anaResult));
 
     if (withinHours) {
-      // 3 — SMS to lead with booking link
+      // 3 -- SMS to lead with booking link
       if (lead.phone) {
         const bookingLink = `${BOOKING_FORM_URL}?phone=${encodeURIComponent(lead.phone)}`;
-        const smsText = `Hi ${lead.name?.split(' ')[0] || 'there'}! Thanks for your interest in Rosalia Group rentals. View available apartments and schedule a tour: ${bookingLink} — Ana, Rosalia Group (551) 249-9795`;
+        const smsText = `Hi ${lead.name?.split(' ')[0] || 'there'}! Thanks for your interest in Rosalia Group rentals. View available apartments and schedule a tour: ${bookingLink} -- Ana, Rosalia Group (551) 249-9795`;
         const smsResult = await sendSMS(lead.phone, smsText);
         console.log('Lead SMS:', JSON.stringify(smsResult));
       }
 
-      // 4 — Trigger Vapi outbound call
+      // 4 -- Trigger Vapi outbound call
       if (lead.phone && VAPI_API_KEY && VAPI_PHONE_ID && JESSICA_ASSISTANT_ID) {
         const callRes = await fetch('https://api.vapi.ai/call/phone', {
           method: 'POST',
@@ -180,7 +180,7 @@ exports.handler = async (event) => {
         const callData = await callRes.json();
         console.log('Vapi call result:', JSON.stringify(callData));
       } else {
-        console.log('Vapi skipped — missing:', { 
+        console.log('Vapi skipped -- missing:', { 
           hasPhone: !!lead.phone, 
           hasVapiKey: !!VAPI_API_KEY, 
           hasPhoneId: !!VAPI_PHONE_ID, 
@@ -188,7 +188,7 @@ exports.handler = async (event) => {
         });
       }
     } else {
-      console.log('Outside business hours — SMS and call skipped');
+      console.log('Outside business hours -- SMS and call skipped');
     }
 
     return {
