@@ -10,7 +10,7 @@ const FROM_EMAIL = 'inquiries@rosaliagroup.com';
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  auth: { user: 'inquiries@rosaliagroup.com', pass: process.env.GMAIL_PASS_INQUIRIES },
+  auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
 });
 
 async function sendSMS(phone, message) {
@@ -30,7 +30,6 @@ async function sendSMS(phone, message) {
 async function createCalendarEvent(booking) {
   const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
   if (!credentials.client_email) return null;
-  const { google } = require('googleapis');
   const auth = new google.auth.JWT(
     credentials.client_email, null, credentials.private_key,
     ['https://www.googleapis.com/auth/calendar']
