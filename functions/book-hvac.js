@@ -109,7 +109,7 @@ exports.handler = async (event) => {
     // Create calendar event - non-blocking
     let eventId = null;
     let calendarError = null;
-    try { eventId = await createCalendarEvent(booking); } catch(calErr) { console.error('Calendar non-blocking:', calErr.message); }
+    try { const r = await createCalendarEvent(booking); if (typeof r === 'string' && r.startsWith('DATE')) { calendarError = r; } else { eventId = r; } } catch(calErr) { calendarError = calErr.message; }
 
     // Save to Supabase bookings table
     await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
