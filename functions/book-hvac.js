@@ -28,57 +28,66 @@ async function sendSMS(phone, message) {
 }
 
 async function createCalendarEvent(booking) {
-  const credStr = process.env.GOOGLE_CREDENTIALS || '{}';
-  const credentials = JSON.parse(credStr);
-  if (!credentials.client_email) {
-    console.error('No client_email in GOOGLE_CREDENTIALS, length:', credStr.length);
-    return 'NO_CREDENTIALS';
-  }
-  const { google } = require('googleapis');
-  const auth = new google.auth.JWT(
-    credentials.client_email, null, credentials.private_key,
-    ['https://www.googleapis.com/auth/calendar']
-  );
+  const googleCredentials = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
+  if (!googleCredentials.client_email) { console.error('No Google credentials'); return null; }
+  
+  const auth = new google.auth.GoogleAuth({
+    credentials: googleCredentials,
+    scopes: ['https://www.googleapis.com/auth/calendar'],
+  });
+
   const calendar = google.calendar({ version: 'v3', auth });
 
-  // Parse date
-  const months = { january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11 };
-  const dateParts = booking.preferred_date.toLowerCase().replace(/,/g,'').split(/\s+/);
-  let year = 2026, month = 0, day = 1;
-  for (const p of dateParts) {
-    if (months[p] !== undefined) month = months[p];
-    else if (/^\d{4}$/.test(p)) year = parseInt(p);
-    else if (/^\d{1,2}$/.test(p)) day = parseInt(p);
-  }
+  let startDateTime;
+  try {
+    let year, monthNum, day;
+    const months = {january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11};
+    const textMatch = (booking.preferred_date || '').match(/(\w+)\s+(\d+)[,\s]+(\d{4})/);
+    const isoMatch = (booking.preferred_date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+      year = parseInt(isoMatch[1]); monthNum = parseInt(isoMatch[2]) - 1; day = parseInt(isoMatch[3]);
+    } else if (textMatch) {
+      const monthName = textMatch[1].toLowerCase();
+      monthNum = months[monthName] ?? 0;
+      day = parseInt(textMatch[2]);
+      year = parseInt(textMatch[3]);
+    } else {
+      console.error('Could not parse date:', booking.preferred_date);
+      return null;
+    }
 
-  // Parse time
-  let [timePart, ampm] = booking.preferred_time.split(' ');
-  let [hours, minutes] = timePart.split(':').map(Number);
-  if (!minutes) minutes = 0;
-  if (ampm?.toLowerCase() === 'pm' && hours !== 12) hours += 12;
-  if (ampm?.toLowerCase() === 'am' && hours === 12) hours = 0;
+    let hours = 10, minutes = 0;
+    const timeMatch = (booking.preferred_time || '').match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (timeMatch) {
+      hours = parseInt(timeMatch[1]);
+      minutes = parseInt(timeMatch[2]);
+      if (timeMatch[3].toUpperCase() === 'PM' && hours !== 12) hours += 12;
+      if (timeMatch[3].toUpperCase() === 'AM' && hours === 12) hours = 0;
+    }
 
-  const startDate = new Date(year, month, day, hours, minutes);
-  const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // 1 hour
+    const etOffset = -4; // EDT
+    startDateTime = new Date(Date.UTC(year, monthNum, day, hours - etOffset, minutes));
+  } catch(e) { console.error('Date parse error:', e.message); return null; }
+
+  const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
+
+  const attendees = [{'email': SALES_EMAIL}];
+  if (booking.email && !booking.email.includes('convo.zillow')) attendees.push({'email': booking.email});
 
   const event = {
-    summary: `[HVAC] ${booking.full_name} - ${booking.appointment_type || "Service"} - Mechanical Enterprise`,
+    summary: `[HVAC] ${booking.full_name} - ${booking.appointment_type || 'Service'} - Mechanical Enterprise`,
     location: booking.property_address || '',
-    description: `Service: ${booking.appointment_type || 'HVAC Appointment'}
-Customer: ${booking.full_name}
-Phone: ${booking.phone}
-Email: ${booking.email || 'N/A'}
-Property: ${booking.property_address || 'N/A'}
-Type: ${booking.property_type || 'N/A'}
-Issue: ${booking.issue_description || 'N/A'}`,
-    start: { dateTime: startDate.toISOString(), timeZone: 'America/New_York' },
-    end: { dateTime: endDate.toISOString(), timeZone: 'America/New_York' },
-    attendees: booking.email ? [{ email: booking.email }, { email: SALES_EMAIL }] : [{ email: SALES_EMAIL }],
+    description: `Service: ${booking.appointment_type || 'N/A'}\nCustomer: ${booking.full_name}\nPhone: ${booking.phone}\nEmail: ${booking.email || 'N/A'}\nProperty: ${booking.property_address || 'N/A'}\nType: ${booking.property_type || 'N/A'}\nIssue: ${booking.issue_description || 'N/A'}`,
+    start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
+    end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
+    attendees,
   };
 
-  const res = await calendar.events.insert({ calendarId: CALENDAR_ID, resource: event, sendUpdates: 'all' });
+  const res = await calendar.events.insert({ calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com', resource: event, sendUpdates: 'all' });
+  console.log('Calendar event created:', res.data.id);
   return res.data.id;
 }
+
 
 exports.handler = async (event) => {
   const headers = {
