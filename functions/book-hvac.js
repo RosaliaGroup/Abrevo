@@ -28,8 +28,12 @@ async function sendSMS(phone, message) {
 }
 
 async function createCalendarEvent(booking) {
-  const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
-  if (!credentials.client_email) return null;
+  const credStr = process.env.GOOGLE_CREDENTIALS || '{}';
+  const credentials = JSON.parse(credStr);
+  if (!credentials.client_email) {
+    console.error('No client_email in GOOGLE_CREDENTIALS, length:', credStr.length);
+    return 'NO_CREDENTIALS';
+  }
   const { google } = require('googleapis');
   const auth = new google.auth.JWT(
     credentials.client_email, null, credentials.private_key,
