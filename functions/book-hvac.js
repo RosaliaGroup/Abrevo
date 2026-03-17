@@ -150,7 +150,7 @@ exports.handler = async (event) => {
       }); } catch(ce) { console.error('Cust email non-blocking:', ce.message); }
     }
 
-    return { statusCode: 200, headers, body: JSON.stringify({ success: true, eventId, calendarError }) };
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true, eventId }) };
   } catch(err) {
     console.error('book-hvac error:', err.message);
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
