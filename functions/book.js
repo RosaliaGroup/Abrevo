@@ -88,6 +88,16 @@ async function createCalendarEvent(client, data) {
     // Create date in Eastern Time (UTC-4 EDT)
     startDateTime = new Date(Date.UTC(year, monthNum, day, hours + 4, minutes, 0));
     console.log('Booking date/time:', year, monthNum+1, day, hours, minutes, '-> UTC:', startDateTime.toISOString());
+
+    // Reject bookings in the past
+    const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    if (startDateTime < nowET) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Cannot book appointments in the past. Please select a future date and time.' }),
+      };
+    }
     
   } catch(e) {
     console.error('Date parsing error:', e.message);
