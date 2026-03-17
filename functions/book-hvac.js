@@ -119,10 +119,10 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           full_name, phone, email,
           preferred_date, preferred_time,
-          property_address: property_address || 'Mechanical Enterprise',
-          budget: budget || appointment_type,
+          budget: appointment_type || 'free_consultation',
           apartment_size: property_type || 'HVAC',
-          move_in_date: issue_description,
+          preferred_area: property_address || 'N/A',
+          move_in_date: issue_description || 'N/A',
           calendar_event_id: eventId,
           client: 'mechanical',
         }),
