@@ -83,7 +83,7 @@ async function createCalendarEvent(booking) {
     attendees,
   };
 
-  const res = await calendar.events.insert({ calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com', resource: event, sendUpdates: 'all' });
+  const res = await calendar.events.insert({ calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com', resource: event, sendUpdates: 'none' });
   console.log('Calendar event created:', res.data.id);
   return res.data.id;
 }
@@ -119,11 +119,10 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           full_name, phone, email,
           preferred_date, preferred_time,
-          budget: appointment_type || 'free_consultation',
+          property_address: property_address || 'Mechanical Enterprise',
+          budget: budget || appointment_type,
           apartment_size: property_type || 'HVAC',
-          preferred_area: property_address || 'N/A',
-          move_in_date: issue_description || 'N/A',
-          additional_notes: `Address: ${property_address || 'N/A'}`,
+          move_in_date: issue_description,
           calendar_event_id: eventId,
           client: 'mechanical',
         }),
