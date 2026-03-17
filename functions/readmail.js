@@ -5,58 +5,81 @@ const nodemailer = require('nodemailer');
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
-const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
-const ANA_PHONE = '+16462269189';
 const INBOX_EMAIL = 'inquiries@rosaliagroup.com';
+const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
-const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-rosalia';
+const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 
-const VAPI_KEY = '064f441d-a388-4404-8b6c-05e91e90f1ff';
+const VAPI_KEY = process.env.VAPI_KEY || '064f441d-a388-4404-8b6c-05e91e90f1ff';
 const VAPI_ASSISTANT_ID = '1cae5323-6b83-4434-8461-6330472da140';
-const VAPI_PHONE_ID = 'fe01292e-6625-4c06-b24e-8cd2240f5453';
+const VAPI_PHONE_ID = process.env.VAPI_PHONE_ID || '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 
-// Ana's property portfolio context (for answering questions)
 const ANA_CONTEXT = `
-You are Ana Haynes, a licensed real estate agent and leasing manager at Rosalia Group in New Jersey.
-You manage rental properties across Newark, Jersey City, East Orange, Elizabeth, and surrounding areas.
-Your properties include luxury apartments, studios, 1BR, 2BR, and 3BR units.
-You also help buyers and sellers with real estate transactions.
-Contact: (551) 249-9795 | inquiries@rosaliagroup.com
-Booking link for tours: ${BOOKING_FORM_URL}
+You are the Rosalia Group Inquiries Team â€” a warm, professional leasing team in New Jersey managing multiple luxury apartment communities. You write concise, friendly emails (max 4 sentences) that invite leads to book a tour. Always include the booking link. Never use bullet points.
 
-IMPORTANT RULES:
-- Never assume which specific property the lead is interested in unless they mentioned it
-- Ask about their needs (budget, bedrooms, area, move-in date) before pitching a specific unit
-- Answer questions honestly based on what you know
-- If you don't know a specific detail (exact price, availability), say you'll check and get back to them
-- Keep replies SHORT, warm, and professional ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â under 120 words
-- For Q&A replies use SHORT bullet points (one answer per question)
-- ONLY offer Rosalia Group properties ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â never suggest other landlords or listings
-- If the lead has NOT provided a phone number, naturally ask for it in your reply (e.g. "Feel free to share your phone number so I can reach out directly")
-- If the lead HAS provided a phone number, do NOT ask for it again
-- Always sign off as: Rosalia Group | Inquiries Team | +18624191763 | inquiries@rosaliagroup.com
+PROPERTIES YOU MANAGE:
+- Iron 65: 65 McWhorter St, Newark NJ â€” Studios from $2,199, 1BR from $2,724, Lofts from $3,488. 1 month free on 12-month lease, $4,000 rent credit on 18-month lease. Rooftop, gym, yoga studio, cold plunge, sauna, NYC views. (862) 333-1681
+- 502 Market St (The Elks), Orange NJ â€” 2BR/3BR luxury units, $2,400-$3,200/mo
+- 162 University Ave, East Orange NJ â€” Flex 1BR/2BR $1,999/mo, 1 month free
+- 473 Main St (The Elks), Orange NJ â€” Luxury apartments
+
+BOOKING LINKS:
+- Iron 65: https://silver-ganache-1ee2ca.netlify.app/booking-form
+- All others: https://silver-ganache-1ee2ca.netlify.app/booking-rosalia
+
+TOUR HOURS: Tue-Fri 12-6 PM, Sat-Sun 12-4 PM. Closed Mon.
+
+Always sign as: Rosalia Group Leasing Team | (862) 333-1681 | inquiries@rosaliagroup.com
 `;
 
 const SKIP_SENDERS = [
   'noreply', 'no-reply', 'donotreply', 'do-not-reply',
-  'mailer-daemon', 'postmaster', 'leads@followupboss.com',
+  'mailer-daemon', 'postmaster',
   'notifications', 'automated', 'newsletter', 'unsubscribe',
   'realtor.com', 'planhub', 'rentspree',
-  'followupboss.com', 'voice.google.com',
+  'voice.google.com',
   'txt.voice.google', 'comet.zillow', 'mail.zillow',
   'zillowrentals', 'mail.realtor', 'mail.instagram',
   'no-reply@mail.zillow', 'market-updates@', 'recommendations@',
   'rosaliagroup.com', 'mechanicalenterprise.com',
+  'no-reply@webflow.com', 'no-reply-forms@webflow.com',
 ];
 
-// Zillow convo emails ARE real leads - allow them through
 function isZillowLead(from) {
   return from.toLowerCase().includes('convo.zillow.com');
 }
+function isAvailDigest(subject) {
+  const s = (subject || '').toLowerCase();
+  return s.includes('you have received') && s.includes('messages on avail');
+}
+
+function isFUBLead(from, subject) {
+  const f = (from || '').toLowerCase();
+  const s = (subject || '').toLowerCase();
+  return f.includes('followupboss.com') || 
+         (s.includes('new lead from') && (s.includes('facebook') || s.includes('instagram') || s.includes('zillow')));
+}
+
+function parseFUBEmail(body) {
+  const lead = {};
+  const lines2 = (body || '').split(/[\n\r]+/);
+  for (const line of lines2) {
+    const nm = line.match(/new lead named ([^(]+)/i);
+    if (nm) { lead.name = nm[1].trim(); break; }
+  }
+  const phoneM = body.match(/(\(\d{3}\)\s*\d{3}[\s\-]\d{4})/);
+  if (phoneM) { let p = phoneM[1].replace(/\D/g,''); if(p.length===10) p='+1'+p; lead.phone = p; }
+  const emailM = body.match(/([a-zA-Z0-9._%+\-]+@(?!followupboss)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
+  if (emailM) lead.email = emailM[1].trim();
+  const srcM = body.match(/from (Facebook|Instagram|Zillow|Google)/i);
+  if (srcM) lead.source = srcM[1].toLowerCase();
+  return lead;
+}
+
 function isAvailLead(from) {
   return from.toLowerCase().includes('reply.avail.co');
 }
-
 function isWebflowLead(from, subject) {
   const f = (from || '').toLowerCase();
   const s = (subject || '').toLowerCase();
@@ -69,7 +92,6 @@ function parseAvailEmail(body) {
   const nameMatch = body.match(/Name:\s*(.+)/i);
   const emailMatch = body.match(/Email:\s*([^\s\n]+@[^\s\n]+)/i);
   const phoneMatch = body.match(/Phone:\s*([\(\)\d\s\-\.]+)/i);
-  const propMatch = body.match(/interested in your property at ([^\n\.]+)/i);
   if (nameMatch) lead.name = nameMatch[1].trim();
   if (emailMatch) lead.email = emailMatch[1].trim();
   if (phoneMatch) {
@@ -78,7 +100,6 @@ function parseAvailEmail(body) {
     else if (p.length === 11) p = '+' + p;
     lead.phone = p;
   }
-  if (propMatch) lead.property = propMatch[1].trim();
   return lead;
 }
 
@@ -87,7 +108,6 @@ function parseWebflowEmail(body) {
   const nameMatch = body.match(/Full Name:\s*(.+)/i);
   const emailMatch = body.match(/Email Address:\s*([^\s\n]+@[^\s\n]+)/i) || body.match(/Email:\s*([^\s\n]+@[^\s\n]+)/i);
   const phoneMatch = body.match(/Cell Phone:\s*([\d\s\(\)\-\.]+)/i) || body.match(/Phone:\s*([\d\s\(\)\-\.]+)/i);
-  const budgetMatch = body.match(/Monthly Budget[^:]*:\s*([\d,\$]+)/i) || body.match(/Budget:\s*([\d,\$]+)/i);
   const buildingMatch = body.match(/Building:\s*(.+)/i);
   const bedroomsMatch = body.match(/Bedrooms:\s*(.+)/i);
   if (nameMatch) lead.name = nameMatch[1].trim();
@@ -98,17 +118,17 @@ function parseWebflowEmail(body) {
     else if (p.length === 11) p = '+' + p;
     lead.phone = p;
   }
-  if (budgetMatch) lead.budget = budgetMatch[1].trim();
   if (buildingMatch) lead.property = buildingMatch[1].split('--')[0].trim();
   if (bedroomsMatch) lead.bedrooms = bedroomsMatch[1].split('--')[0].trim();
   return lead;
 }
 
-
 const LEAD_KEYWORDS = /rent|apartment|unit|tour|showing|available|bedroom|studio|price|lease|apply|application|move.in|listing|looking|interested|inquiry|inquire|buy|purchase|mortgage|home|house|sell|property|schedule|viewing|question|info|information/i;
 
 function shouldSkip(from, subject) {
   if (isZillowLead(from)) return false;
+  if (isFUBLead(from, subject)) return false;
+  if (isAvailDigest(subject)) return true;
   if (isAvailLead(from)) return false;
   if (isWebflowLead(from, subject)) return false;
   const f = (from || '').toLowerCase();
@@ -117,13 +137,16 @@ function shouldSkip(from, subject) {
 
 function isLead(subject, body, from) {
   if (isZillowLead(from || '')) return true;
+  if (isFUBLead(from || '', subject || '')) return true;
   if (isAvailLead(from || '')) return true;
   if (isWebflowLead(from || '', subject)) return true;
   return LEAD_KEYWORDS.test((subject || '') + ' ' + (body || ''));
 }
 
 function extractPhone(text) {
-  const match = text.match(/(\(?\d{3}\)?[\s\-.]?\d{3}[\s\-.]?\d{4})/);
+  // Strip email addresses first to avoid extracting digits from relay addresses
+  const cleaned = (text || '').replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '');
+  const match = cleaned.match(/(\(?\d{3}\)?[\s\-.]?\d{3}[\s\-.]?\d{4})/);
   if (!match) return null;
   let p = match[1].replace(/\D/g, '');
   if (p.length === 10) p = '+1' + p;
@@ -131,7 +154,16 @@ function extractPhone(text) {
   return p;
 }
 
-// ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ FETCH UNREAD EMAILS VIA IMAP ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬
+// Parse Zillow lead email for structured data
+function parseZillowEmail(body) {
+  const lead = {};
+  // Zillow sends name in subject like "Alondra is requesting..."
+  // Phone is NOT in Zillow relay emails - don't try to extract
+  const emailMatch = body.match(/Reply to ([^\s\n]+@[^\s\n]+)/i);
+  if (emailMatch) lead.email = emailMatch[1].trim();
+  return lead;
+}
+
 function fetchUnreadEmails() {
   return new Promise((resolve, reject) => {
     const imap = new Imap({
@@ -143,48 +175,34 @@ function fetchUnreadEmails() {
       tlsOptions: { rejectUnauthorized: false },
       authTimeout: 10000,
     });
-
     const emails = [];
-
     imap.once('ready', () => {
       imap.openBox('INBOX', false, (err) => {
         if (err) return reject(err);
-
         const since = new Date();
         since.setDate(since.getDate() - 14);
         const sinceStr = since.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
         imap.search(['UNSEEN', ['SINCE', sinceStr]], (err, results) => {
           if (err) return reject(err);
-          if (!results || results.length === 0) {
-            imap.end();
-            return resolve([]);
-          }
-
+          if (!results || results.length === 0) { imap.end(); return resolve([]); }
           const toFetch = results.slice(0, 5);
           const fetch = imap.fetch(toFetch, { bodies: '', markSeen: true });
-
           fetch.on('message', (msg) => {
             let buffer = '';
-            msg.on('body', (stream) => {
-              stream.on('data', (chunk) => { buffer += chunk.toString('utf8'); });
-            });
+            msg.on('body', (stream) => { stream.on('data', (chunk) => { buffer += chunk.toString('utf8'); }); });
             msg.once('end', () => { emails.push({ raw: buffer }); });
           });
-
           fetch.once('error', reject);
           fetch.once('end', () => { imap.end(); });
         });
       });
     });
-
     imap.once('end', () => resolve(emails));
     imap.once('error', reject);
     imap.connect();
   });
 }
 
-// ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ GET PREVIOUS EMAIL THREAD FROM SUPABASE ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬
 async function getLeadData(fromEmail) {
   try {
     const res = await fetch(
@@ -195,6 +213,64 @@ async function getLeadData(fromEmail) {
     if (Array.isArray(data) && data.length > 0) return data[0];
   } catch (e) {}
   return null;
+}
+
+async function getLeadContext(email, name) {
+  try {
+    let url = `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(email)}&limit=1`;
+    let res = await fetch(url, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } });
+    let data = await res.json();
+    if (data && data[0]) return data[0];
+    if (name) {
+      url = `${SUPABASE_URL}/rest/v1/leads?name=ilike.*${encodeURIComponent(name)}*&limit=1&order=created_at.desc`;
+      res = await fetch(url, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } });
+      data = await res.json();
+      if (data && data[0]) return data[0];
+    }
+    return null;
+  } catch (e) {
+    console.error('Supabase lead lookup error:', e.message);
+    return null;
+  }
+}
+
+async function getCalendarAppointment(leadName) {
+  try {
+    const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
+    const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
+    if (!credentials.client_email) return null;
+    const { google } = require('googleapis');
+    const auth = new google.auth.JWT(
+      credentials.client_email, null, credentials.private_key,
+      ['https://www.googleapis.com/auth/calendar.readonly']
+    );
+    const calendar = google.calendar({ version: 'v3', auth });
+    const now = new Date();
+    const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const res = await calendar.events.list({
+      calendarId: CALENDAR_ID,
+      timeMin: now.toISOString(),
+      timeMax: weekLater.toISOString(),
+      q: leadName,
+      maxResults: 3,
+      singleEvents: true,
+      orderBy: 'startTime',
+    });
+    const events = res.data.items || [];
+    if (events.length === 0) return null;
+    const event = events[0];
+    const start = event.start?.dateTime || event.start?.date;
+    const date = new Date(start);
+    return {
+      title: event.summary,
+      date: date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
+      time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+      description: event.description || '',
+    };
+  } catch (e) {
+    console.error('Calendar lookup error:', e.message);
+    return null;
+  }
 }
 
 async function getPreviousThread(fromEmail) {
@@ -209,33 +285,74 @@ async function repliedRecently(fromEmail) {
   return lastReply > new Date(Date.now() - 10 * 60 * 1000);
 }
 
-// ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ GENERATE AI REPLY (context-aware) ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬
-async function generateReply(from, subject, body, previousReply) {
+async function generateReply(from, subject, body, previousReply, leadContext, calendarAppt, leadName) {
   const isBuyer = /buy|purchase|mortgage|home|house|sell/i.test(body + subject);
 
-  // Build conversation context if this is a reply thread
   let threadContext = '';
   if (previousReply) {
-    threadContext = `\n\nPREVIOUS REPLY YOU SENT:\n${previousReply}\n\nThe lead is now replying to that. Answer their follow-up question or continue the conversation naturally.`;
+    threadContext = `\n\nPREVIOUS REPLY YOU SENT:\n${previousReply}\n\nThe lead is now replying to that. Answer their follow-up naturally.`;
   }
+
+  // Build context from Supabase and Calendar
+  let contextStr = '';
+  if (calendarAppt) {
+    contextStr += `\n\nCALENDAR: This lead has an upcoming appointment: ${calendarAppt.title} on ${calendarAppt.date} at ${calendarAppt.time}.`;
+  }
+  if (leadContext) {
+    if (leadContext.phone) contextStr += `\nLEAD PHONE: ${leadContext.phone}`;
+    if (leadContext.notes) contextStr += `\nLEAD NOTES: ${leadContext.notes}`;
+    if (leadContext.status) contextStr += `\nLEAD STATUS: ${leadContext.status}`;
+  }
+  if (contextStr) contextStr = '\n---\nCONTEXT FROM OUR RECORDS:' + contextStr + '\n---\n';
 
   const role = isBuyer
     ? 'a licensed real estate agent helping buyers and sellers'
     : 'a leasing manager helping people find rental apartments';
 
+  // Address to city/property mapping
+  const addressMap = {
+    '473 main': 'Orange NJ (The Elks)',
+    '475 main': 'Orange NJ (The Elks)',
+    '162 university': 'Newark NJ (162 University Ave)',
+    '486 market': 'Newark NJ (River Pointe)',
+    '502 market': 'Newark NJ (502 Market St)',
+    '556 market': 'Newark NJ (556 Market St)',
+    '289 halsey': 'Newark NJ (289 Halsey St)',
+    '39 madison': 'Newark NJ (Iron Pointe)',
+    '65 mcwhorter': 'Newark NJ (Iron 65)',
+    'iron 65': 'Newark NJ (Iron 65)',
+    '276 duncan': 'Jersey City NJ (276 Duncan St)',
+    '80 freeman': 'Newark NJ (The Ballantine)',
+    '77 christie': 'Newark NJ (The Ballantine)',
+    '1369 south': 'Plainfield NJ (1369 South Ave)',
+  };
+  const subjectLower = (subject || '').toLowerCase();
+  const bodyLower = (body || '').toLowerCase();
+  let detectedCity = '';
+  for (const [addr, city] of Object.entries(addressMap)) {
+    if (subjectLower.includes(addr) || bodyLower.includes(addr)) {
+      detectedCity = `\nIMPORTANT: This inquiry is about a property in ${city} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â make sure your reply references the correct city and property.`;
+      break;
+    }
+  }
+  const firstName = leadName ? leadName.split(' ')[0] : '';
+  const nameGreeting = firstName ? `The lead's name is ${firstName}. Start your reply with "Hi ${firstName},"` : 'Start with a warm greeting.';
+
+  const userMessage = `FROM: ${from}
+SUBJECT: ${subject}
+THEIR EMAIL:
+${body.substring(0, 800)}
+${contextStr}${threadContext}`;
+
   const prompt = `${ANA_CONTEXT}
 
 You are ${role}.
 
-${previousReply ? 'A lead is REPLYING to your previous email. Read their reply and respond to what they are asking or saying.' : 'A new inquiry email came in. Reply warmly and ask about their needs.'}
-${threadContext}
+${previousReply ? 'A lead is REPLYING to your previous email. Read their reply and respond to what they are asking.' : `A new inquiry email came in. ${nameGreeting} Ask about their needs.${detectedCity}`}
 
-FROM: ${from}
-SUBJECT: ${subject}
-THEIR EMAIL:
-${body.substring(0, 800)}
+${userMessage}
 
-Write ONLY the email body. No subject line. Under 100 words. Use bullet points for Q&A answers.`;
+Write ONLY the email body. No subject line. MAXIMUM 4 sentences. No bullet points. No lists. Lead with the lead's name and ONE sentence about their property interest. Ask for their phone number and preferred move-in date in ONE sentence. End with the booking link. Never mention multiple properties or amenities in detail ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â keep it short and conversational. No markdown.`;
 
   console.log('Calling Claude API...');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -246,13 +363,12 @@ Write ONLY the email body. No subject line. Under 100 words. Use bullet points f
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 300,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 400,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
   const data = await res.json();
-  console.log('Claude response type:', data.type);
   if (data.type === 'error') {
     console.error('Claude error:', data.error?.message);
     return '';
@@ -260,31 +376,36 @@ Write ONLY the email body. No subject line. Under 100 words. Use bullet points f
   return data.content?.[0]?.text || '';
 }
 
-// ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ SEND EMAIL REPLY ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬
 async function sendReply(replyTo, subject, replyText) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: INBOX_EMAIL, pass: GMAIL_PASS },
   });
   const replySubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`;
+  const htmlText = replyText
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/\n/g, '<br>')
+    .replace(
+      /(https?:\/\/[^\s<]+)/g,
+      '<a href="$1" style="color:#1a73e8;text-decoration:underline;">Book Your Tour Here</a>'
+    );
   await transporter.sendMail({
-    from: `"Ana Haynes ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Rosalia Group" <${INBOX_EMAIL}>`,
+    from: `"Rosalia Group Inquiries" <${INBOX_EMAIL}>`,
     to: replyTo,
     subject: replySubject,
-    text: replyText,
+    text: replyText.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1'),
+    html: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.8;color:#333;max-width:600px;">${htmlText}</div>`,
   });
   console.log('Email reply sent to:', replyTo);
 }
 
-// ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ TRIGGER VAPI OUTBOUND CALL ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬
 async function triggerCall(phone, leadName) {
   try {
     const res = await fetch('https://api.vapi.ai/call/phone', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${VAPI_KEY}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${VAPI_KEY}` },
       body: JSON.stringify({
         phoneNumberId: VAPI_PHONE_ID,
         assistantId: VAPI_ASSISTANT_ID,
@@ -300,10 +421,10 @@ async function triggerCall(phone, leadName) {
   }
 }
 
-// ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ SEND SMS ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬
 async function sendSMS(phone, leadName) {
+  if (!TEXTBELT_KEY) return;
   const firstName = leadName?.split(' ')[0] || 'there';
-  const msg = `Hi ${firstName}! This is Ana from Rosalia Group. I just sent you an email ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â we have great apartments available and would love to help you find the right fit. Book a tour: ${BOOKING_FORM_URL} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â (551) 249-9795`;
+  const msg = `Hi ${firstName}! Rosalia Group here. We replied to your inquiry and would love to help you find the perfect apartment. Book a tour: ${BOOKING_FORM_URL}`;
   try {
     await fetch('https://textbelt.com/text', {
       method: 'POST',
@@ -314,14 +435,12 @@ async function sendSMS(phone, leadName) {
   } catch (err) { console.error('SMS error:', err.message); }
 }
 
-// ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ SAVE/UPDATE LEAD IN SUPABASE ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬
 async function saveLead(fromEmail, fromName, subject, body, replyText, phone) {
   const checkRes = await fetch(
     `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(fromEmail)}&limit=1`,
     { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
   );
   const existing = await checkRes.json();
-
   if (Array.isArray(existing) && existing.length > 0) {
     const newNote = `[${new Date().toLocaleDateString()}] Email reply: ${subject}`;
     const mergedNotes = existing[0].notes ? existing[0].notes + '\n' + newNote : newNote;
@@ -335,10 +454,8 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone) {
         phone: existing[0].phone || phone || null,
       }),
     });
-    console.log('Updated existing lead:', existing[0].id);
     return existing[0];
   }
-
   const res = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
     method: 'POST',
     headers: {
@@ -368,32 +485,27 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone) {
   } catch (e) { return null; }
 }
 
-// ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ NOTIFY ANA ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬
-async function notifyAna(fromName, subject, phone) {
-  const msg = `New Lead Email!\nFrom: ${fromName}\nSubject: ${subject}${phone ? '\nPhone: ' + phone + '\nAlex calling...' : '\nNo phone ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â reply sent'}`;
+async function notifyAna(fromName, subject, phone, callAllowed) {
   try {
-    await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: ANA_PHONE, message: msg, key: TEXTBELT_KEY }),
+    const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+    await transporter.sendMail({
+      from: `"Rosalia AI System" <${GMAIL_USER}>`,
+      to: GMAIL_USER,
+      subject: `New Lead: ${fromName || 'Unknown'}`,
+      text: `New lead email received!\n\nFrom: ${fromName}\nSubject: ${subject}${phone ? '\nPhone: ' + phone + (callAllowed ? '\nAlex is calling...' : '\nCall queued for business hours') : '\nNo phone ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â reply sent'}`,
     });
-  } catch (err) { console.error('Ana SMS error:', err.message); }
+  } catch (err) { console.error('Ana email notification error:', err.message); }
 }
 
-// ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ MAIN HANDLER ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬
 exports.handler = async (event) => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
-
-  if (!GMAIL_PASS) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: 'GMAIL_PASS_INQUIRIES not set' }) };
-  }
+  if (!GMAIL_PASS) return { statusCode: 500, headers, body: JSON.stringify({ error: 'GMAIL_PASS_INQUIRIES not set' }) };
 
   try {
     console.log('readmail: fetching unread emails via IMAP...');
     const rawEmails = await fetchUnreadEmails();
     console.log(`Found ${rawEmails.length} unread emails`);
-
     const results = { processed: 0, skipped: 0, not_lead: 0, errors: 0 };
 
     for (const raw of rawEmails) {
@@ -401,7 +513,10 @@ exports.handler = async (event) => {
         const parsed = await simpleParser(raw.raw);
         const from = parsed.from?.text || '';
         const subject = parsed.subject || '(no subject)';
-        const body = parsed.text || '';
+        // Use text body, fall back to HTML with tags stripped
+        const rawHtml = parsed.html || '';
+        const strippedHtml = rawHtml.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+        const body = parsed.text || strippedHtml || '';
         const replyTo = parsed.replyTo?.text || from;
 
         const emailMatch = from.match(/<([^>]+)>/) || from.match(/([^\s]+@[^\s]+)/);
@@ -425,64 +540,83 @@ exports.handler = async (event) => {
         let phone = null;
         let realEmail = fromEmail;
         let realName = fromName;
-        if (isAvailLead(from)) {
-          const parsed = parseAvailEmail(body);
-          if (parsed.phone) phone = parsed.phone;
-          if (parsed.email) realEmail = parsed.email;
-          if (parsed.name) realName = parsed.name;
-          console.log('Avail lead - Name:', realName, 'Email:', realEmail, 'Phone:', phone);
+
+        if (isFUBLead(from, subject)) {
+          const p = parseFUBEmail(body);
+          if (p.phone) phone = p.phone;
+          if (p.email) realEmail = p.email;
+          if (p.name) realName = p.name;
+          console.log('FUB lead - Name:', realName, 'Phone:', phone, 'Email:', realEmail);
+        } else if (isAvailLead(from)) {
+          const p = parseAvailEmail(body);
+          if (p.phone) phone = p.phone;
+          if (p.email) realEmail = p.email;
+          if (p.name) realName = p.name;
+          console.log('Avail lead - Name:', realName, 'Email:', realEmail);
         } else if (isWebflowLead(from, subject)) {
-          const parsed = parseWebflowEmail(body);
-          if (parsed.phone) phone = parsed.phone;
-          if (parsed.email) realEmail = parsed.email;
-          if (parsed.name) realName = parsed.name;
-          console.log('Webflow lead - Name:', realName, 'Email:', realEmail, 'Phone:', phone);
+          const p = parseWebflowEmail(body);
+          if (p.phone) phone = p.phone;
+          if (p.email) realEmail = p.email;
+          if (p.name) realName = p.name;
+          console.log('Webflow lead - Name:', realName, 'Email:', realEmail);
+        } else if (isZillowLead(from)) {
+          // Zillow relay emails don't contain phone numbers
+          // Phone comes from Zillow profile - not available in relay
+          const p = parseZillowEmail(body);
+          if (p.email) realEmail = p.email;
+          phone = null; // Zillow relay never has phone
+          console.log('Zillow lead - no phone in relay email');
         } else {
+          // Strip emails from text before extracting phone
           phone = extractPhone(body + ' ' + subject);
         }
         console.log('Lead detected! Phone:', phone || 'none found');
 
-        // Skip if replied recently (prevents double replies)
-        if (await repliedRecently(fromEmail)) {
-          console.log('Skipping (replied recently):', fromEmail);
+        const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : fromEmail;
+        if (await repliedRecently(checkEmail)) {
+          console.log('Skipping (replied recently):', checkEmail);
           results.skipped++;
           continue;
         }
 
-        // Get previous thread context
         const previousReply = await getPreviousThread(fromEmail);
         const isReply = subject.toLowerCase().startsWith('re:') || !!previousReply;
-        if (isReply) console.log('Thread reply detected - using conversation context');
+        if (isReply) console.log('Thread reply detected');
 
-        // Generate AI reply with context
-        const replyText = await generateReply(from, subject, body, previousReply);
-        if (!replyText) {
-          console.log('No reply generated');
-          results.skipped++;
-          continue;
+        const leadContext = await getLeadContext(checkEmail, realName);
+        const calendarAppt = await getCalendarAppointment(realName || fromName);
+        if (calendarAppt) console.log('Calendar appointment found:', calendarAppt.date, calendarAppt.time);
+        if (leadContext) console.log('Lead context found:', leadContext.status);
+
+        const replyText = await generateReply(from, subject, body, previousReply, leadContext, calendarAppt, realName);
+        if (!replyText) { results.skipped++; continue; }
+
+        const effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : replyTo;
+        await sendReply(effectiveReplyTo, subject, replyText);
+        await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone);
+        // Business hours check BEFORE notifying Ana
+        let callAllowed = false;
+        if (phone) {
+          const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+          const etHour = nowET.getHours();
+          const etDay = nowET.getDay();
+          if (etDay >= 1 && etDay <= 5) callAllowed = etHour >= 9 && etHour < 18;
+          else if (etDay === 6) callAllowed = etHour >= 10 && etHour < 17;
+          else if (etDay === 0) callAllowed = etHour >= 11 && etHour < 17;
         }
 
-        // Send email reply
-        await sendReply(replyTo, subject, replyText);
+        await notifyAna(realName || fromName || from, subject, phone, callAllowed);
 
-        // Save to Supabase
-        await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone);
-
-        // Notify Ana
-        await notifyAna(realName || fromName || from, subject, phone);
-
-        // If phone found and NOT a reply thread ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â trigger call + SMS
-        // Trigger call if NEW phone found (even in reply thread)
         if (phone) {
           const existingLead = await getLeadData(fromEmail);
-          const hadPhone = existingLead?.phone && existingLead.phone.replace(/\D/g,'').length >= 10;
-          if (!hadPhone) {
-            console.log('New phone found ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â triggering call:', phone);
-            await triggerCall(phone, fromName);
-            await sendSMS(phone, fromName);
-          } else if (!isReply) {
-            await triggerCall(phone, fromName);
-            await sendSMS(phone, fromName);
+          const hadPhone = existingLead?.phone && existingLead.phone.replace(/\D/g, '').length >= 10;
+          if (!hadPhone || !isReply) {
+            if (callAllowed) {
+              await triggerCall(phone, realName || fromName);
+              console.log('Call triggered during business hours for:', realName || fromName);
+            } else {
+              console.log('Outside business hours - skipping call, autocall will handle:', realName || fromName);
+            }
           }
         }
 
@@ -495,19 +629,10 @@ exports.handler = async (event) => {
       }
     }
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ success: true, total_unread: rawEmails.length, results }),
-    };
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true, total_unread: rawEmails.length, results }) };
 
   } catch (err) {
     console.error('readmail error:', err.message);
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };
-
-
-
-
-
