@@ -71,16 +71,12 @@ async function createCalendarEvent(booking) {
 
   const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
 
-  const attendees = [{'email': SALES_EMAIL}];
-  if (booking.email && !booking.email.includes('convo.zillow')) attendees.push({'email': booking.email});
-
   const event = {
     summary: `[HVAC] ${booking.full_name} - ${booking.appointment_type || 'Service'} - Mechanical Enterprise`,
     location: booking.property_address || '',
     description: `Service: ${booking.appointment_type || 'N/A'}\nCustomer: ${booking.full_name}\nPhone: ${booking.phone}\nEmail: ${booking.email || 'N/A'}\nProperty: ${booking.property_address || 'N/A'}\nType: ${booking.property_type || 'N/A'}\nIssue: ${booking.issue_description || 'N/A'}`,
     start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
     end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
-    attendees,
   };
 
   const res = await calendar.events.insert({ calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com', resource: event, sendUpdates: 'all' });
@@ -109,7 +105,7 @@ exports.handler = async (event) => {
     // Create calendar event - non-blocking
     let eventId = null;
     let calendarError = null;
-    try { const r = await createCalendarEvent(booking); if (typeof r === 'string' && r.startsWith('DATE')) { calendarError = r; } else { eventId = r; } } catch(calErr) { calendarError = calErr.message; }
+    try { eventId = await createCalendarEvent(booking); } catch(calErr) { console.error('Calendar non-blocking:', calErr.message); }
 
     // Save to Supabase bookings table
     await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
