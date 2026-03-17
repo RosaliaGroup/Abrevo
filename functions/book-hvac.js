@@ -71,12 +71,16 @@ async function createCalendarEvent(booking) {
 
   const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
 
+  const attendees = [{'email': SALES_EMAIL}];
+  if (booking.email && !booking.email.includes('convo.zillow')) attendees.push({'email': booking.email});
+
   const event = {
     summary: `[HVAC] ${booking.full_name} - ${booking.appointment_type || 'Service'} - Mechanical Enterprise`,
     location: booking.property_address || '',
     description: `Service: ${booking.appointment_type || 'N/A'}\nCustomer: ${booking.full_name}\nPhone: ${booking.phone}\nEmail: ${booking.email || 'N/A'}\nProperty: ${booking.property_address || 'N/A'}\nType: ${booking.property_type || 'N/A'}\nIssue: ${booking.issue_description || 'N/A'}`,
     start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
     end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
+    attendees,
   };
 
   const res = await calendar.events.insert({ calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com', resource: event, sendUpdates: 'all' });
