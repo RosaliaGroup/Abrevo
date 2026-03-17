@@ -108,22 +108,27 @@ exports.handler = async (event) => {
 
     // Create calendar event - non-blocking
     let eventId = null;
-    try { eventId = await createCalendarEvent(booking); } catch(calErr) { console.error('Calendar error:', calErr.message); }
+    let calendarError = null;
+    try { const cr = await createCalendarEvent(booking); if (cr && !cr.startsWith('DATE')) eventId = cr; } catch(calErr) { console.error('Calendar error:', calErr.message); }
 
     // Save to Supabase bookings table
-    await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-      body: JSON.stringify({
-        full_name, phone, email,
-        preferred_date, preferred_time,
-        property_address: property_address || 'Mechanical Enterprise',
-        budget: budget || appointment_type,
-        apartment_size: property_type || 'HVAC',
-        move_in_date: issue_description,
-        calendar_event_id: eventId,
-      }),
-    });
+    try {
+      const sbRes = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          full_name, phone, email,
+          preferred_date, preferred_time,
+          property_address: property_address || 'Mechanical Enterprise',
+          budget: budget || appointment_type,
+          apartment_size: property_type || 'HVAC',
+          move_in_date: issue_description,
+          calendar_event_id: eventId,
+          client: 'mechanical',
+        }),
+      });
+      console.log('Supabase status:', sbRes.status);
+    } catch(sbErr) { console.error('Supabase error:', sbErr.message); }
 
     // Send SMS confirmation to customer
     if (phone) {
