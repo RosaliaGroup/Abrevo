@@ -29,7 +29,7 @@ async function sendSMS(phone, message) {
 
 async function createCalendarEvent(booking) {
   const googleCredentials = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
-  if (!googleCredentials.client_email) { console.error('No Google credentials'); return null; }
+  if (!googleCredentials.client_email) { return 'NO_CREDS'; }
   
   const auth = new google.auth.GoogleAuth({
     credentials: googleCredentials,
@@ -52,8 +52,7 @@ async function createCalendarEvent(booking) {
       day = parseInt(textMatch[2]);
       year = parseInt(textMatch[3]);
     } else {
-      console.error('Could not parse date:', booking.preferred_date);
-      return null;
+      return 'BAD_DATE:' + booking.preferred_date;
     }
 
     let hours = 10, minutes = 0;
@@ -67,7 +66,7 @@ async function createCalendarEvent(booking) {
 
     const etOffset = -4; // EDT
     startDateTime = new Date(Date.UTC(year, monthNum, day, hours - etOffset, minutes));
-  } catch(e) { return 'DATE_PARSE_ERROR:' + e.message; }
+  } catch(e) { return 'DATE_ERR:' + e.message; }
 
   const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
 
@@ -153,7 +152,7 @@ exports.handler = async (event) => {
       }); } catch(ce) { console.error('Cust email non-blocking:', ce.message); }
     }
 
-    return { statusCode: 200, headers, body: JSON.stringify({ success: true, eventId, calErr: eventId && eventId.startsWith('ERR:') ? eventId : null }) };
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true, eventId }) };
   } catch(err) {
     console.error('book-hvac error:', err.message);
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
