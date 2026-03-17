@@ -31,10 +31,10 @@ async function createCalendarEvent(booking) {
   const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
   if (!credentials.client_email) return null;
   const { google } = require('googleapis');
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/calendar'],
-  });
+  const auth = new google.auth.JWT(
+    credentials.client_email, null, credentials.private_key,
+    ['https://www.googleapis.com/auth/calendar']
+  );
   const calendar = google.calendar({ version: 'v3', auth });
 
   // Parse date
@@ -95,6 +95,7 @@ exports.handler = async (event) => {
 
     // Create calendar event - non-blocking
     let eventId = null;
+    let calendarError = null;
     try { eventId = await createCalendarEvent(booking); } catch(calErr) { console.error('Calendar non-blocking:', calErr.message); }
 
     // Save to Supabase bookings table
@@ -136,7 +137,7 @@ exports.handler = async (event) => {
       }); } catch(ce) { console.error('Cust email non-blocking:', ce.message); }
     }
 
-    return { statusCode: 200, headers, body: JSON.stringify({ success: true, eventId }) };
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true, eventId, calendarError }) };
   } catch(err) {
     console.error('book-hvac error:', err.message);
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
