@@ -67,7 +67,7 @@ async function createCalendarEvent(booking) {
 
     const etOffset = -4; // EDT
     startDateTime = new Date(Date.UTC(year, monthNum, day, hours - etOffset, minutes));
-  } catch(e) { console.error('Date parse error:', e.message); return null; }
+  } catch(e) { return 'DATE_PARSE_ERROR:' + e.message; }
 
   const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
 
@@ -150,8 +150,7 @@ exports.handler = async (event) => {
       }); } catch(ce) { console.error('Cust email non-blocking:', ce.message); }
     }
 
-    const credLen = (process.env.GOOGLE_CREDENTIALS || '').length;
-    return { statusCode: 200, headers, body: JSON.stringify({ success: true, eventId, calendarError, credLen }) };
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true, eventId, calendarError }) };
   } catch(err) {
     console.error('book-hvac error:', err.message);
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
