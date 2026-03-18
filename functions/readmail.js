@@ -217,7 +217,7 @@ A: Yes  both applicants qualify individually. Combined income of ~3x rent requir
 
 const SKIP_SENDERS = [
   'noreply', 'no-reply', 'donotreply', 'do-not-reply',
-  'mailer-daemon', 'postmaster', 'leads@followupboss.com',
+  'mailer-daemon', 'postmaster',
   'notifications', 'automated', 'newsletter', 'unsubscribe',
   'realtor.com', 'planhub', 'rentspree',
   'voice.google.com',
@@ -226,8 +226,7 @@ const SKIP_SENDERS = [
   'no-reply@mail.zillow', 'market-updates@', 'recommendations@',
   'rosaliagroup.com', 'mechanicalenterprise.com',
   'no-reply@webflow.com', 'no-reply-forms@webflow.com',
-  // FUB system emails and notifications
-  'followupboss.com', 'fub.com',
+  // FUB system emails - DO NOT skip followupboss.com (FUB lead notifications must be processed)
   // Common notification senders
   'alert@', 'alerts@', 'billing@', 'invoice@', 'receipt@',
   'support@', 'help@', 'info@', 'admin@', 'system@',
@@ -359,8 +358,8 @@ function shouldSkip(from, subject) {
   // Skip system/notification subjects
   if (SKIP_SUBJECTS.some(skip => s.includes(skip))) return true;
 
-  // Skip FUB notification emails (these are processed by fubsync/parsefubemail)
-  if (isFUBLead(from, subject)) return true;
+  // FUB lead notifications must be processed, not skipped
+  if (isFUBLead(from, subject)) return false;
 
   // Skip emails from our own domains
   if (f.includes('useabrevo.co') || f.includes('abrevo.co')) return true;
