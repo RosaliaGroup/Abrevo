@@ -133,6 +133,7 @@ async function triggerCall(phone, leadName, assistantId, phoneId, property) {
             tomorrow: tomorrow,
             call_type: 'outbound',
             property: property || '',
+            customer_name: leadName || 'there',
           },
         },
       }),
