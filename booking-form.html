@@ -86,6 +86,7 @@
     .notice-box { padding: 14px 16px; border-radius: var(--radius); font-size: 13px; line-height: 1.5; display: none; transition: opacity 0.3s, max-height 0.3s; overflow: hidden; }
     .notice-box.visible { display: block; animation: fadeUp 0.3s ease both; }
     .notice-cosigner { background: rgba(255, 191, 0, 0.08); border: 1px solid rgba(255, 191, 0, 0.25); color: #FFBF00; }
+    .notice-confirm { background: rgba(201, 168, 76, 0.06); border-left: 3px solid var(--gold); border-radius: 2px; padding: 12px 14px; font-size: 12px; line-height: 1.5; color: var(--text-muted); margin-top: 4px; }
     .specialist-section { display: none; }
     .specialist-section.visible { display: block; animation: fadeUp 0.4s ease both; }
     .specialist-msg { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; text-align: center; }
@@ -236,6 +237,8 @@
           </div>
 
           <div id="formError" class="error-msg"></div>
+
+          <div class="notice-confirm">Please note: All appointments are subject to confirmation by our leasing team. Due to high demand, we will reach out to confirm your visit and ensure the best experience.</div>
 
           <button type="submit" class="btn" id="submitBtn">Reserve My Tour &rarr;</button>
 
