@@ -271,8 +271,14 @@ function isAvailDigest(subject) {
 function isFUBLead(from, subject) {
   const f = (from || '').toLowerCase();
   const s = (subject || '').toLowerCase();
-  return f.includes('followupboss.com') ||
-    (s.includes('new lead from') && (s.includes('facebook') || s.includes('instagram') || s.includes('zillow')));
+  // Direct FUB emails
+  if (f.includes('followupboss.com')) return true;
+  // Forwarded FUB lead notifications (Fwd: New Lead from Facebook)
+  if (s.includes('new lead from') || s.includes('fwd: new lead')) return true;
+  // FUB subject patterns
+  if (s.includes('new lead -') || s.includes('lead from facebook') || 
+      s.includes('lead from instagram') || s.includes('lead from zillow')) return true;
+  return false;
 }
 
 function parseFUBEmail(body) {
