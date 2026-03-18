@@ -255,7 +255,6 @@ const SKIP_SUBJECTS = [
   'delivery status', 'undeliverable', 'returned mail',
   'security alert', 'sign-in', 'login notification',
   'subscription', 'unsubscribe', 'opt out',
-  'new lead from', // FUB notification - we process these separately
   'lead assigned', 'task reminder', 'action plan',
   'stage changed', 'deal updated', 'note added',
 ];
@@ -352,14 +351,14 @@ function shouldSkip(from, subject) {
   const f = (from || '').toLowerCase();
   const s = (subject || '').toLowerCase();
 
+  // FUB lead notifications MUST be checked before any subject/sender filters
+  if (isFUBLead(from, subject)) return false;
+
   // Skip any sender matching skip list
   if (SKIP_SENDERS.some(skip => f.includes(skip))) return true;
 
   // Skip system/notification subjects
   if (SKIP_SUBJECTS.some(skip => s.includes(skip))) return true;
-
-  // FUB lead notifications must be processed, not skipped
-  if (isFUBLead(from, subject)) return false;
 
   // Skip emails from our own domains
   if (f.includes('useabrevo.co') || f.includes('abrevo.co')) return true;
