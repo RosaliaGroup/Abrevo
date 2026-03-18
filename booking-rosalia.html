@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Book Your Tour Ã¢â‚¬â€ Rosalia Group</title>
+  <title>Book Your Tour &mdash; Rosalia Group</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -72,16 +72,25 @@
       -webkit-appearance: none;
     }
     .field select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    .field select:disabled { opacity: 0.4; cursor: not-allowed; }
     .field input[type="date"] { cursor: pointer; color-scheme: dark; }
     .field select option { background: var(--dark2); }
     .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.08); }
     .field input::placeholder, .field textarea::placeholder { color: rgba(255,255,255,0.2); }
     .field textarea { resize: vertical; min-height: 80px; }
+    .field input:read-only { opacity: 0.6; cursor: default; }
     .section-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
     .btn { width: 100%; padding: 16px; background: var(--gold); color: var(--black); border: none; border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: background 0.2s, transform 0.1s; margin-top: 8px; }
     .btn:hover { background: var(--gold-light); }
     .btn:active { transform: scale(0.99); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .notice-box { padding: 14px 16px; border-radius: var(--radius); font-size: 13px; line-height: 1.5; display: none; transition: opacity 0.3s, max-height 0.3s; overflow: hidden; }
+    .notice-box.visible { display: block; animation: fadeUp 0.3s ease both; }
+    .notice-cosigner { background: rgba(255, 191, 0, 0.08); border: 1px solid rgba(255, 191, 0, 0.25); color: #FFBF00; }
+    .notice-ballantine { background: rgba(201, 168, 76, 0.1); border: 1px solid rgba(201, 168, 76, 0.3); color: var(--gold-light); }
+    .specialist-section { display: none; }
+    .specialist-section.visible { display: block; animation: fadeUp 0.4s ease both; }
+    .specialist-msg { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; text-align: center; }
     .success-state { display: none; }
     .success-box { text-align: center; padding: 48px 24px; }
     .success-icon { width: 56px; height: 56px; border: 1px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; color: var(--gold); font-size: 22px; }
@@ -114,7 +123,8 @@
   </div>
 
   <div class="card">
-    <div class="form-state">
+    <!-- BOOKING FORM -->
+    <div class="form-state" id="bookingSection">
       <form id="bookingForm" novalidate>
         <div class="form-grid">
 
@@ -134,6 +144,34 @@
           <div class="field">
             <label>Email Address *</label>
             <input type="email" id="email" placeholder="jane@example.com" required />
+          </div>
+
+          <div class="section-label" style="margin-top:4px">Qualification</div>
+
+          <div class="form-row">
+            <div class="field">
+              <label>Monthly Income *</label>
+              <select id="income" required>
+                <option value="">Select range</option>
+                <option value="2500">Under $3,000</option>
+                <option value="4000">$3,000 - $5,000</option>
+                <option value="6500">$5,000 - $8,000</option>
+                <option value="10000">$8,000 - $12,000</option>
+                <option value="15000">$12,000+</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Credit Score *</label>
+              <select id="credit" required>
+                <option value="">Select range</option>
+                <option value="580">Below 600</option>
+                <option value="625">600 - 649</option>
+                <option value="675">650 - 699</option>
+                <option value="725">700 - 749</option>
+                <option value="775">750+</option>
+                <option value="0">Unsure</option>
+              </select>
+            </div>
           </div>
 
           <div class="section-label" style="margin-top:4px">Apartment Preferences</div>
@@ -167,48 +205,13 @@
             <input type="date" id="move_in_date" required />
           </div>
 
-          <div class="form-row">
-            <div class="field">
-              <label>Monthly Income</label>
-              <select id="income">
-                <option value="">Select range</option>
-                <option>Under $3,000</option>
-                <option>$3,000 - $5,000</option>
-                <option>$5,000 - $8,000</option>
-                <option>$8,000 - $12,000</option>
-                <option>$12,000+</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Credit Score</label>
-              <select id="credit">
-                <option value="">Select range</option>
-                <option>Below 600</option>
-                <option>600 - 649</option>
-                <option>650 - 699</option>
-                <option>700 - 749</option>
-                <option>750+</option>
-                <option>Unsure</option>
-              </select>
-            </div>
-          </div>
-
           <div class="section-label" style="margin-top:4px">Tour Appointment</div>
 
           <div class="form-row">
             <div class="field">
               <label>Property *</label>
-              <select id="property_name" required>
-                <option value="">Select property</option>
-                <option>486 Market St - River Pointe, Newark NJ</option>
-                <option>502 Market St, Newark NJ</option>
-                <option>39 Madison St - Iron Pointe, Newark NJ</option>
-                <option>556 Market St, Newark NJ</option>
-                <option>289 Halsey St, Newark NJ</option>
-                <option>77 Christie St, Newark NJ</option>
-                <option>1369 South Ave, Plainfield NJ</option>
-                <option>475 Main St - The Elks, Orange NJ</option>
-                <option value="other">Other (specify below)</option>
+              <select id="property_name" required disabled>
+                <option value="">Select income &amp; credit first</option>
               </select>
             </div>
             <div class="field" id="other_property_field" style="display:none">
@@ -235,6 +238,14 @@
             </div>
           </div>
 
+          <div id="noticeCosigner" class="notice-box notice-cosigner">
+            Some properties may require a cosigner or guarantor. TheGuarantors.com is accepted. Our leasing team will guide you.
+          </div>
+
+          <div id="noticeBallantine" class="notice-box notice-ballantine">
+            <strong style="font-size:11px;letter-spacing:0.05em;">Important:</strong> The Ballantine appointments must be confirmed by our leasing team prior to your visit. Your appointment is not valid until confirmed.
+          </div>
+
           <div class="field">
             <label>Message (optional)</label>
             <textarea id="message" placeholder="Any questions or special requests..."></textarea>
@@ -248,6 +259,69 @@
       </form>
     </div>
 
+    <!-- SPECIALIST FORM (shown when disqualified) -->
+    <div class="specialist-section" id="specialistSection">
+      <div class="form-grid">
+        <p class="specialist-msg">Our leasing specialists may have options that work for your situation &mdash; including guarantor programs, flexible requirements, and upcoming availability not listed online.</p>
+
+        <div class="section-label">Your Information</div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Full Name *</label>
+            <input type="text" id="sp_full_name" placeholder="Jane Smith" required />
+          </div>
+          <div class="field">
+            <label>Phone *</label>
+            <input type="tel" id="sp_phone" placeholder="(646) 000-0000" required />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Email Address *</label>
+          <input type="email" id="sp_email" placeholder="jane@example.com" required />
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Monthly Income</label>
+            <input type="text" id="sp_income" readonly />
+          </div>
+          <div class="field">
+            <label>Credit Score Range</label>
+            <input type="text" id="sp_credit" readonly />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Apartment Size *</label>
+            <select id="sp_apartment_size" required>
+              <option value="">Select</option>
+              <option>Studio</option>
+              <option>1BR</option>
+              <option>2BR</option>
+              <option>3BR</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Move-in Date *</label>
+            <input type="date" id="sp_move_in_date" required />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Message (optional)</label>
+          <textarea id="sp_message" placeholder="Tell us about your situation..."></textarea>
+        </div>
+
+        <div id="spFormError" class="error-msg"></div>
+
+        <button type="button" class="btn" id="spSubmitBtn">Connect Me with a Specialist &rarr;</button>
+      </div>
+    </div>
+
+    <!-- SUCCESS STATE -->
     <div class="success-state" id="successState">
       <div class="success-box">
         <div class="success-icon">&#10003;</div>
@@ -256,28 +330,171 @@
         <div class="detail" id="confirmDetails"></div>
       </div>
     </div>
+
+    <!-- SPECIALIST SUCCESS STATE -->
+    <div class="success-state" id="specialistSuccessState">
+      <div class="success-box">
+        <div class="success-icon">&#10003;</div>
+        <h2>Request Received</h2>
+        <p>Thank you! A leasing specialist will review your profile and be in touch to discuss your options.</p>
+      </div>
+    </div>
   </div>
 
   <div class="footer">
-    Newark, NJ &middot; <a href="tel:+18624191763">(862) 419-1763</a> &middot; <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a>
+    Newark, NJ &middot; <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a>
   </div>
 
 </div>
 <script>
-  const params = new URLSearchParams(window.location.search);
-  const phoneParam = params.get('phone');
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var phoneParam = params.get('phone');
   if (phoneParam) document.getElementById('phone').value = phoneParam;
 
-  const today = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-  document.getElementById('property_name').addEventListener('change', function() {
-    document.getElementById('other_property_field').style.display = this.value === 'other' ? 'block' : 'none';
+  var today = new Date().toISOString().split('T')[0];
+  var tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  document.getElementById('preferred_date').min = tomorrow;
+  document.getElementById('move_in_date').min = today;
+  document.getElementById('sp_move_in_date').min = tomorrow;
+
+  // Property data: { label, value, minIncome, creditMin, cosignerMin }
+  // creditMin = minimum credit to fully qualify
+  // cosignerMin = minimum credit to qualify with cosigner (below this = disqualified)
+  var PROPERTIES = [
+    { label: '502 Market St - The Ballantine, Newark NJ', value: '502 Market St - The Ballantine, Newark NJ', minIncome: 5997, creditMin: 625, cosignerMin: 600, ballantine: true },
+    { label: '486 Market St - River Pointe, Newark NJ', value: '486 Market St - River Pointe, Newark NJ', minIncome: 7050, creditMin: 650, cosignerMin: 625 },
+    { label: '39 Madison St - Iron Pointe, Newark NJ', value: '39 Madison St - Iron Pointe, Newark NJ', minIncome: 7200, creditMin: 650, cosignerMin: 625 },
+    { label: '556 Market St, Newark NJ', value: '556 Market St, Newark NJ', minIncome: 6000, creditMin: 650, cosignerMin: 625 },
+    { label: '289 Halsey St, Newark NJ', value: '289 Halsey St, Newark NJ', minIncome: 6000, creditMin: 650, cosignerMin: 625 },
+    { label: '77 Christie St, Newark NJ', value: '77 Christie St, Newark NJ', minIncome: 6000, creditMin: 650, cosignerMin: 625 },
+    { label: '1369 South Ave, Plainfield NJ', value: '1369 South Ave, Plainfield NJ', minIncome: 5400, creditMin: 650, cosignerMin: 625 },
+    { label: '475 Main St - The Elks, Orange NJ', value: '475 Main St - The Elks, Orange NJ', minIncome: 7200, creditMin: 650, cosignerMin: 625 }
+  ];
+
+  var incomeEl = document.getElementById('income');
+  var creditEl = document.getElementById('credit');
+  var propertyEl = document.getElementById('property_name');
+  var cosignerNotice = document.getElementById('noticeCosigner');
+  var ballantineNotice = document.getElementById('noticeBallantine');
+  var bookingSection = document.getElementById('bookingSection');
+  var specialistSection = document.getElementById('specialistSection');
+
+  function getIncomeVal() { return parseInt(incomeEl.value) || 0; }
+  function getCreditVal() { return parseInt(creditEl.value); }
+
+  function filterProperties() {
+    var incomeVal = getIncomeVal();
+    var creditVal = getCreditVal();
+
+    // Reset notices
+    cosignerNotice.classList.remove('visible');
+    ballantineNotice.classList.remove('visible');
+
+    // Both must be selected
+    if (!incomeEl.value || !creditEl.value) {
+      propertyEl.disabled = true;
+      propertyEl.innerHTML = '<option value="">Select income &amp; credit first</option>';
+      showBooking();
+      return;
+    }
+
+    // "Unsure" = 0 = disqualified
+    if (creditVal === 0) {
+      showSpecialist();
+      return;
+    }
+
+    var qualifiedFull = [];
+    var qualifiedCosigner = [];
+    var hasCosigner = false;
+
+    for (var i = 0; i < PROPERTIES.length; i++) {
+      var p = PROPERTIES[i];
+      var incomeOk = incomeVal >= p.minIncome;
+      var creditFull = creditVal >= p.creditMin;
+      var creditCosigner = creditVal >= p.cosignerMin && creditVal < p.creditMin;
+
+      if (incomeOk && creditFull) {
+        qualifiedFull.push(p);
+      } else if (incomeOk && creditCosigner) {
+        qualifiedCosigner.push(p);
+        hasCosigner = true;
+      }
+    }
+
+    var allQualified = qualifiedFull.concat(qualifiedCosigner);
+
+    if (allQualified.length === 0) {
+      showSpecialist();
+      return;
+    }
+
+    // Show booking form
+    showBooking();
+    propertyEl.disabled = false;
+    propertyEl.innerHTML = '<option value="">Select property</option>';
+
+    for (var j = 0; j < qualifiedFull.length; j++) {
+      var opt = document.createElement('option');
+      opt.value = qualifiedFull[j].value;
+      opt.textContent = qualifiedFull[j].label;
+      propertyEl.appendChild(opt);
+    }
+    for (var k = 0; k < qualifiedCosigner.length; k++) {
+      var opt2 = document.createElement('option');
+      opt2.value = qualifiedCosigner[k].value;
+      opt2.textContent = qualifiedCosigner[k].label + ' (cosigner may be required)';
+      propertyEl.appendChild(opt2);
+    }
+
+    // Add "Other" option
+    var otherOpt = document.createElement('option');
+    otherOpt.value = 'other';
+    otherOpt.textContent = 'Other (specify below)';
+    propertyEl.appendChild(otherOpt);
+
+    if (hasCosigner) {
+      cosignerNotice.classList.add('visible');
+    }
+  }
+
+  function showBooking() {
+    bookingSection.style.display = '';
+    specialistSection.classList.remove('visible');
+  }
+
+  function showSpecialist() {
+    bookingSection.style.display = 'none';
+    specialistSection.classList.add('visible');
+
+    // Pre-fill specialist form
+    document.getElementById('sp_full_name').value = document.getElementById('full_name').value;
+    document.getElementById('sp_phone').value = document.getElementById('phone').value;
+    document.getElementById('sp_email').value = document.getElementById('email').value;
+
+    var incomeText = incomeEl.options[incomeEl.selectedIndex] ? incomeEl.options[incomeEl.selectedIndex].text : '';
+    var creditText = creditEl.options[creditEl.selectedIndex] ? creditEl.options[creditEl.selectedIndex].text : '';
+    document.getElementById('sp_income').value = incomeText;
+    document.getElementById('sp_credit').value = creditText;
+  }
+
+  incomeEl.addEventListener('change', filterProperties);
+  creditEl.addEventListener('change', filterProperties);
+
+  // Ballantine notice on property change
+  propertyEl.addEventListener('change', function() {
+    var val = this.value;
+    document.getElementById('other_property_field').style.display = val === 'other' ? 'block' : 'none';
+
+    if (val.indexOf('502 Market') !== -1) {
+      ballantineNotice.classList.add('visible');
+    } else {
+      ballantineNotice.classList.remove('visible');
+    }
   });
 
-    document.getElementById('preferred_date').min = tomorrow;
-  // Show/hide other property field
-  document.getElementById('move_in_date').min = today;
-
+  // Booking form submit
   document.getElementById('bookingForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     var btn = document.getElementById('submitBtn');
@@ -290,15 +507,15 @@
     var budget = document.getElementById('budget').value;
     var apartment_size = document.getElementById('apartment_size').value;
     var move_in_date_raw = document.getElementById('move_in_date').value;
-    var income_qualifies = document.getElementById('income').value || 'Not provided';
-    var credit_qualifies = document.getElementById('credit').value || 'Not provided';
+    var income_qualifies = incomeEl.options[incomeEl.selectedIndex] ? incomeEl.options[incomeEl.selectedIndex].text : '';
+    var credit_qualifies = creditEl.options[creditEl.selectedIndex] ? creditEl.options[creditEl.selectedIndex].text : '';
     var property_raw = document.getElementById('property_name').value;
-    var property_name = property_raw === 'other' ? (document.getElementById('other_property').value.trim() || 'Other') : property_raw;
+    var property_name = property_raw === 'other' ? (document.getElementById('other_property').value.trim() || 'Other') : property_raw.replace(' (cosigner may be required)', '');
     var preferred_date_raw = document.getElementById('preferred_date').value;
     var preferred_time = document.getElementById('preferred_time').value;
     var additional_notes = document.getElementById('message').value.trim();
 
-    if (!full_name || !phone || !email || !budget || !apartment_size || !move_in_date_raw || !preferred_date_raw || !preferred_time || !property_name) {
+    if (!full_name || !phone || !email || !budget || !apartment_size || !move_in_date_raw || !preferred_date_raw || !preferred_time || !property_raw) {
       errorEl.textContent = 'Please fill in all required fields.';
       errorEl.style.display = 'block';
       return;
@@ -337,7 +554,7 @@
       var data = await res.json();
 
       if (data.success || res.ok) {
-        document.querySelector('.form-state').style.display = 'none';
+        document.getElementById('bookingSection').style.display = 'none';
         document.getElementById('successState').style.display = 'block';
         document.getElementById('confirmDetails').innerHTML =
           '<strong>Appointment</strong>' + preferred_date + ' at ' + preferred_time +
@@ -347,13 +564,75 @@
         throw new Error(data.error || 'Booking failed');
       }
     } catch(err) {
-      errorEl.textContent = 'Something went wrong. Please call us at (862) 333-1681.';
+      errorEl.textContent = 'Something went wrong. Please try again or email us at inquiries@rosaliagroup.com.';
       errorEl.style.display = 'block';
       btn.disabled = false;
       btn.textContent = 'Reserve My Tour \u2192';
     }
   });
+
+  // Specialist form submit
+  var spSubmitting = false;
+  document.getElementById('spSubmitBtn').addEventListener('click', async function() {
+    if (spSubmitting) return;
+    var btn = document.getElementById('spSubmitBtn');
+    var errorEl = document.getElementById('spFormError');
+    errorEl.style.display = 'none';
+
+    var full_name = document.getElementById('sp_full_name').value.trim();
+    var phone = document.getElementById('sp_phone').value.trim();
+    var email = document.getElementById('sp_email').value.trim();
+    var apartment_size = document.getElementById('sp_apartment_size').value;
+    var move_in_date = document.getElementById('sp_move_in_date').value;
+    var additional_notes = document.getElementById('sp_message').value.trim();
+
+    if (!full_name || !phone || !email || !apartment_size || !move_in_date) {
+      errorEl.textContent = 'Please fill in all required fields.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    spSubmitting = true;
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    try {
+      var res = await fetch('/.netlify/functions/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: full_name,
+          phone: phone,
+          email: email,
+          income_qualifies: document.getElementById('sp_income').value,
+          credit_qualifies: document.getElementById('sp_credit').value,
+          apartment_size: apartment_size,
+          move_in_date: move_in_date,
+          additional_notes: additional_notes,
+          status: 'needs_specialist',
+          source: 'disqualified_form',
+          client: 'rosalia'
+        })
+      });
+
+      var data = await res.json();
+
+      if (data.success || res.ok) {
+        specialistSection.classList.remove('visible');
+        specialistSection.style.display = 'none';
+        document.getElementById('specialistSuccessState').style.display = 'block';
+      } else {
+        throw new Error(data.error || 'Submission failed');
+      }
+    } catch(err) {
+      errorEl.textContent = 'Something went wrong. Please try again or email us at inquiries@rosaliagroup.com.';
+      errorEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Connect Me with a Specialist \u2192';
+      spSubmitting = false;
+    }
+  });
+})();
 </script>
 </body>
 </html>
-

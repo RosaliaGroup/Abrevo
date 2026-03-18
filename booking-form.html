@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Book Your Tour Ã¢â‚¬â€ Iron 65 Luxury Apartments</title>
+  <title>Book Your Tour &mdash; Iron 65 Luxury Apartments</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -77,11 +77,18 @@
     .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.08); }
     .field input::placeholder, .field textarea::placeholder { color: rgba(255,255,255,0.2); }
     .field textarea { resize: vertical; min-height: 80px; }
+    .field input:read-only { opacity: 0.6; cursor: default; }
     .section-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
     .btn { width: 100%; padding: 16px; background: var(--gold); color: var(--black); border: none; border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: background 0.2s, transform 0.1s; margin-top: 8px; }
     .btn:hover { background: var(--gold-light); }
     .btn:active { transform: scale(0.99); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .notice-box { padding: 14px 16px; border-radius: var(--radius); font-size: 13px; line-height: 1.5; display: none; transition: opacity 0.3s, max-height 0.3s; overflow: hidden; }
+    .notice-box.visible { display: block; animation: fadeUp 0.3s ease both; }
+    .notice-cosigner { background: rgba(255, 191, 0, 0.08); border: 1px solid rgba(255, 191, 0, 0.25); color: #FFBF00; }
+    .specialist-section { display: none; }
+    .specialist-section.visible { display: block; animation: fadeUp 0.4s ease both; }
+    .specialist-msg { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; text-align: center; }
     .success-state { display: none; }
     .success-box { text-align: center; padding: 48px 24px; }
     .success-icon { width: 56px; height: 56px; border: 1px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; color: var(--gold); font-size: 22px; }
@@ -114,7 +121,8 @@
   </div>
 
   <div class="card">
-    <div class="form-state">
+    <!-- BOOKING FORM -->
+    <div class="form-state" id="bookingSection">
       <form id="bookingForm" novalidate>
         <div class="form-grid">
 
@@ -134,6 +142,38 @@
           <div class="field">
             <label>Email Address *</label>
             <input type="email" id="email" placeholder="jane@example.com" required />
+          </div>
+
+          <div class="section-label" style="margin-top:4px">Qualification</div>
+
+          <div class="form-row">
+            <div class="field">
+              <label>Monthly Income *</label>
+              <select id="income" required>
+                <option value="">Select range</option>
+                <option value="2500">Under $3,000</option>
+                <option value="4000">$3,000 - $5,000</option>
+                <option value="6500">$5,000 - $8,000</option>
+                <option value="10000">$8,000 - $12,000</option>
+                <option value="15000">$12,000+</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Credit Score *</label>
+              <select id="credit" required>
+                <option value="">Select range</option>
+                <option value="580">Below 600</option>
+                <option value="625">600 - 649</option>
+                <option value="675">650 - 699</option>
+                <option value="725">700 - 749</option>
+                <option value="775">750+</option>
+                <option value="0">Unsure</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="noticeCosigner" class="notice-box notice-cosigner">
+            A cosigner or guarantor may be required for your credit range. TheGuarantors.com is accepted. Our leasing team will guide you through the process.
           </div>
 
           <div class="section-label" style="margin-top:4px">Apartment Preferences</div>
@@ -165,32 +205,6 @@
           <div class="field">
             <label>Move-In Date *</label>
             <input type="date" id="move_in_date" required />
-          </div>
-
-          <div class="form-row">
-            <div class="field">
-              <label>Monthly Income</label>
-              <select id="income">
-                <option value="">Select range</option>
-                <option>Under $3,000</option>
-                <option>$3,000 - $5,000</option>
-                <option>$5,000 - $8,000</option>
-                <option>$8,000 - $12,000</option>
-                <option>$12,000+</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Credit Score</label>
-              <select id="credit">
-                <option value="">Select range</option>
-                <option>Below 600</option>
-                <option>600 - 649</option>
-                <option>650 - 699</option>
-                <option>700 - 749</option>
-                <option>750+</option>
-                <option>Unsure</option>
-              </select>
-            </div>
           </div>
 
           <div class="section-label" style="margin-top:4px">Tour Appointment</div>
@@ -229,6 +243,69 @@
       </form>
     </div>
 
+    <!-- SPECIALIST FORM (shown when disqualified) -->
+    <div class="specialist-section" id="specialistSection">
+      <div class="form-grid">
+        <p class="specialist-msg">Our leasing specialists may have options that work for your situation &mdash; including guarantor programs, flexible requirements, and upcoming availability not listed online.</p>
+
+        <div class="section-label">Your Information</div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Full Name *</label>
+            <input type="text" id="sp_full_name" placeholder="Jane Smith" required />
+          </div>
+          <div class="field">
+            <label>Phone *</label>
+            <input type="tel" id="sp_phone" placeholder="(646) 000-0000" required />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Email Address *</label>
+          <input type="email" id="sp_email" placeholder="jane@example.com" required />
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Monthly Income</label>
+            <input type="text" id="sp_income" readonly />
+          </div>
+          <div class="field">
+            <label>Credit Score Range</label>
+            <input type="text" id="sp_credit" readonly />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Apartment Size *</label>
+            <select id="sp_apartment_size" required>
+              <option value="">Select</option>
+              <option>Studio</option>
+              <option>1BR</option>
+              <option>2BR</option>
+              <option>3BR</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Move-in Date *</label>
+            <input type="date" id="sp_move_in_date" required />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Message (optional)</label>
+          <textarea id="sp_message" placeholder="Tell us about your situation..."></textarea>
+        </div>
+
+        <div id="spFormError" class="error-msg"></div>
+
+        <button type="button" class="btn" id="spSubmitBtn">Connect Me with a Specialist &rarr;</button>
+      </div>
+    </div>
+
+    <!-- SUCCESS STATE -->
     <div class="success-state" id="successState">
       <div class="success-box">
         <div class="success-icon">&#10003;</div>
@@ -237,24 +314,100 @@
         <div class="detail" id="confirmDetails"></div>
       </div>
     </div>
+
+    <!-- SPECIALIST SUCCESS STATE -->
+    <div class="success-state" id="specialistSuccessState">
+      <div class="success-box">
+        <div class="success-icon">&#10003;</div>
+        <h2>Request Received</h2>
+        <p>Thank you! A leasing specialist will review your profile and be in touch to discuss your options.</p>
+      </div>
+    </div>
   </div>
 
   <div class="footer">
-    65 Mcwhorter St, Newark, NJ 07105 &middot; <a href="tel:+18623331681">(862) 333-1681</a> &middot; <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a>
+    65 Mcwhorter St, Newark, NJ 07105 &middot; <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a>
   </div>
 
 </div>
 <script>
-  const params = new URLSearchParams(window.location.search);
-  const phoneParam = params.get('phone');
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var phoneParam = params.get('phone');
   if (phoneParam) document.getElementById('phone').value = phoneParam;
 
-  const today = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  var today = new Date().toISOString().split('T')[0];
+  var tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
   document.getElementById('preferred_date').min = tomorrow;
-  // Show/hide other property field
   document.getElementById('move_in_date').min = today;
+  document.getElementById('sp_move_in_date').min = tomorrow;
 
+  // Iron 65 qualification rules:
+  // Credit 625+ = qualifies, 600-624 = cosigner, below 600 = disqualified
+  // Income min $6,597/mo
+  var MIN_INCOME = 6597;
+  var CREDIT_FULL = 625;
+  var CREDIT_COSIGNER = 600;
+
+  var incomeEl = document.getElementById('income');
+  var creditEl = document.getElementById('credit');
+  var cosignerNotice = document.getElementById('noticeCosigner');
+  var bookingSection = document.getElementById('bookingSection');
+  var specialistSection = document.getElementById('specialistSection');
+
+  function checkQualification() {
+    var incomeVal = parseInt(incomeEl.value) || 0;
+    var creditVal = parseInt(creditEl.value);
+
+    cosignerNotice.classList.remove('visible');
+
+    // Both must be selected to evaluate
+    if (!incomeEl.value || !creditEl.value) return;
+
+    var incomeOk = incomeVal >= MIN_INCOME;
+    var creditOk = creditVal >= CREDIT_FULL;
+    var creditCosigner = creditVal >= CREDIT_COSIGNER && creditVal < CREDIT_FULL;
+    var creditUnsure = creditVal === 0;
+
+    // Disqualified: credit below 600 AND income below min, OR "Unsure"
+    if (creditUnsure || (creditVal < CREDIT_COSIGNER && !incomeOk)) {
+      showSpecialist();
+      return;
+    }
+
+    // Show booking form
+    showBooking();
+
+    // Cosigner notice: credit 600-624 OR income borderline (below min but credit ok)
+    if (creditCosigner || (!incomeOk && creditOk)) {
+      cosignerNotice.classList.add('visible');
+    }
+  }
+
+  function showBooking() {
+    bookingSection.style.display = '';
+    specialistSection.classList.remove('visible');
+  }
+
+  function showSpecialist() {
+    bookingSection.style.display = 'none';
+    specialistSection.classList.add('visible');
+
+    // Pre-fill specialist form
+    document.getElementById('sp_full_name').value = document.getElementById('full_name').value;
+    document.getElementById('sp_phone').value = document.getElementById('phone').value;
+    document.getElementById('sp_email').value = document.getElementById('email').value;
+
+    var incomeText = incomeEl.options[incomeEl.selectedIndex] ? incomeEl.options[incomeEl.selectedIndex].text : '';
+    var creditText = creditEl.options[creditEl.selectedIndex] ? creditEl.options[creditEl.selectedIndex].text : '';
+    document.getElementById('sp_income').value = incomeText;
+    document.getElementById('sp_credit').value = creditText;
+  }
+
+  incomeEl.addEventListener('change', checkQualification);
+  creditEl.addEventListener('change', checkQualification);
+
+  // Booking form submit
   document.getElementById('bookingForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     var btn = document.getElementById('submitBtn');
@@ -267,8 +420,8 @@
     var budget = document.getElementById('budget').value;
     var apartment_size = document.getElementById('apartment_size').value;
     var move_in_date_raw = document.getElementById('move_in_date').value;
-    var income_qualifies = document.getElementById('income').value || 'Not provided';
-    var credit_qualifies = document.getElementById('credit').value || 'Not provided';
+    var income_qualifies = incomeEl.options[incomeEl.selectedIndex] ? incomeEl.options[incomeEl.selectedIndex].text : '';
+    var credit_qualifies = creditEl.options[creditEl.selectedIndex] ? creditEl.options[creditEl.selectedIndex].text : '';
     var preferred_date_raw = document.getElementById('preferred_date').value;
     var preferred_time = document.getElementById('preferred_time').value;
     var additional_notes = document.getElementById('message').value.trim();
@@ -312,7 +465,7 @@
       var data = await res.json();
 
       if (data.success || res.ok) {
-        document.querySelector('.form-state').style.display = 'none';
+        document.getElementById('bookingSection').style.display = 'none';
         document.getElementById('successState').style.display = 'block';
         document.getElementById('confirmDetails').innerHTML =
           '<strong>Appointment</strong>' + preferred_date + ' at ' + preferred_time +
@@ -322,13 +475,76 @@
         throw new Error(data.error || 'Booking failed');
       }
     } catch(err) {
-      errorEl.textContent = 'Something went wrong. Please call us at (862) 333-1681.';
+      errorEl.textContent = 'Something went wrong. Please try again or email us at inquiries@rosaliagroup.com.';
       errorEl.style.display = 'block';
       btn.disabled = false;
       btn.textContent = 'Reserve My Tour \u2192';
     }
   });
+
+  // Specialist form submit
+  var spSubmitting = false;
+  document.getElementById('spSubmitBtn').addEventListener('click', async function() {
+    if (spSubmitting) return;
+    var btn = document.getElementById('spSubmitBtn');
+    var errorEl = document.getElementById('spFormError');
+    errorEl.style.display = 'none';
+
+    var full_name = document.getElementById('sp_full_name').value.trim();
+    var phone = document.getElementById('sp_phone').value.trim();
+    var email = document.getElementById('sp_email').value.trim();
+    var apartment_size = document.getElementById('sp_apartment_size').value;
+    var move_in_date = document.getElementById('sp_move_in_date').value;
+    var additional_notes = document.getElementById('sp_message').value.trim();
+
+    if (!full_name || !phone || !email || !apartment_size || !move_in_date) {
+      errorEl.textContent = 'Please fill in all required fields.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    spSubmitting = true;
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    try {
+      var res = await fetch('/.netlify/functions/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: full_name,
+          phone: phone,
+          email: email,
+          income_qualifies: document.getElementById('sp_income').value,
+          credit_qualifies: document.getElementById('sp_credit').value,
+          apartment_size: apartment_size,
+          move_in_date: move_in_date,
+          additional_notes: additional_notes,
+          status: 'needs_specialist',
+          source: 'disqualified_form',
+          property_address: 'Iron 65 - 65 Mcwhorter St, Newark NJ',
+          client: 'rosalia'
+        })
+      });
+
+      var data = await res.json();
+
+      if (data.success || res.ok) {
+        specialistSection.classList.remove('visible');
+        specialistSection.style.display = 'none';
+        document.getElementById('specialistSuccessState').style.display = 'block';
+      } else {
+        throw new Error(data.error || 'Submission failed');
+      }
+    } catch(err) {
+      errorEl.textContent = 'Something went wrong. Please try again or email us at inquiries@rosaliagroup.com.';
+      errorEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Connect Me with a Specialist \u2192';
+      spSubmitting = false;
+    }
+  });
+})();
 </script>
 </body>
 </html>
-
