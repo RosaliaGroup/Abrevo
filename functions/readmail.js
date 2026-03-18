@@ -374,6 +374,7 @@ function isLead(subject, body, from) {
   if (isZillowLead(from || '')) return true;
   if (isAvailLead(from || '')) return true;
   if (isWebflowLead(from || '', subject)) return true;
+  if (isFUBLead(from || '', subject || '')) return true;
 
   const s = (subject || '').toLowerCase();
   const b = (body || '').toLowerCase();
