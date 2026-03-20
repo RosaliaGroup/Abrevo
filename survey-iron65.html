@@ -88,6 +88,32 @@
       color: #888;
       line-height: 1.75;
     }
+    .property-tag {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .tag-text {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #C9A84C;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .tag-line {
+      width: 24px;
+      height: 1px;
+      background: rgba(201,168,76,0.4);
+    }
+    .tag-diamond {
+      width: 5px;
+      height: 5px;
+      background: #C9A84C;
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
 
     /* ── Card ── */
     .card {
@@ -338,6 +364,7 @@
 
   <div class="header">
     <h1><em>Quick</em> Feedback</h1>
+    <div class="property-tag"><span class="tag-line"></span><span class="tag-diamond"></span><span class="tag-text">Iron 65</span><span class="tag-diamond"></span><span class="tag-line"></span></div>
     <p>We noticed you haven't moved forward with us yet. We'd love to understand why &mdash; your feedback helps us improve for future residents.</p>
   </div>
 
