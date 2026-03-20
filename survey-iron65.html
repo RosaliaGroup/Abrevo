@@ -65,18 +65,17 @@
     .field input::placeholder, .field textarea::placeholder { color: #555; }
     .field textarea { resize: vertical; min-height: 80px; border: none; border-bottom: 1px solid var(--border); }
 
-    /* Radio options - full-width rows */
-    .options { display: flex; flex-direction: column; gap: 0; }
-    .option { display: flex; align-items: center; gap: 14px; cursor: pointer; padding: 14px 16px; background: transparent; border-bottom: 1px solid rgba(201,168,76,0.08); transition: all 0.2s; }
-    .option:first-child { border-top: 1px solid rgba(201,168,76,0.08); }
-    .option:hover { background: rgba(201,168,76,0.04); }
+    /* Radio options - compact pill/row buttons */
+    .options { display: flex; flex-direction: column; gap: 6px; }
+    .option { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 11px 14px; background: var(--dark2); border: 1px solid rgba(201,168,76,0.12); border-radius: 4px; transition: all 0.2s; }
+    .option:hover { border-color: rgba(201,168,76,0.35); background: rgba(201,168,76,0.04); }
     .option input[type="radio"] { display: none; }
-    .option-dot { width: 18px; height: 18px; border: 1.5px solid var(--text-muted); border-radius: 50%; flex-shrink: 0; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
-    .option-dot::after { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); opacity: 0; transition: opacity 0.2s; }
-    .option.selected { background: rgba(201,168,76,0.06); }
+    .option-dot { width: 16px; height: 16px; border: 1.5px solid #555; border-radius: 50%; flex-shrink: 0; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+    .option-dot::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); opacity: 0; transition: opacity 0.2s; }
+    .option.selected { border-color: var(--gold); background: rgba(201,168,76,0.08); }
     .option.selected .option-dot { border-color: var(--gold); }
     .option.selected .option-dot::after { opacity: 1; }
-    .option-text { font-size: 14px; color: var(--text); }
+    .option-text { font-size: 13.5px; color: var(--text); text-transform: none; }
 
     /* Gold divider */
     .gold-divider { height: 1px; background: linear-gradient(90deg, var(--gold), rgba(201,168,76,0.2)); margin: 28px 0; }
