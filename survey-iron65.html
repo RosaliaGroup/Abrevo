@@ -3,184 +3,197 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quick Feedback &mdash; Iron 65</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <title>Share Your Experience &mdash; Iron 65</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --gold: #c9a84c;
-      --dark: #0a0a0a;
-      --dark2: #141414;
-      --text: #f0ece4;
+      --gold: #C9A84C;
+      --gold-light: #E8D49A;
+      --black: #0A0A0A;
+      --dark: #111111;
+      --dark2: #1A1A1A;
+      --text: #E8E8E8;
       --text-muted: #888;
-      --border: rgba(255,255,255,0.08);
-      --radius: 8px;
+      --border: rgba(201,168,76,0.2);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100vh; background: var(--black); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; }
     body {
-      background: var(--dark);
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 300;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 90% 90%, rgba(201,168,76,0.04) 0%, transparent 50%);
     }
-    .card {
-      background: var(--dark2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 40px;
-      max-width: 520px;
-      width: 100%;
+    .page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 48px 24px 80px; }
+    .logo-mark { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 40px; text-decoration: none; }
+    .logo-icon { width: 36px; height: 36px; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; transform: rotate(45deg); }
+    .logo-icon span { transform: rotate(-45deg); font-family: 'Cormorant Garamond', serif; font-size: 14px; color: var(--gold); font-weight: 500; }
+    .logo-text { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 400; letter-spacing: 0.15em; color: var(--text); text-transform: uppercase; }
+    .header { text-align: center; margin-bottom: 40px; }
+    .header h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(28px, 5vw, 46px); font-weight: 300; color: #fff; margin-bottom: 12px; }
+    .header h1 em { font-style: italic; color: var(--gold); }
+    .header p { font-size: 14px; color: var(--text-muted); letter-spacing: 0.05em; max-width: 400px; margin: 0 auto; line-height: 1.6; }
+    .divider { display: flex; align-items: center; gap: 16px; margin: 0 auto 36px; width: 100%; max-width: 480px; }
+    .divider-line { flex: 1; height: 1px; background: var(--border); }
+    .divider-diamond { width: 6px; height: 6px; background: var(--gold); transform: rotate(45deg); flex-shrink: 0; }
+    .card { background: var(--dark); border: 1px solid var(--border); width: 100%; max-width: 540px; padding: 40px; }
+    .field { margin-bottom: 20px; }
+    .field label { display: block; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+    .field input, .field select, .field textarea {
+      width: 100%; background: var(--dark2); border: 1px solid var(--border);
+      color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
+      font-weight: 300; padding: 12px 14px; outline: none; transition: border 0.2s;
+      border-radius: 2px;
     }
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 32px;
-    }
-    .logo-icon {
-      width: 32px; height: 32px;
-      border: 1px solid var(--gold);
-      display: flex; align-items: center; justify-content: center;
-      transform: rotate(45deg);
-    }
-    .logo-icon span { transform: rotate(-45deg); font-family: 'Cormorant Garamond', serif; font-size: 13px; color: var(--gold); }
-    .logo-text { font-family: 'Cormorant Garamond', serif; font-size: 17px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text); }
-    h1 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; margin-bottom: 8px; }
-    .subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 32px; line-height: 1.5; }
-    .options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
-    .option {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px 16px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: 14px;
-    }
-    .option:hover { border-color: var(--gold); }
-    .option.selected { border-color: var(--gold); background: rgba(201,168,76,0.08); }
-    .option input { display: none; }
-    .option-dot {
-      width: 18px; height: 18px;
-      border: 1px solid var(--border);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      transition: all 0.2s;
-    }
-    .option.selected .option-dot { border-color: var(--gold); background: var(--gold); }
-    .option.selected .option-dot::after { content: ''; width: 6px; height: 6px; background: var(--dark); border-radius: 50%; }
-    textarea {
-      width: 100%;
-      background: var(--dark);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 300;
-      padding: 12px 14px;
-      resize: vertical;
-      min-height: 90px;
-      outline: none;
-      margin-bottom: 24px;
-      transition: border-color 0.2s;
-    }
-    textarea:focus { border-color: var(--gold); }
-    textarea::placeholder { color: rgba(255,255,255,0.2); }
-    .btn {
-      width: 100%;
-      background: var(--gold);
-      color: var(--dark);
-      border: none;
-      border-radius: var(--radius);
-      padding: 14px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    .btn:hover { opacity: 0.9; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold); }
+    .field select option { background: var(--dark2); }
+    .field textarea { resize: vertical; min-height: 100px; }
+    .stars { display: flex; gap: 8px; margin-top: 4px; }
+    .star { font-size: 28px; cursor: pointer; color: #444; transition: color 0.15s; user-select: none; }
+    .star.active { color: var(--gold); }
+    .star:hover { color: var(--gold-light); }
+    .btn { width: 100%; padding: 16px; background: transparent; border: 1px solid var(--gold); color: var(--gold); font-family: 'DM Sans', sans-serif; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; margin-top: 8px; transition: all 0.2s; }
+    .btn:hover { background: var(--gold); color: var(--black); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .success { text-align: center; display: none; }
-    .success h2 { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 400; margin-bottom: 8px; color: var(--gold); }
-    .success p { color: var(--text-muted); font-size: 14px; }
-    .label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+    .success { text-align: center; padding: 48px 24px; display: none; }
+    .success-icon { font-size: 40px; margin-bottom: 20px; }
+    .success h2 { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; color: #fff; margin-bottom: 12px; }
+    .success p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+    .error-msg { color: #e88; font-size: 12px; margin-top: 12px; display: none; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="logo">
-      <div class="logo-icon"><span>65</span></div>
-      <span class="logo-text">Iron 65</span>
-    </div>
+<div class="page">
+  <a href="#" class="logo-mark">
+    <div class="logo-icon"><span>65</span></div>
+    <div class="logo-text">Iron 65</div>
+  </a>
 
-    <div id="formState">
-      <h1>Quick Feedback</h1>
-      <p class="subtitle">We noticed you haven't moved forward with us yet. We'd love to understand why &mdash; your feedback helps us improve for future residents.</p>
-
-      <div class="label">What was the main reason?</div>
-      <div class="options" id="options">
-        <label class="option"><input type="radio" name="reason" value="price" /><div class="option-dot"></div>Price was too high</label>
-        <label class="option"><input type="radio" name="reason" value="found_other" /><div class="option-dot"></div>Found another place</label>
-        <label class="option"><input type="radio" name="reason" value="location" /><div class="option-dot"></div>Location didn't work for me</label>
-        <label class="option"><input type="radio" name="reason" value="size" /><div class="option-dot"></div>Unit size wasn't right</label>
-        <label class="option"><input type="radio" name="reason" value="qualify" /><div class="option-dot"></div>Didn't meet qualification requirements</label>
-        <label class="option"><input type="radio" name="reason" value="tour" /><div class="option-dot"></div>Tour experience</label>
-        <label class="option"><input type="radio" name="reason" value="timing" /><div class="option-dot"></div>Timing wasn't right</label>
-        <label class="option"><input type="radio" name="reason" value="other" /><div class="option-dot"></div>Other reason</label>
-      </div>
-
-      <div class="label">Any additional comments? (optional)</div>
-      <textarea id="comments" placeholder="Tell us more &mdash; your feedback is valuable..."></textarea>
-
-      <button class="btn" id="submitBtn" onclick="submitSurvey()" disabled>Submit Feedback &rarr;</button>
-    </div>
-
-    <div class="success" id="successState">
-      <h2>Thank You</h2>
-      <p>We appreciate you taking the time to share your feedback. It helps us serve future residents better.</p>
-      <br/>
-      <p style="color: var(--text-muted); font-size:13px;">If your situation changes, we'd love to have you visit again.<br/>Call us at <a href="tel:+18623331681" style="color:var(--gold)">(862) 333-1681</a></p>
-    </div>
+  <div class="header">
+    <h1>Share Your <em>Experience</em></h1>
+    <p>We value your feedback and use it to continuously improve the experience for every resident and guest.</p>
   </div>
 
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const leadId = params.get('id');
-    const leadName = params.get('name');
+  <div class="divider"><div class="divider-line"></div><div class="divider-diamond"></div><div class="divider-line"></div></div>
 
-    document.querySelectorAll('.option').forEach(opt => {
-      opt.addEventListener('click', function() {
-        document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
-        this.classList.add('selected');
-        document.getElementById('submitBtn').disabled = false;
+  <div class="card">
+    <div id="form-section">
+      <div class="field">
+        <label>Your Name</label>
+        <input type="text" id="name" placeholder="Jane Smith" />
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="jane@example.com" />
+      </div>
+      <div class="field">
+        <label>Visit Type</label>
+        <select id="visit_type">
+          <option value="">Select one</option>
+          <option>Apartment Tour</option>
+          <option>Leasing Inquiry</option>
+          <option>Current Resident</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Overall Experience</label>
+        <div class="stars" id="stars">
+          <span class="star" data-val="1">&#9733;</span>
+          <span class="star" data-val="2">&#9733;</span>
+          <span class="star" data-val="3">&#9733;</span>
+          <span class="star" data-val="4">&#9733;</span>
+          <span class="star" data-val="5">&#9733;</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>How likely are you to recommend Iron 65?</label>
+        <select id="recommend">
+          <option value="">Select one</option>
+          <option>Very likely</option>
+          <option>Likely</option>
+          <option>Neutral</option>
+          <option>Unlikely</option>
+          <option>Very unlikely</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>What did you enjoy most?</label>
+        <textarea id="positive" placeholder="The rooftop views, the leasing team, the amenities..."></textarea>
+      </div>
+      <div class="field">
+        <label>Any suggestions for improvement? (optional)</label>
+        <textarea id="suggestions" placeholder="We'd love to know how we can do better..."></textarea>
+      </div>
+      <div class="error-msg" id="error-msg">Please fill in your name and overall rating before submitting.</div>
+      <button class="btn" id="submit-btn" onclick="submitSurvey()">Submit Feedback</button>
+    </div>
+
+    <div class="success" id="success-section">
+      <div class="success-icon">&#9733;</div>
+      <h2>Thank You</h2>
+      <p>Your feedback means everything to us. We'll use it to make Iron 65 an even better place to call home.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  var rating = 0;
+  var stars = document.querySelectorAll('.star');
+
+  stars.forEach(function(star) {
+    star.addEventListener('click', function() {
+      rating = parseInt(this.getAttribute('data-val'));
+      stars.forEach(function(s) {
+        s.classList.toggle('active', parseInt(s.getAttribute('data-val')) <= rating);
       });
     });
+    star.addEventListener('mouseover', function() {
+      var val = parseInt(this.getAttribute('data-val'));
+      stars.forEach(function(s) {
+        s.classList.toggle('active', parseInt(s.getAttribute('data-val')) <= val);
+      });
+    });
+    star.addEventListener('mouseout', function() {
+      stars.forEach(function(s) {
+        s.classList.toggle('active', parseInt(s.getAttribute('data-val')) <= rating);
+      });
+    });
+  });
 
-    async function submitSurvey() {
-      const btn = document.getElementById('submitBtn');
-      btn.disabled = true;
-      btn.textContent = 'Submitting...';
-      const reason = document.querySelector('input[name="reason"]:checked')?.value;
-      const comments = document.getElementById('comments').value.trim();
-      try {
-        await fetch('/.netlify/functions/survey', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ leadId, leadName, reason, comments, source: 'iron65', })
-        });
-      } catch(e) { console.error(e); }
-      document.getElementById('formState').style.display = 'none';
-      document.getElementById('successState').style.display = 'block';
+  function submitSurvey() {
+    var name = document.getElementById('name').value.trim();
+    var errMsg = document.getElementById('error-msg');
+    if (!name || !rating) {
+      errMsg.style.display = 'block';
+      return;
     }
-  </script>
+    errMsg.style.display = 'none';
+    var btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    var data = {
+      full_name: name,
+      email: document.getElementById('email').value.trim(),
+      visit_type: document.getElementById('visit_type').value,
+      rating: rating,
+      recommend: document.getElementById('recommend').value,
+      positive: document.getElementById('positive').value.trim(),
+      suggestions: document.getElementById('suggestions').value.trim(),
+      source: 'iron65_survey',
+      property: 'Iron 65',
+      submitted_at: new Date().toISOString()
+    };
+
+    fetch('/.netlify/functions/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name: data.full_name, email: data.email, phone: '', source: 'survey', status: 'survey_completed', message: JSON.stringify(data) })
+    }).catch(function(){}).finally(function() {
+      document.getElementById('form-section').style.display = 'none';
+      document.getElementById('success-section').style.display = 'block';
+    });
+  }
+</script>
 </body>
 </html>
