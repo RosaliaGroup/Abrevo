@@ -7,98 +7,323 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --gold: #C9A84C;
-      --black: #0A0A0A;
-      --dark: #111111;
-      --dark2: #1A1A1A;
-      --text: #E8E8E8;
-      --text-muted: #888;
-      --border: rgba(201,168,76,0.2);
+
+    html, body {
+      min-height: 100vh;
+      background: #0A0A0A;
+      color: #E8E8E8;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
     }
-    html, body { min-height: 100vh; background: var(--black); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; }
+
     body {
       background-image:
-        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.07) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 30% at 90% 90%, rgba(201,168,76,0.03) 0%, transparent 50%);
+        radial-gradient(ellipse 70% 40% at 50% -5%, rgba(201,168,76,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 35% 25% at 85% 95%, rgba(201,168,76,0.04) 0%, transparent 50%);
     }
 
-    .page { min-height: 100vh; display: flex; flex-direction: column; align-items: flex-start; padding: 48px 24px 80px; max-width: 580px; margin: 0 auto; }
+    .page {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 52px 24px 80px;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeIn 0.6s ease 0.1s forwards;
+    }
 
-    /* Fade-up animation */
-    .fade-up { opacity: 0; transform: translateY(24px); animation: fadeUp 0.7s ease forwards; }
-    .fade-up-d1 { animation-delay: 0.1s; }
-    .fade-up-d2 { animation-delay: 0.25s; }
-    .fade-up-d3 { animation-delay: 0.4s; }
-    @keyframes fadeUp {
+    @keyframes fadeIn {
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Logo */
-    .logo-mark { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 40px; text-decoration: none; }
-    .logo-icon { width: 36px; height: 36px; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; transform: rotate(45deg); }
-    .logo-icon span { transform: rotate(-45deg); font-family: 'Cormorant Garamond', serif; font-size: 13px; color: var(--gold); font-weight: 500; }
-    .logo-text { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 400; letter-spacing: 0.15em; color: var(--text); text-transform: uppercase; }
-
-    /* Header - left aligned */
-    .header { text-align: left; margin-bottom: 36px; }
-    .header h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(28px, 5vw, 42px); font-weight: 300; color: #fff; margin-bottom: 12px; }
-    .header h1 em { font-style: italic; color: var(--gold); }
-    .header p { font-size: 14px; color: var(--text-muted); line-height: 1.7; max-width: 480px; }
-
-    /* Card */
-    .card { background: var(--dark); border: 1px solid var(--border); width: 100%; padding: 40px; }
-
-    /* Name/Email row */
-    .field-row { display: flex; gap: 24px; margin-bottom: 28px; }
-    .field-row .field { flex: 1; margin-bottom: 0; }
-
-    /* Fields - underline style */
-    .field { margin-bottom: 28px; }
-    .field label { display: block; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
-    .field input, .field textarea {
-      width: 100%; background: transparent; border: none; border-bottom: 1px solid var(--border);
-      color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
-      font-weight: 300; padding: 10px 0; outline: none; transition: border-color 0.2s; border-radius: 0;
+    /* ── Logo ── */
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      text-decoration: none;
+      margin-bottom: 44px;
     }
-    .field input:focus, .field textarea:focus { border-bottom-color: var(--gold); }
-    .field input::placeholder, .field textarea::placeholder { color: #555; }
-    .field textarea { resize: vertical; min-height: 80px; border: none; border-bottom: 1px solid var(--border); }
+    .logo-diamond {
+      width: 34px;
+      height: 34px;
+      border: 1px solid #C9A84C;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: rotate(45deg);
+    }
+    .logo-diamond span {
+      transform: rotate(-45deg);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: #C9A84C;
+    }
+    .logo-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 17px;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      color: #E8E8E8;
+      text-transform: uppercase;
+    }
 
-    /* Radio options - compact pill/row buttons */
-    .options { display: flex; flex-direction: column; gap: 6px; }
-    .option { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 11px 14px; background: var(--dark2); border: 1px solid rgba(201,168,76,0.12); border-radius: 4px; transition: all 0.2s; }
-    .option:hover { border-color: rgba(201,168,76,0.35); background: rgba(201,168,76,0.04); }
-    .option input[type="radio"] { display: none; }
-    .option-dot { width: 16px; height: 16px; border: 1.5px solid #555; border-radius: 50%; flex-shrink: 0; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
-    .option-dot::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); opacity: 0; transition: opacity 0.2s; }
-    .option.selected { border-color: var(--gold); background: rgba(201,168,76,0.08); }
-    .option.selected .option-dot { border-color: var(--gold); }
-    .option.selected .option-dot::after { opacity: 1; }
-    .option-text { font-size: 13.5px; color: var(--text); text-transform: none; }
+    /* ── Header ── */
+    .header {
+      margin-bottom: 32px;
+    }
+    .header h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(28px, 5vw, 40px);
+      font-weight: 300;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+    .header h1 em {
+      font-style: italic;
+      color: #C9A84C;
+    }
+    .header p {
+      font-size: 14px;
+      color: #888;
+      line-height: 1.75;
+    }
 
-    /* Gold divider */
-    .gold-divider { height: 1px; background: linear-gradient(90deg, var(--gold), rgba(201,168,76,0.2)); margin: 28px 0; }
+    /* ── Card ── */
+    .card {
+      background: #161616;
+      border: 1px solid rgba(201,168,76,0.18);
+      padding: 36px 32px;
+      width: 100%;
+    }
 
-    /* Button - gold filled */
-    .btn { width: 100%; padding: 16px; background: var(--gold); border: none; color: var(--black); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; margin-top: 8px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; }
-    .btn:hover { background: #d4b35a; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn .arrow { font-size: 18px; transition: transform 0.2s; }
-    .btn:hover .arrow { transform: translateX(4px); }
+    /* ── Input row ── */
+    .input-row {
+      display: flex;
+      gap: 28px;
+      margin-bottom: 30px;
+    }
+    .input-group {
+      flex: 1;
+    }
+    .input-group label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: #C9A84C;
+      margin-bottom: 8px;
+    }
+    .input-group input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(201,168,76,0.2);
+      color: #E8E8E8;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 300;
+      padding: 9px 0;
+      outline: none;
+      transition: border-color 0.2s;
+      border-radius: 0;
+    }
+    .input-group input:focus {
+      border-bottom-color: #C9A84C;
+    }
+    .input-group input::placeholder {
+      color: #4a4a4a;
+    }
 
-    .error-msg { color: #e88; font-size: 12px; margin-top: 12px; display: none; }
+    /* ── Section label ── */
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: #C9A84C;
+      margin-bottom: 14px;
+    }
 
-    /* Success */
-    .success { text-align: center; padding: 48px 24px; display: none; }
-    .success-diamond { width: 52px; height: 52px; border: 1.5px solid var(--gold); transform: rotate(45deg); margin: 0 auto 28px; display: flex; align-items: center; justify-content: center; }
-    .success-diamond-inner { width: 20px; height: 20px; background: var(--gold); transform: rotate(0deg); opacity: 0.6; }
-    .success h2 { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 300; color: #fff; margin-bottom: 12px; }
-    .success p { font-size: 14px; color: var(--text-muted); line-height: 1.7; }
+    /* ── Radio options ── */
+    .radio-list {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 0;
+    }
+    .radio-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .radio-item:last-child {
+      border-bottom: none;
+    }
+    .radio-item:hover .radio-circle {
+      border-color: rgba(201,168,76,0.5);
+    }
+    .radio-item input[type="radio"] {
+      display: none;
+    }
+    .radio-circle {
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid #444;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .radio-circle::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #C9A84C;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .radio-item.active .radio-circle {
+      border-color: #C9A84C;
+    }
+    .radio-item.active .radio-circle::after {
+      opacity: 1;
+    }
+    .radio-item.active .radio-label {
+      color: #fff;
+    }
+    .radio-label {
+      font-size: 14px;
+      color: #ccc;
+      transition: color 0.15s;
+    }
 
-    @media (max-width: 500px) {
-      .field-row { flex-direction: column; gap: 0; }
-      .field-row .field { margin-bottom: 28px; }
+    /* ── Gold divider ── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, #C9A84C, rgba(201,168,76,0.15));
+      margin: 24px 0;
+    }
+
+    /* ── Textarea ── */
+    .comment-label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: #C9A84C;
+      margin-bottom: 8px;
+    }
+    .comment-box {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(201,168,76,0.2);
+      color: #E8E8E8;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 300;
+      padding: 9px 0;
+      outline: none;
+      resize: vertical;
+      min-height: 70px;
+      transition: border-color 0.2s;
+      border-radius: 0;
+    }
+    .comment-box:focus {
+      border-bottom-color: #C9A84C;
+    }
+    .comment-box::placeholder {
+      color: #4a4a4a;
+    }
+
+    /* ── Submit ── */
+    .submit-btn {
+      width: 100%;
+      margin-top: 24px;
+      padding: 15px;
+      background: #C9A84C;
+      border: none;
+      color: #0A0A0A;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+    .submit-btn:hover {
+      background: #d4b45a;
+    }
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .submit-btn .arr {
+      font-size: 17px;
+      transition: transform 0.2s;
+    }
+    .submit-btn:hover .arr {
+      transform: translateX(3px);
+    }
+
+    /* ── Error ── */
+    .err {
+      color: #e07;
+      font-size: 12px;
+      margin-top: 14px;
+      display: none;
+    }
+
+    /* ── Success ── */
+    .done {
+      text-align: center;
+      padding: 52px 16px;
+      display: none;
+    }
+    .done-diamond {
+      width: 48px;
+      height: 48px;
+      border: 1.5px solid #C9A84C;
+      transform: rotate(45deg);
+      margin: 0 auto 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .done-diamond i {
+      width: 16px;
+      height: 16px;
+      background: #C9A84C;
+      opacity: 0.5;
+    }
+    .done h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      font-weight: 300;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+    .done p {
+      font-size: 14px;
+      color: #888;
+      line-height: 1.7;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 520px) {
+      .input-row { flex-direction: column; gap: 0; }
+      .input-group { margin-bottom: 24px; }
       .card { padding: 28px 20px; }
     }
   </style>
@@ -106,57 +331,54 @@
 <body>
 <div class="page">
 
-  <a href="https://rosaliagroup.com" class="logo-mark fade-up">
-    <div class="logo-icon"><span>R</span></div>
-    <div class="logo-text">Rosalia Group</div>
+  <a href="https://rosaliagroup.com" class="logo">
+    <div class="logo-diamond"><span>R</span></div>
+    <div class="logo-name">Rosalia Group</div>
   </a>
 
-  <div class="header fade-up fade-up-d1">
+  <div class="header">
     <h1><em>Quick</em> Feedback</h1>
     <p>We noticed you haven't moved forward with us yet. We'd love to understand why &mdash; your feedback helps us improve for future residents.</p>
   </div>
 
-  <div class="card fade-up fade-up-d2">
-    <div id="form-section">
+  <div class="card">
+    <div id="formArea">
 
-      <div class="field-row">
-        <div class="field">
+      <div class="input-row">
+        <div class="input-group">
           <label>Your Name *</label>
           <input type="text" id="fname" placeholder="Jane Smith" />
         </div>
-        <div class="field">
+        <div class="input-group">
           <label>Email *</label>
           <input type="email" id="femail" placeholder="jane@example.com" />
         </div>
       </div>
 
-      <div class="field">
-        <label>What was the main reason? *</label>
-        <div class="options" id="options">
-          <label class="option"><input type="radio" name="reason" value="Price was too high"><div class="option-dot"></div><span class="option-text">Price was too high</span></label>
-          <label class="option"><input type="radio" name="reason" value="Found another place"><div class="option-dot"></div><span class="option-text">Found another place</span></label>
-          <label class="option"><input type="radio" name="reason" value="Location didn't work for me"><div class="option-dot"></div><span class="option-text">Location didn't work for me</span></label>
-          <label class="option"><input type="radio" name="reason" value="Unit size wasn't right"><div class="option-dot"></div><span class="option-text">Unit size wasn't right</span></label>
-          <label class="option"><input type="radio" name="reason" value="Didn't meet qualification requirements"><div class="option-dot"></div><span class="option-text">Didn't meet qualification requirements</span></label>
-          <label class="option"><input type="radio" name="reason" value="Tour experience"><div class="option-dot"></div><span class="option-text">Tour experience</span></label>
-          <label class="option"><input type="radio" name="reason" value="Timing wasn't right"><div class="option-dot"></div><span class="option-text">Timing wasn't right</span></label>
-          <label class="option"><input type="radio" name="reason" value="Other reason"><div class="option-dot"></div><span class="option-text">Other reason</span></label>
-        </div>
+      <div class="section-label">What was the main reason? *</div>
+
+      <div class="radio-list" id="radioList">
+        <label class="radio-item"><input type="radio" name="reason" value="Price was too high"><div class="radio-circle"></div><span class="radio-label">Price was too high</span></label>
+        <label class="radio-item"><input type="radio" name="reason" value="Found another place"><div class="radio-circle"></div><span class="radio-label">Found another place</span></label>
+        <label class="radio-item"><input type="radio" name="reason" value="Location didn't work for me"><div class="radio-circle"></div><span class="radio-label">Location didn't work for me</span></label>
+        <label class="radio-item"><input type="radio" name="reason" value="Unit size wasn't right"><div class="radio-circle"></div><span class="radio-label">Unit size wasn't right</span></label>
+        <label class="radio-item"><input type="radio" name="reason" value="Didn't meet qualification requirements"><div class="radio-circle"></div><span class="radio-label">Didn't meet qualification requirements</span></label>
+        <label class="radio-item"><input type="radio" name="reason" value="Tour experience"><div class="radio-circle"></div><span class="radio-label">Tour experience</span></label>
+        <label class="radio-item"><input type="radio" name="reason" value="Timing wasn't right"><div class="radio-circle"></div><span class="radio-label">Timing wasn't right</span></label>
+        <label class="radio-item"><input type="radio" name="reason" value="Other reason"><div class="radio-circle"></div><span class="radio-label">Other reason</span></label>
       </div>
 
-      <div class="gold-divider"></div>
+      <div class="divider"></div>
 
-      <div class="field">
-        <label>Any additional comments? (optional)</label>
-        <textarea id="fcomments" placeholder="Tell us more..."></textarea>
-      </div>
+      <label class="comment-label">Any additional comments? (optional)</label>
+      <textarea class="comment-box" id="fcomments" placeholder="Tell us more..."></textarea>
 
-      <div class="error-msg" id="error-msg">Please fill in your name, email, and select a reason.</div>
-      <button class="btn" id="submit-btn" onclick="submitFeedback()">Submit Feedback <span class="arrow">&rarr;</span></button>
+      <div class="err" id="errMsg">Please fill in your name, email, and select a reason.</div>
+      <button class="submit-btn" id="submitBtn" onclick="send()">Submit Feedback <span class="arr">&rarr;</span></button>
     </div>
 
-    <div class="success" id="success-section">
-      <div class="success-diamond"><div class="success-diamond-inner"></div></div>
+    <div class="done" id="doneArea">
+      <div class="done-diamond"><i></i></div>
       <h2>Thank You</h2>
       <p>Your feedback means a lot to us. We'll use it to keep improving the experience for everyone who walks through our doors.</p>
     </div>
@@ -164,28 +386,25 @@
 
 </div>
 <script>
-  document.querySelectorAll('.option').forEach(function(opt) {
-    opt.addEventListener('click', function() {
-      document.querySelectorAll('.option').forEach(function(o) { o.classList.remove('selected'); });
-      this.classList.add('selected');
+  document.querySelectorAll('.radio-item').forEach(function(r) {
+    r.addEventListener('click', function() {
+      document.querySelectorAll('.radio-item').forEach(function(x) { x.classList.remove('active'); });
+      this.classList.add('active');
     });
   });
 
-  function submitFeedback() {
-    var name = document.getElementById('fname').value.trim();
-    var email = document.getElementById('femail').value.trim();
-    var reasonEl = document.querySelector('input[name="reason"]:checked');
-    var reason = reasonEl ? reasonEl.value : '';
+  function send() {
+    var n = document.getElementById('fname').value.trim();
+    var e = document.getElementById('femail').value.trim();
+    var sel = document.querySelector('input[name="reason"]:checked');
+    var reason = sel ? sel.value : '';
     var comments = document.getElementById('fcomments').value.trim();
-    var errMsg = document.getElementById('error-msg');
+    var err = document.getElementById('errMsg');
 
-    if (!name || !email || !reason) {
-      errMsg.style.display = 'block';
-      return;
-    }
-    errMsg.style.display = 'none';
+    if (!n || !e || !reason) { err.style.display = 'block'; return; }
+    err.style.display = 'none';
 
-    var btn = document.getElementById('submit-btn');
+    var btn = document.getElementById('submitBtn');
     btn.disabled = true;
     btn.innerHTML = 'Submitting&hellip;';
 
@@ -193,16 +412,16 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        full_name: name,
-        email: email,
+        full_name: n,
+        email: e,
         phone: '',
         source: 'feedback_survey',
         status: 'survey_completed',
         message: 'Reason: ' + reason + (comments ? ' | Comments: ' + comments : '')
       })
     }).catch(function(){}).finally(function() {
-      document.getElementById('form-section').style.display = 'none';
-      document.getElementById('success-section').style.display = 'block';
+      document.getElementById('formArea').style.display = 'none';
+      document.getElementById('doneArea').style.display = 'block';
     });
   }
 </script>
