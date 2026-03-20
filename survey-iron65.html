@@ -373,9 +373,16 @@
 
       <div class="input-row">
         <div class="input-group">
-          <label>Your Name *</label>
-          <input type="text" id="fname" placeholder="Jane Smith" />
+          <label>First Name *</label>
+          <input type="text" id="ffirst" placeholder="Jane" />
         </div>
+        <div class="input-group">
+          <label>Last Name *</label>
+          <input type="text" id="flast" placeholder="Smith" />
+        </div>
+      </div>
+
+      <div class="input-row">
         <div class="input-group">
           <label>Email *</label>
           <input type="email" id="femail" placeholder="jane@example.com" />
@@ -400,7 +407,7 @@
       <label class="comment-label">Any additional comments? (optional)</label>
       <textarea class="comment-box" id="fcomments" placeholder="Tell us more..."></textarea>
 
-      <div class="err" id="errMsg">Please fill in your name, email, and select a reason.</div>
+      <div class="err" id="errMsg">Please fill in your first name, last name, email, and select a reason.</div>
       <button class="submit-btn" id="submitBtn" onclick="send()">Submit Feedback <span class="arr">&rarr;</span></button>
     </div>
 
@@ -421,14 +428,15 @@
   });
 
   function send() {
-    var n = document.getElementById('fname').value.trim();
+    var first = document.getElementById('ffirst').value.trim();
+    var last = document.getElementById('flast').value.trim();
     var e = document.getElementById('femail').value.trim();
     var sel = document.querySelector('input[name="reason"]:checked');
     var reason = sel ? sel.value : '';
     var comments = document.getElementById('fcomments').value.trim();
     var err = document.getElementById('errMsg');
 
-    if (!n || !e || !reason) { err.style.display = 'block'; return; }
+    if (!first || !last || !e || !reason) { err.style.display = 'block'; return; }
     err.style.display = 'none';
 
     var btn = document.getElementById('submitBtn');
@@ -439,7 +447,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        full_name: n,
+        full_name: first + ' ' + last,
         email: e,
         phone: '',
         source: 'feedback_survey',
