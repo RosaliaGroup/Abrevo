@@ -313,7 +313,7 @@ function isWebflowLead(from, subject) {
 
 function parseAvailEmail(body) {
   const lead = {};
-  const nameMatch = body.match(/Name:\s*([^\n\r]+)/i);
+  const nameMatch = body.match(/Name:\s*([^\n\r]+?)(?:\s+Email:|\s+Phone:|\s+Message:|$)/i);
   const emailMatch = body.match(/Email:\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
   const phoneMatch = body.match(/Phone:\s*([\+\d\s\(\)\-\.]{7,})/i);
 
