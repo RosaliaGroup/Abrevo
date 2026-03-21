@@ -313,25 +313,20 @@ function isWebflowLead(from, subject) {
 
 function parseAvailEmail(body) {
   const lead = {};
-  // Try multiple name patterns
-  const nameMatch = body.match(/Name:\s*(.+?)(?:\n|$)/i) || body.match(/name is ([A-Z][a-z]+ [A-Z][a-z]+)/i);
-  // Try multiple email patterns - exclude avail relay addresses
-  const emailMatch = body.match(/Email:\s*([^\s\n]+@[^\s\n]+)/i);
-  // Try multiple phone patterns
-  const phoneMatch = body.match(/Phone:\s*([\(\)\d\s\-\.]+)/i) || body.match(/(\(\d{3}\)\s*\d{3}[\s\-]\d{4})/);
+  const nameMatch = body.match(/Name:\s*([^\n\r]+)/i);
+  const emailMatch = body.match(/Email:\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
+  const phoneMatch = body.match(/Phone:\s*([\+\d\s\(\)\-\.]{7,})/i);
 
-  if (nameMatch) lead.name = nameMatch[1].trim();
+  if (nameMatch) lead.name = nameMatch[1].trim().replace(/\s+/g, ' ');
   if (emailMatch) {
     const email = emailMatch[1].trim();
-    if (!email.includes('reply.avail.co') && !email.includes('avail.co')) {
-      lead.email = email;
-    }
+    if (!email.includes('avail.co')) lead.email = email;
   }
   if (phoneMatch) {
     let p = phoneMatch[1].replace(/\D/g, '');
     if (p.length === 10) p = '+1' + p;
     else if (p.length === 11) p = '+' + p;
-    lead.phone = p;
+    if (p.length >= 11) lead.phone = p;
   }
   return lead;
 }
