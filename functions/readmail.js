@@ -794,7 +794,9 @@ exports.handler = async (event) => {
         // Use text body, fall back to HTML with tags stripped
         const rawHtml = parsed.html || '';
         const strippedHtml = rawHtml.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
-        const body = parsed.text || strippedHtml || '';
+        // For Avail emails, prefer HTML (has structured Name/Email/Phone labels)
+        // For others, prefer plain text
+        const body = (isAvailLead(from) && strippedHtml) ? strippedHtml : (parsed.text || strippedHtml || '');
         const replyTo = parsed.replyTo?.text || from;
 
         const emailMatch = from.match(/<([^>]+)>/) || from.match(/([^\s]+@[^\s]+)/);
