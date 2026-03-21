@@ -713,7 +713,7 @@ async function sendSMS(phone, leadName) {
   } catch (err) { console.error('SMS error:', err.message); }
 }
 
-async function saveLead(fromEmail, fromName, subject, body, replyText, phone) {
+async function saveLead(fromEmail, fromName, subject, body, replyText, phone, client) {
   const checkRes = await fetch(
     `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(fromEmail)}&limit=1`,
     { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
@@ -748,7 +748,7 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone) {
       phone: phone || null,
       source: 'email',
       message: body?.substring(0, 500) || subject,
-      client: 'rosalia',
+      client: client || 'rosalia',
       status: 'new',
       replied_at: new Date().toISOString(),
       follow_up_count: 0,
@@ -820,13 +820,21 @@ exports.handler = async (event) => {
         let phone = null;
         let realEmail = fromEmail;
         let realName = fromName;
+        let leadClient = null;
 
         if (isAvailLead(from)) {
           const p = parseAvailEmail(body);
           if (p.phone) phone = p.phone;
           if (p.email) realEmail = p.email;
           if (p.name) realName = p.name;
-          console.log('Avail lead - Name:', realName, 'Email:', realEmail);
+          // Detect Iron 65 property from subject or body
+          const subjectLower = subject.toLowerCase();
+          const bodyLower = body.toLowerCase();
+          if (subjectLower.includes('mcwhorter') || subjectLower.includes('iron 65') ||
+              bodyLower.includes('mcwhorter') || bodyLower.includes('iron 65')) {
+            leadClient = 'iron65';
+          }
+          console.log('Avail lead - Name:', realName, 'Email:', realEmail, 'Client:', leadClient || 'rosalia');
         } else if (isWebflowLead(from, subject)) {
           const p = parseWebflowEmail(body);
           if (p.phone) phone = p.phone;
@@ -870,7 +878,7 @@ exports.handler = async (event) => {
         const effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : replyTo;
         const ccEmail = (isAvailLead(from) && realEmail && realEmail !== fromEmail) ? realEmail : null;
         await sendReply(effectiveReplyTo, subject, replyText, ccEmail);
-        await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone);
+        await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone, leadClient);
         // Business hours check BEFORE notifying Ana
         let callAllowed = false;
         if (phone) {
