@@ -257,6 +257,8 @@ const SKIP_SUBJECTS = [
   'subscription', 'unsubscribe', 'opt out',
   'lead assigned', 'task reminder', 'action plan',
   'stage changed', 'deal updated', 'note added',
+  'hot sheet', 'follow up boss hot sheet',
+  'daily hot leads', 'no appointments',
 ];
 
 function isZillowLead(from) {
@@ -271,6 +273,8 @@ function isAvailDigest(subject) {
 function isFUBLead(from, subject) {
   const f = (from || '').toLowerCase();
   const s = (subject || '').toLowerCase();
+  // Hot Sheet is a daily digest, not a lead
+  if (s.includes('hot sheet')) return false;
   // Direct FUB emails
   if (f.includes('followupboss.com')) return true;
   // Forwarded FUB lead notifications (Fwd: New Lead from Facebook)
