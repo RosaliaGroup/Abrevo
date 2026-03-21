@@ -309,11 +309,20 @@ function isWebflowLead(from, subject) {
 
 function parseAvailEmail(body) {
   const lead = {};
-  const nameMatch = body.match(/Name:\s*(.+)/i);
+  // Try multiple name patterns
+  const nameMatch = body.match(/Name:\s*(.+?)(?:\n|$)/i) || body.match(/name is ([A-Z][a-z]+ [A-Z][a-z]+)/i);
+  // Try multiple email patterns - exclude avail relay addresses
   const emailMatch = body.match(/Email:\s*([^\s\n]+@[^\s\n]+)/i);
-  const phoneMatch = body.match(/Phone:\s*([\(\)\d\s\-\.]+)/i);
+  // Try multiple phone patterns
+  const phoneMatch = body.match(/Phone:\s*([\(\)\d\s\-\.]+)/i) || body.match(/(\(\d{3}\)\s*\d{3}[\s\-]\d{4})/);
+
   if (nameMatch) lead.name = nameMatch[1].trim();
-  if (emailMatch) lead.email = emailMatch[1].trim();
+  if (emailMatch) {
+    const email = emailMatch[1].trim();
+    if (!email.includes('reply.avail.co') && !email.includes('avail.co')) {
+      lead.email = email;
+    }
+  }
   if (phoneMatch) {
     let p = phoneMatch[1].replace(/\D/g, '');
     if (p.length === 10) p = '+1' + p;
@@ -631,7 +640,7 @@ Write ONLY the email body. No subject line. MAXIMUM 4 sentences. No bullet point
   return data.content?.[0]?.text || '';
 }
 
-async function sendReply(replyTo, subject, replyText) {
+async function sendReply(replyTo, subject, replyText, ccEmail) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: INBOX_EMAIL, pass: GMAIL_PASS },
@@ -646,14 +655,18 @@ async function sendReply(replyTo, subject, replyText) {
       /(https?:\/\/[^\s<]+)/g,
       '<a href="$1" style="color:#1a73e8;text-decoration:underline;">Book Your Tour Here</a>'
     );
-  await transporter.sendMail({
+  const mailOptions = {
     from: `"Rosalia Group Inquiries" <${INBOX_EMAIL}>`,
     to: replyTo,
     subject: replySubject,
     text: replyText.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1'),
     html: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.8;color:#333;max-width:600px;">${htmlText}</div>`,
-  });
-  console.log('Email reply sent to:', replyTo);
+  };
+  if (ccEmail && ccEmail !== replyTo) {
+    mailOptions.cc = ccEmail;
+  }
+  await transporter.sendMail(mailOptions);
+  console.log('Email reply sent to:', replyTo, ccEmail ? `(cc: ${ccEmail})` : '');
 }
 
 async function triggerCall(phone, leadName) {
@@ -841,7 +854,8 @@ exports.handler = async (event) => {
         if (!replyText) { results.skipped++; continue; }
 
         const effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : replyTo;
-        await sendReply(effectiveReplyTo, subject, replyText);
+        const ccEmail = (isAvailLead(from) && realEmail && realEmail !== fromEmail) ? realEmail : null;
+        await sendReply(effectiveReplyTo, subject, replyText, ccEmail);
         await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone);
         // Business hours check BEFORE notifying Ana
         let callAllowed = false;
