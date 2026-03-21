@@ -134,6 +134,7 @@ async function triggerCall(phone, leadName, assistantId, phoneId, property) {
             call_type: 'outbound',
             property: property || '',
             customer_name: leadName || '',
+            customer_phone: phone,
           },
         },
       }),
