@@ -314,9 +314,18 @@ function isWebflowLead(from, subject) {
 
 function parseAvailEmail(body) {
   const lead = {};
-  const nameMatch = body.match(/Name:\s*([^\n\r]+?)(?:\s+Email:|\s+Phone:|\s+Message:|$)/i);
-  const emailMatch = body.match(/Email:\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
-  const phoneMatch = body.match(/Phone:\s*([\+\d\s\(\)\-\.]{7,})/i) || body.match(/Phone:\s*(\d{10,})/i);
+  // Normalize common HTML artifacts: multiple spaces, &amp;, &nbsp; etc
+  const normalized = (body || '')
+    .replace(/&amp;/g, '&')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const nameMatch = normalized.match(/Name:\s*([^\n\r]+?)(?:\s+Email:|\s+Phone:|\s+Message:|$)/i);
+  const emailMatch = normalized.match(/Email:\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
+  const phoneMatch = normalized.match(/Phone:\s*([\+\d\s\(\)\-\.]{7,})/i) || normalized.match(/Phone:\s*(\d{10,})/i);
 
   if (nameMatch) lead.name = nameMatch[1].trim().replace(/\s+/g, ' ');
   if (emailMatch) {
