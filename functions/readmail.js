@@ -834,15 +834,17 @@ exports.handler = async (event) => {
         console.log('Lead detected! Phone:', phone || 'none found');
 
         const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : fromEmail;
-        if (await repliedRecently(checkEmail)) {
-          console.log('Skipping (replied recently):', checkEmail);
-          results.skipped++;
-          continue;
-        }
+        const skipRecentCheck = isAvailLead(from);
 
         const previousReply = await getPreviousThread(fromEmail);
         const isReply = subject.toLowerCase().startsWith('re:') || !!previousReply;
         if (isReply) console.log('Thread reply detected');
+
+        if (!isReply && !skipRecentCheck && await repliedRecently(checkEmail)) {
+          console.log('Skipping (replied recently, not a thread reply):', checkEmail);
+          results.skipped++;
+          continue;
+        }
 
         const leadContext = await getLeadContext(checkEmail, realName);
         const calendarAppt = await getCalendarAppointment(realName || fromName);
