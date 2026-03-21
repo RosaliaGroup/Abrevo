@@ -173,9 +173,9 @@ exports.handler = async (event) => {
     // Normalize phone number
     if (data.phone) {
       let normalizedPhone = data.phone.toString().replace(/\D/g, '');
-      if (!normalizedPhone.startsWith('+')) {
-        normalizedPhone = '+1' + normalizedPhone;
-      }
+      if (normalizedPhone.length === 10) normalizedPhone = '+1' + normalizedPhone;
+      else if (normalizedPhone.length === 11) normalizedPhone = '+' + normalizedPhone;
+      else if (normalizedPhone.length === 12) normalizedPhone = '+' + normalizedPhone;
       data.phone = normalizedPhone;
     }
 
@@ -260,6 +260,7 @@ exports.handler = async (event) => {
 
       try {
         // Send to caller and CC to inquiries
+        console.log('Sending confirmation email to:', data.email, '| GMAIL_USER:', process.env.GMAIL_USER ? 'set' : 'MISSING', '| GMAIL_PASS:', process.env.GMAIL_PASS ? 'set' : 'MISSING');
         await transporter.sendMail({
           from: '"Rosalia Group" <ana@rosaliagroup.com>',
           to: data.email,
@@ -267,7 +268,7 @@ exports.handler = async (event) => {
           subject: 'Appointment Confirmed - Rosalia Group',
           html: emailHtml,
         });
-        console.log('Email sent to caller');
+        console.log('Email confirmation sent successfully to:', data.email);
       } catch (err) {
         console.error('Email error:', err.message);
       }
