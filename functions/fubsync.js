@@ -1,3 +1,7 @@
+const VAPI_KEY = process.env.VAPI_KEY || '064f441d-a388-4404-8b6c-05e91e90f1ff';
+const JESSICA_PHONE_ID = '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
+const JESSICA_OUTBOUND_ASSISTANT_ID = '35f4e4a2-aabc-47be-abfc-630cf6a85d58';
+
 async function fetchNewFUBLeads(hoursBack = 24) {
   const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
   
