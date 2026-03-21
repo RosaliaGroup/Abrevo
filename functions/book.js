@@ -28,11 +28,18 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendSMS(phone, message) {
+  if (!phone) return { success: false };
+  // Normalize phone - add +1 if needed
+  let normalizedPhone = phone.toString().replace(/\D/g, '');
+  if (normalizedPhone.length === 10) normalizedPhone = '+1' + normalizedPhone;
+  else if (normalizedPhone.length === 11) normalizedPhone = '+' + normalizedPhone;
+  else normalizedPhone = '+' + normalizedPhone;
+
   const response = await fetch('https://textbelt.com/text', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      phone,
+      phone: normalizedPhone,
       message,
       key: TEXTBELT_KEY,
     }),
