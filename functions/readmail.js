@@ -302,7 +302,8 @@ function parseFUBEmail(body) {
 }
 
 function isAvailLead(from) {
-  return from.toLowerCase().includes('reply.avail.co');
+  const f = from.toLowerCase();
+  return f.includes('reply.avail.co') || f.includes('@avail.co');
 }
 function isWebflowLead(from, subject) {
   const f = (from || '').toLowerCase();
@@ -315,7 +316,7 @@ function parseAvailEmail(body) {
   const lead = {};
   const nameMatch = body.match(/Name:\s*([^\n\r]+?)(?:\s+Email:|\s+Phone:|\s+Message:|$)/i);
   const emailMatch = body.match(/Email:\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
-  const phoneMatch = body.match(/Phone:\s*([\+\d\s\(\)\-\.]{7,})/i);
+  const phoneMatch = body.match(/Phone:\s*([\+\d\s\(\)\-\.]{7,})/i) || body.match(/Phone:\s*(\d{10,})/i);
 
   if (nameMatch) lead.name = nameMatch[1].trim().replace(/\s+/g, ' ');
   if (emailMatch) {
@@ -325,6 +326,7 @@ function parseAvailEmail(body) {
   if (phoneMatch) {
     let p = phoneMatch[1].replace(/\D/g, '');
     if (p.length === 10) p = '+1' + p;
+    else if (p.length === 11 && p.startsWith('1')) p = '+' + p;
     else if (p.length === 11) p = '+' + p;
     if (p.length >= 11) lead.phone = p;
   }
