@@ -262,7 +262,7 @@ exports.handler = async (event) => {
         // Send to caller and CC to inquiries
         console.log('Sending confirmation email to:', data.email, '| GMAIL_USER:', process.env.GMAIL_USER ? 'set' : 'MISSING', '| GMAIL_PASS:', process.env.GMAIL_PASS ? 'set' : 'MISSING');
         await transporter.sendMail({
-          from: '"Rosalia Group" <ana@rosaliagroup.com>',
+          from: `"Rosalia Group" <${process.env.GMAIL_USER || 'inquiries@rosaliagroup.com'}>`,
           to: data.email,
           cc: 'inquiries@rosaliagroup.com',
           subject: 'Appointment Confirmed - Rosalia Group',
