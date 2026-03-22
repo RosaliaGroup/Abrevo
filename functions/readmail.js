@@ -9,6 +9,7 @@ const INBOX_EMAIL = 'inquiries@rosaliagroup.com';
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
 const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-rosalia';
+const IRON65_BOOKING_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 
 const VAPI_KEY = process.env.VAPI_KEY || '064f441d-a388-4404-8b6c-05e91e90f1ff';
@@ -699,10 +700,11 @@ async function triggerCall(phone, leadName) {
   }
 }
 
-async function sendSMS(phone, leadName, property) {
+async function sendSMS(phone, leadName, property, bookingUrl) {
   if (!TEXTBELT_KEY) return;
   const firstName = leadName?.split(' ')[0] || 'there';
-  const msg = `Hi ${firstName}! Rosalia Group here. We replied to your inquiry${property ? ' about ' + property : ''}. Book a tour: ${BOOKING_FORM_URL}`;
+  const url = bookingUrl || BOOKING_FORM_URL;
+  const msg = `Hi ${firstName}! Rosalia Group here. We replied to your inquiry${property ? ' about ' + property : ''}. Book a tour: ${url}`;
   try {
     await fetch('https://textbelt.com/text', {
       method: 'POST',
@@ -827,11 +829,14 @@ exports.handler = async (event) => {
           if (p.phone) phone = p.phone;
           if (p.email) realEmail = p.email;
           if (p.name) realName = p.name;
-          if (subject.toLowerCase().includes('iron 65') || body.toLowerCase().includes('iron 65') ||
-              subject.toLowerCase().includes('mcwhorter') || body.toLowerCase().includes('mcwhorter')) {
+          // Detect Iron 65 from subject, body or source
+          const sl = subject.toLowerCase();
+          const bl = (body || '').toLowerCase();
+          if (sl.includes('iron 65') || sl.includes('mcwhorter') || bl.includes('iron 65') ||
+              bl.includes('mcwhorter') || bl.includes('loft') || bl.includes('iron65')) {
             leadClient = 'iron65';
           }
-          console.log('FUB lead - Name:', realName, 'Phone:', phone, 'Email:', realEmail);
+          console.log('FUB lead - Name:', realName, 'Phone:', phone, 'Email:', realEmail, 'Client:', leadClient);
         } else if (isAvailLead(from)) {
           const p = parseAvailEmail(body);
           if (p.phone) phone = p.phone;
@@ -912,7 +917,8 @@ exports.handler = async (event) => {
           if (!hadPhone || !isReply) {
             const propertyMatch = subject.match(/for\s+(.+?)(?:,\s*Unit|\s*$)/i);
             const propertyName = propertyMatch ? propertyMatch[1].trim() : '';
-            await sendSMS(phone, realName || fromName, propertyName);
+            const smsBookingUrl = leadClient === 'iron65' ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
+            await sendSMS(phone, realName || fromName, propertyName, smsBookingUrl);
             if (callAllowed) {
               await triggerCall(phone, realName || fromName);
               console.log('Call triggered during business hours for:', realName || fromName);
