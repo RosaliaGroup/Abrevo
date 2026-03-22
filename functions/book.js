@@ -22,8 +22,8 @@ const TEXTBELT_KEY = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
+    user: 'inquiries@rosaliagroup.com',
+    pass: process.env.GMAIL_PASS_INQUIRIES,
   },
 });
 
@@ -262,7 +262,7 @@ exports.handler = async (event) => {
         // Send to caller and CC to inquiries
         console.log('Sending confirmation email to:', data.email, '| GMAIL_USER:', process.env.GMAIL_USER ? 'set' : 'MISSING', '| GMAIL_PASS:', process.env.GMAIL_PASS ? 'set' : 'MISSING');
         await transporter.sendMail({
-          from: `"Rosalia Group" <${process.env.GMAIL_USER || 'inquiries@rosaliagroup.com'}>`,
+          from: '"Rosalia Group" <inquiries@rosaliagroup.com>',
           to: data.email,
           cc: 'inquiries@rosaliagroup.com',
           subject: 'Appointment Confirmed - Rosalia Group',
