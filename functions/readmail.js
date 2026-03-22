@@ -899,6 +899,9 @@ exports.handler = async (event) => {
           const existingLead = await getLeadData(fromEmail);
           const hadPhone = existingLead?.phone && existingLead.phone.replace(/\D/g, '').length >= 10;
           if (!hadPhone || !isReply) {
+            const propertyMatch = subject.match(/for\s+(.+?)(?:,\s*Unit|\s*$)/i);
+            const propertyName = propertyMatch ? propertyMatch[1].trim() : '';
+            await sendSMS(phone, realName || fromName, propertyName);
             if (callAllowed) {
               await triggerCall(phone, realName || fromName);
               console.log('Call triggered during business hours for:', realName || fromName);
