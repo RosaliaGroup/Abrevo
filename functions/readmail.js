@@ -290,13 +290,24 @@ function parseFUBEmail(body) {
   const lead = {};
   const lines2 = (body || '').split(/[\n\r]+/);
   for (const line of lines2) {
-    const nm = line.match(/new lead named ([^(]+)/i);
-    if (nm) { lead.name = nm[1].trim(); break; }
+    const nm = line.match(/new lead named ([^(\n]+)/i);
+    if (nm) { 
+      let name = nm[1].trim();
+      // Remove "from Facebook/Instagram/Zillow" suffix
+      name = name.replace(/\s+from\s+(Facebook|Instagram|Zillow|Google|Web).*/i, '').trim();
+      lead.name = name; 
+      break; 
+    }
   }
   const phoneM = body.match(/(\(\d{3}\)\s*\d{3}[\s\-]\d{4})/);
   if (phoneM) { let p = phoneM[1].replace(/\D/g,''); if(p.length===10) p='+1'+p; lead.phone = p; }
   const emailM = body.match(/([a-zA-Z0-9._%+\-]+@(?!followupboss)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
   if (emailM) lead.email = emailM[1].trim();
+  // Fallback: extract name from subject "New Lead from Facebook - Denise Turner"
+  if (!lead.name) {
+    const subjectName = (body || '').match(/New Lead from \w+ - ([^\n]+)/i);
+    if (subjectName) lead.name = subjectName[1].trim();
+  }
   const srcM = body.match(/from (Facebook|Instagram|Zillow|Google)/i);
   if (srcM) lead.source = srcM[1].toLowerCase();
   return lead;
@@ -858,7 +869,6 @@ exports.handler = async (event) => {
           console.log('Webflow lead - Name:', realName, 'Email:', realEmail);
         } else if (isZillowLead(from)) {
           // Zillow relay emails don't contain phone numbers
-          // Phone comes from Zillow profile - not available in relay
           const p = parseZillowEmail(body);
           if (p.email) realEmail = p.email;
           phone = null; // Zillow relay never has phone
