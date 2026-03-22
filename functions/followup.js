@@ -1,223 +1,123 @@
-// ---------------------------------------------
-// followup.js -- 24hr Follow-Up Scheduler
-// Called by a Netlify scheduled function or external cron
-// Finds leads with no reply in 24hrs and triggers Alex call + SMS
-// ---------------------------------------------
+const nodemailer = require('nodemailer');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
-const TEXTBELT_KEY = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
-const VAPI_API_KEY = process.env.VAPI_API_KEY;
-const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const GMAIL_USER = 'inquiries@rosaliagroup.com';
+const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
+const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-rosalia';
+const IRON65_BOOKING_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 
-const VAPI_CONFIG = {
-  luxury: {
-    assistantId: '1cae5323-6b83-4434-8461-6330472da140',
-    phoneNumberId: '339c7317-ab98-4696-8ac3-9c71349557cd',
-  },
-  general: {
-    assistantId: '53245859-6ed5-467f-b557-88456ee2f10b',
-    phoneNumberId: '339c7317-ab98-4696-8ac3-9c71349557cd',
-  },
-};
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: { user: GMAIL_USER, pass: GMAIL_PASS },
+});
 
-// -- BUSINESS HOURS --
-function isBusinessHours() {
-  const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  const day = et.getDay();
-  const time = et.getHours() + et.getMinutes() / 60;
-  if (day === 0) return time >= 10 && time < 17;
-  if (day === 6) return time >= 10 && time < 17;
-  return time >= 9 && time < 18;
-}
+async function sendFollowUpEmail(lead, attempt) {
+  if (!lead.email || lead.email.includes('reply.avail.co') || lead.email.includes('convo.zillow')) return;
+  const firstName = (lead.name || '').split(' ')[0] || 'there';
+  const isIron65 = lead.client === 'iron65';
+  const bookingUrl = isIron65 ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
+  const property = isIron65 ? 'Iron 65' : 'our properties';
 
-function normalizePhone(phone) {
-  if (!phone) return null;
-  let p = phone.toString().replace(/\D/g, '');
-  if (p.length === 10) p = '+1' + p;
-  else if (p.length === 11 && !p.startsWith('+')) p = '+' + p;
-  return p;
-}
+  const subjects = [
+    `${firstName}, still looking for an apartment?`,
+    `Last chance — tours filling up fast at ${property}`,
+  ];
+  const bodies = [
+    `Hi ${firstName},\n\nJust following up on your inquiry about ${property}. We still have units available and would love to schedule a tour for you.\n\nBook your tour here: ${bookingUrl}\n\nBest regards,\nRosalia Group\n(862) 333-1681`,
+    `Hi ${firstName},\n\nWe wanted to reach out one more time — tours at ${property} are filling up quickly. If you're still interested, grab your spot now.\n\nBook here: ${bookingUrl}\n\nBest regards,\nRosalia Group\n(862) 333-1681`,
+  ];
 
-async function sendSMS(phone, message) {
-  if (!phone) return null;
+  const subject = subjects[attempt - 2] || subjects[0];
+  const body = bodies[attempt - 2] || bodies[0];
+
   try {
-    const res = await fetch('https://textbelt.com/text', {
+    await transporter.sendMail({
+      from: '"Rosalia Group" <inquiries@rosaliagroup.com>',
+      to: lead.email,
+      subject,
+      text: body,
+    });
+    console.log(`Follow-up email #${attempt} sent to:`, lead.email);
+    return true;
+  } catch (e) {
+    console.error('Follow-up email error:', e.message);
+    return false;
+  }
+}
+
+async function sendFollowUpSMS(lead, attempt) {
+  if (!lead.phone) return;
+  const firstName = (lead.name || '').split(' ')[0] || 'there';
+  const isIron65 = lead.client === 'iron65';
+  const bookingUrl = isIron65 ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
+  const msg = attempt === 2
+    ? `Hi ${firstName}! Still looking for an apartment? We have units available. Book a tour: ${bookingUrl}`
+    : `Hi ${firstName}! Last chance — tours filling up fast. Book now: ${bookingUrl}`;
+  try {
+    let p = lead.phone.toString().replace(/\D/g, '');
+    if (p.length === 10) p = '+1' + p;
+    else if (p.length === 11) p = '+' + p;
+    await fetch('https://textbelt.com/text', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
+      body: JSON.stringify({ phone: p, message: msg, key: TEXTBELT_KEY }),
     });
-    return res.json();
-  } catch (err) {
-    console.error('SMS error:', err.message);
-    return { success: false };
-  }
+    console.log(`Follow-up SMS #${attempt} sent to:`, lead.phone);
+  } catch (e) { console.error('Follow-up SMS error:', e.message); }
 }
 
-async function triggerVapiCall(phone, name, category, bookingLink, property) {
-  const config = VAPI_CONFIG[category] || VAPI_CONFIG.general;
+exports.handler = async () => {
+  const headers = { 'Content-Type': 'application/json' };
   try {
-    const res = await fetch('https://api.vapi.ai/call/phone', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${VAPI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        phoneNumberId: config.phoneNumberId,
-        assistantId: config.assistantId,
-        customer: { number: phone, name: name || undefined },
-        assistantOverrides: {
-          variableValues: {
-            lead_name: name || '',
-            lead_property: property || '',
-            booking_link: bookingLink,
-          },
-        },
-      }),
-    });
-    const data = await res.json();
-    return { success: !data.error, callId: data.id };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-}
+    const now = new Date();
+    const twoDaysAgo = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
+    const fiveDaysAgo = new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString();
+    const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-async function updateLeadFollowUp(leadId, count) {
-  await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-    },
-    body: JSON.stringify({
-      follow_up_count: count,
-      last_follow_up_at: new Date().toISOString(),
-    }),
-  });
-}
-
-exports.handler = async (event) => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Content-Type': 'application/json',
-  };
-
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
-
-  // Only run during business hours
-  if (!isBusinessHours()) {
-    console.log('Outside business hours -- follow-up skipped');
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ skipped: true, reason: 'outside business hours' }),
-    };
-  }
-
-  try {
-    // Find leads that:
-    // 1. Have a phone number
-    // 2. Have follow_up_count < 2 (max 2 follow-ups)
-    // 3. Were created 24+ hours ago
-    // 4. Status is still "new" (not converted, not booked)
-    // 5. Last follow-up was either never or 24+ hours ago
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
+    // Get leads that got first reply but no booking, not yet followed up
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?status=eq.new&phone=not.is.null&follow_up_count=lt.2&created_at=lt.${cutoff}&select=*`,
-      {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-        },
-      }
+      `${SUPABASE_URL}/rest/v1/leads?replied_at=not.is.null&status=neq.booked&follow_up_count=lt.2&replied_at=lt.${twoDaysAgo}&select=id,name,email,phone,client,replied_at,follow_up_count,last_follow_up_at`,
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
-
     const leads = await res.json();
+    if (!Array.isArray(leads)) { console.log('No leads found'); return { statusCode: 200, headers, body: JSON.stringify({ success: true, processed: 0 }) }; }
 
-    if (!Array.isArray(leads) || leads.length === 0) {
-      console.log('No leads need follow-up');
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ processed: 0, message: 'No leads need follow-up' }),
-      };
+    let processed = 0;
+    for (const lead of leads) {
+      const followUpCount = lead.follow_up_count || 0;
+      const repliedAt = new Date(lead.replied_at);
+      const lastFollowUp = lead.last_follow_up_at ? new Date(lead.last_follow_up_at) : null;
+      const attempt = followUpCount + 2; // 2nd or 3rd contact
+
+      // 2nd follow-up: 48hrs after first reply, no previous follow-up
+      if (followUpCount === 0 && repliedAt < new Date(twoDaysAgo)) {
+        await sendFollowUpEmail(lead, 2);
+        await sendFollowUpSMS(lead, 2);
+        await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${lead.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+          body: JSON.stringify({ follow_up_count: 1, last_follow_up_at: now.toISOString() }),
+        });
+        processed++;
+      }
+      // 3rd follow-up: 5 days after first reply, 1 follow-up already sent
+      else if (followUpCount === 1 && repliedAt < new Date(fiveDaysAgo) && (!lastFollowUp || lastFollowUp < new Date(twoDaysAgo))) {
+        await sendFollowUpEmail(lead, 3);
+        await sendFollowUpSMS(lead, 3);
+        await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${lead.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+          body: JSON.stringify({ follow_up_count: 2, last_follow_up_at: now.toISOString() }),
+        });
+        processed++;
+      }
     }
 
-    // Filter: last_follow_up_at must be null OR 24+ hours ago
-    const eligible = leads.filter(lead => {
-      if (!lead.last_follow_up_at) return true;
-      const lastFollowUp = new Date(lead.last_follow_up_at);
-      return Date.now() - lastFollowUp.getTime() >= 24 * 60 * 60 * 1000;
-    });
-
-    console.log(`Found ${eligible.length} leads eligible for follow-up`);
-
-    const results = [];
-
-    for (const lead of eligible) {
-      const phone = normalizePhone(lead.phone);
-      if (!phone) continue;
-
-      const followUpNumber = (lead.follow_up_count || 0) + 1;
-      const bookingLink = `${BOOKING_FORM_URL}?phone=${encodeURIComponent(phone)}`;
-      const first = lead.name?.split(' ')[0] || 'there';
-      const prop = lead.property || '';
-
-      // Detect luxury vs general based on property name
-      const isLuxury = /iron.?pointe|market.?st|river.?pointe|556|486|502|elks/i.test(prop);
-      const category = isLuxury ? 'luxury' : 'general';
-
-      // Build follow-up SMS
-      const smsMessages = {
-        1: `Hi ${first} -- this is Alex from Rosalia Group following up on your apartment inquiry! We still have availability${prop ? ' at ' + prop : ''} and would love to show you around. Book a tour here: ${bookingLink} or call (862) 419-1814`,
-        2: `Hi ${first} -- last follow-up from Alex at Rosalia Group. ${prop ? prop + ' is' : 'Units are'} still available but going fast. Book your tour: ${bookingLink}`,
-      };
-
-      const smsText = smsMessages[followUpNumber] || smsMessages[1];
-
-      // 1. Trigger Vapi call
-      const callResult = await triggerVapiCall(phone, lead.name, category, bookingLink, prop);
-      console.log(`Follow-up call for lead ${lead.id}:`, callResult.success ? 'TRIGGERED' : 'FAILED');
-
-      // 2. Send SMS regardless of call success
-      const smsResult = await sendSMS(phone, smsText);
-      console.log(`Follow-up SMS for lead ${lead.id}:`, smsResult?.success ? 'SENT' : 'FAILED');
-
-      // 3. Update follow-up count in Supabase
-      await updateLeadFollowUp(lead.id, followUpNumber);
-
-      results.push({
-        leadId: lead.id,
-        name: lead.name,
-        phone,
-        followUpNumber,
-        callTriggered: callResult.success,
-        smsSent: smsResult?.success,
-      });
-
-      // Small delay between leads to avoid rate limiting
-      await new Promise(r => setTimeout(r, 500));
-    }
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: true,
-        processed: results.length,
-        results,
-      }),
-    };
-
-  } catch (err) {
-    console.error('Follow-up error:', err);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: err.message }),
-    };
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true, processed, total: leads.length }) };
+  } catch (e) {
+    console.error('followup error:', e.message);
+    return { statusCode: 500, headers, body: JSON.stringify({ error: e.message }) };
   }
 };
