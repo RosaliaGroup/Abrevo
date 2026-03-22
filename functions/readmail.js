@@ -822,7 +822,17 @@ exports.handler = async (event) => {
         let realName = fromName;
         let leadClient = null;
 
-        if (isAvailLead(from)) {
+        if (isFUBLead(from, subject)) {
+          const p = parseFUBEmail(body);
+          if (p.phone) phone = p.phone;
+          if (p.email) realEmail = p.email;
+          if (p.name) realName = p.name;
+          if (subject.toLowerCase().includes('iron 65') || body.toLowerCase().includes('iron 65') ||
+              subject.toLowerCase().includes('mcwhorter') || body.toLowerCase().includes('mcwhorter')) {
+            leadClient = 'iron65';
+          }
+          console.log('FUB lead - Name:', realName, 'Phone:', phone, 'Email:', realEmail);
+        } else if (isAvailLead(from)) {
           const p = parseAvailEmail(body);
           if (p.phone) phone = p.phone;
           if (p.email) realEmail = p.email;
@@ -855,7 +865,7 @@ exports.handler = async (event) => {
         console.log('Lead detected! Phone:', phone || 'none found');
 
         const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : fromEmail;
-        const skipRecentCheck = isAvailLead(from) || from.includes('reply.avail.co') || from.includes('@avail.co');
+        const skipRecentCheck = isAvailLead(from) || from.includes('reply.avail.co') || from.includes('@avail.co') || isFUBLead(from, subject);
 
         const previousReply = await getPreviousThread(fromEmail);
         const isReply = subject.toLowerCase().startsWith('re:') || !!previousReply;
@@ -878,7 +888,8 @@ exports.handler = async (event) => {
         const effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : replyTo;
         // For Avail leads: reply to relay so it appears in Avail platform, CC real email
         const avail = isAvailLead(from);
-        const replyTarget = avail ? fromEmail : effectiveReplyTo;
+        const isFUB = isFUBLead(from, subject);
+        const replyTarget = avail ? fromEmail : realEmail || effectiveReplyTo;
         const ccEmail = avail && realEmail && realEmail !== fromEmail ? realEmail : null;
         await sendReply(replyTarget, subject, replyText, ccEmail);
         await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone, leadClient);
