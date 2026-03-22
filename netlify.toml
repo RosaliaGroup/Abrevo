@@ -1,3 +1,25 @@
+[build]
+  functions = "functions"
+[functions]
+  node_bundler = "esbuild"
+[functions."readmail"]
+  schedule = "* * * * *"
+  node_bundler = "nft"
+[functions."fubsync"]
+  schedule = "* * * * *"
+  node_bundler = "nft"
+[functions."autocall"]
+  schedule = "* * * * *"
+  node_bundler = "nft"
+[functions."healthcheck"]
+  schedule = "*/30 * * * *"
+  node_bundler = "nft"
+[functions."sendsurvey"]
+  schedule = "0 22 * * *"
+  node_bundler = "nft"
+[functions."followup"]
+  schedule = "0 10 * * *"
+  node_bundler = "nft"
 [[redirects]]
   from = "/*"
   to = "/index.html"
