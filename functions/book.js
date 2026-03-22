@@ -246,17 +246,60 @@ exports.handler = async (event) => {
 
     // 5. Send email confirmation to caller (CC inquiries@rosaliagroup.com)
     if (data.email) {
+      const firstName = (data.full_name || '').split(' ')[0] || 'there';
       const emailHtml = `
-        <h2>Appointment Confirmed</h2>
-        <p>Dear ${data.full_name},</p>
-        <p>Your showing at <strong>${propertyAddress}</strong> is confirmed for:</p>
-        <p><strong>${data.preferred_date} at ${data.preferred_time}</strong></p>
-        <p>Budget: ${data.budget}<br>
-        Apartment Size: ${data.apartment_size}<br>
-        Move-In Date: ${data.move_in_date}</p>
-        <p>We look forward to seeing you!</p>
-        <p>Best regards,<br>Rosalia Group<br>(862) 333-1681</p>
-      `;
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#0A0A0A;font-family:'Georgia',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#111111;border:1px solid #C9A84C;border-radius:4px;overflow:hidden;">
+        <!-- Header -->
+        <tr>
+          <td style="background:#0A0A0A;padding:30px 40px;text-align:center;border-bottom:1px solid #C9A84C;">
+            <div style="color:#C9A84C;font-size:11px;letter-spacing:4px;text-transform:uppercase;">Rosalia Group</div>
+            <div style="color:#C9A84C;font-size:18px;margin-top:6px;">◆</div>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:40px;">
+            <h1 style="color:#C9A84C;font-size:22px;font-weight:normal;letter-spacing:2px;text-transform:uppercase;margin:0 0 24px 0;">Appointment Confirmed</h1>
+            <p style="color:#E8E8E8;font-size:15px;line-height:1.7;margin:0 0 24px 0;">Dear ${firstName},</p>
+            <p style="color:#E8E8E8;font-size:15px;line-height:1.7;margin:0 0 30px 0;">Your private tour has been confirmed. We look forward to welcoming you.</p>
+            <!-- Details Box -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;border:1px solid #333;border-radius:4px;margin-bottom:30px;">
+              <tr><td style="padding:24px 28px;">
+                <div style="color:#C9A84C;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">Tour Details</div>
+                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📍 <strong style="color:#C9A84C;">${propertyAddress}</strong></div>
+                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📅 ${data.preferred_date} at ${data.preferred_time}</div>
+                <div style="color:#E8E8E8;font-size:14px;margin-bottom:6px;color:#999;">Size: ${data.apartment_size} &nbsp;|&nbsp; Budget: ${data.budget}/mo</div>
+                <div style="color:#999;font-size:14px;">Move-In: ${data.move_in_date}</div>
+              </td></tr>
+            </table>
+            <p style="color:#999;font-size:13px;line-height:1.7;margin:0 0 30px 0;">Our leasing agent will reach out before your appointment to confirm. If you need to reschedule, simply reply to this email or call us at (862) 333-1681.</p>
+            <!-- CTA -->
+            <div style="text-align:center;margin-bottom:30px;">
+              <a href="https://silver-ganache-1ee2ca.netlify.app/booking-rosalia" style="display:inline-block;background:#C9A84C;color:#0A0A0A;font-size:12px;letter-spacing:3px;text-transform:uppercase;padding:14px 32px;text-decoration:none;font-weight:bold;border-radius:2px;">Manage Appointment</a>
+            </div>
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="background:#0A0A0A;padding:20px 40px;text-align:center;border-top:1px solid #222;">
+            <div style="color:#555;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Rosalia Group &nbsp;|&nbsp; rosaliagroup.com</div>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
+`;
 
       try {
         // Send to caller and CC to inquiries
