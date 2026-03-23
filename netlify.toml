@@ -1,5 +1,13 @@
 [build]
   functions = "functions"
+
+[context.production.environment]
+  DOMAIN = "app.abrevo.co"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Custom-Domain = "app.abrevo.co"
 [functions]
   node_bundler = "esbuild"
 [functions."readmail"]
