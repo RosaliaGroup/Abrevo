@@ -122,7 +122,7 @@ exports.handler = async (event) => {
     await transporter.sendMail({
       from: `"Mechanical Enterprise Booking" <${FROM_EMAIL}>`,
       to: SALES_EMAIL,
-      subject: `Appointment Rescheduled -- ${customerName} | ${new_date} at ${new_time}`,
+      subject: `Appointment Rescheduled - ${customerName} - ${new_date} at ${new_time}`,
       text: `HVAC Appointment Rescheduled\n\nCustomer: ${customerName}\nPhone: ${normalizedPhone}\nNew Date: ${new_date}\nNew Time: ${new_time}`,
     });
 
