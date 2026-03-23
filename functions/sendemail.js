@@ -35,7 +35,7 @@ async function markEmailed(email) {
 }
 
 function buildIron65Email(firstName) {
-  const bookingUrl = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+  const bookingUrl = 'https://book.rosaliagroup.com/iron65';
   
   const html = `<!DOCTYPE html>
 <html>

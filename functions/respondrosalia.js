@@ -3,7 +3,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const ANA_PHONE = '+16462269189';
-const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/iron65';
 
 // -- DETECT BUYER vs RENTAL --
 function detectCategory(lead) {

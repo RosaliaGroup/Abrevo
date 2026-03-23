@@ -4,8 +4,8 @@ const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
-const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-rosalia';
-const IRON65_BOOKING_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
+const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 
 const transporter = nodemailer.createTransport({

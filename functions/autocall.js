@@ -7,8 +7,8 @@ const JESSICA_ASSISTANT_ID = '35f4e4a2-aabc-47be-abfc-630cf6a85d58';
 const JESSICA_PHONE_ID = '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 const ANA_PHONE = '+16462269189';
-const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-rosalia';
-const IRON65_BOOKING_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
+const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
 
 // Max call attempts before giving up
 const MAX_CALL_ATTEMPTS = 5;

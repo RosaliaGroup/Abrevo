@@ -1,5 +1,5 @@
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY || '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
-const SITE_URL = 'https://silver-ganache-1ee2ca.netlify.app';
+const SITE_URL = 'https://book.rosaliagroup.com';
 
 async function sendSMS(phone, message) {
   let p = phone.toString().replace(/\D/g, '');
@@ -52,12 +52,12 @@ exports.handler = async (event) => {
         : `${SITE_URL}/booking-form-hvac`;
     } else if (isReschedule) {
       formUrl = isIron65
-        ? `${SITE_URL}/reschedule-form`
-        : `${SITE_URL}/reschedule-rosalia`;
+        ? 'https://book.rosaliagroup.com/iron65-reschedule'
+        : 'https://book.rosaliagroup.com/reschedule';
     } else {
       formUrl = isIron65
-        ? `${SITE_URL}/booking-form`
-        : `${SITE_URL}/booking-rosalia`;
+        ? 'https://book.rosaliagroup.com/iron65'
+        : 'https://book.rosaliagroup.com/book';
     }
 
     const firstName = (name || '').split(' ')[0] || 'there';
