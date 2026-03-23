@@ -568,7 +568,12 @@ async function repliedRecently(fromEmail) {
   const lead = await getLeadData(fromEmail);
   if (!lead?.replied_at) return false;
   const lastReply = new Date(lead.replied_at);
-  return lastReply > new Date(Date.now() - 10 * 60 * 1000);
+  const hoursSince = (Date.now() - lastReply.getTime()) / (1000 * 60 * 60);
+  if (hoursSince < 24) {
+    console.log(`Duplicate check: already replied to ${fromEmail} ${hoursSince.toFixed(1)} hours ago, skipping`);
+    return true;
+  }
+  return false;
 }
 
 async function generateReply(from, subject, body, previousReply, leadContext, calendarAppt, leadName) {
@@ -638,7 +643,9 @@ ${previousReply ? 'A lead is REPLYING to your previous email. Read their reply a
 
 ${userMessage}
 
-Write ONLY the email body. No subject line. MAXIMUM 4 sentences. No bullet points. No lists. Lead with the lead's name and ONE sentence about their property interest. Ask for their phone number and preferred move-in date in ONE sentence. End with the booking link. Never mention multiple properties or amenities in detail  keep it short and conversational. No markdown.`;
+When including booking links, format them as HTML hyperlinks like: <a href='URL'>Book Your Tour Here</a> - use HTML format since emails support it.
+
+Write ONLY the email body. No subject line. MAXIMUM 4 sentences. No bullet points. No lists. Lead with the lead's name and ONE sentence about their property interest. Ask for their phone number and preferred move-in date in ONE sentence. End with the booking link as a clickable HTML hyperlink. Never mention multiple properties or amenities in detail  keep it short and conversational. No markdown.`;
 
   console.log('Calling Claude API...');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -662,27 +669,34 @@ Write ONLY the email body. No subject line. MAXIMUM 4 sentences. No bullet point
   return data.content?.[0]?.text || '';
 }
 
+const sendReplyTracker = {};
 async function sendReply(replyTo, subject, replyText, ccEmail) {
+  // Track how many times sendReply is called per email address per run
+  sendReplyTracker[replyTo] = (sendReplyTracker[replyTo] || 0) + 1;
+  console.log(`sendReply called for ${replyTo}: ${sendReplyTracker[replyTo]} time(s) this run`);
+  if (sendReplyTracker[replyTo] > 1) {
+    console.log(`DUPLICATE PREVENTED: already sent to ${replyTo} this run, skipping`);
+    return;
+  }
+
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: INBOX_EMAIL, pass: GMAIL_PASS },
   });
   const replySubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`;
-  const htmlText = replyText
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const plainText = replyText.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1').replace(/<a\s+href=['"]([^'"]+)['"][^>]*>[^<]*<\/a>/gi, '$1');
+  let replyHtml = replyText
     .replace(/\*\*([^*]+)\*\*/g, '$1')
     .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/\n/g, '<br>')
-    .replace(
-      /(https?:\/\/[^\s<]+)/g,
-      '<a href="$1" style="color:#1a73e8;text-decoration:underline;">Book Your Tour Here</a>'
-    );
+    .replace(/\n/g, '<br>');
+  // Convert any plain URLs (not already in href) to clickable hyperlinks
+  replyHtml = replyHtml.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#C9A84C;">$1</a>');
   const mailOptions = {
     from: `"Rosalia Group Inquiries" <${INBOX_EMAIL}>`,
     to: replyTo,
     subject: replySubject,
-    text: replyText.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1'),
-    html: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.8;color:#333;max-width:600px;">${htmlText}</div>`,
+    text: plainText,
+    html: `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.6;color:#333;">${replyHtml}</div>`,
   };
   if (ccEmail && ccEmail !== replyTo) {
     mailOptions.cc = ccEmail;
@@ -798,6 +812,7 @@ exports.handler = async (event) => {
     const rawEmails = await fetchUnreadEmails();
     console.log(`Found ${rawEmails.length} unread emails`);
     const results = { processed: 0, skipped: 0, not_lead: 0, errors: 0 };
+    const processedEmails = new Set(); // Prevent processing same sender twice per run
 
     for (const raw of rawEmails) {
       try {
@@ -817,6 +832,14 @@ exports.handler = async (event) => {
         const fromName = from.replace(/<[^>]+>/, '').trim().replace(/"/g, '') || null;
 
         console.log('Processing:', from, '|', subject);
+
+        // Per-run dedup: skip if we already processed this sender
+        if (processedEmails.has(fromEmail.toLowerCase())) {
+          console.log('Skipping (already processed this run):', fromEmail);
+          results.skipped++;
+          continue;
+        }
+        processedEmails.add(fromEmail.toLowerCase());
 
         if (shouldSkip(from, subject)) {
           console.log('Skipping (automated):', from);
