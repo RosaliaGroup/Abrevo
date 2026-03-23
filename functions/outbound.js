@@ -6,7 +6,7 @@
 // ---------------------------------------------
 
 const VAPI_API_KEY = process.env.VAPI_KEY || process.env.VAPI_API_KEY;
-const TEXTBELT_KEY = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
+const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
 
 // Vapi config per category
