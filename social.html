@@ -852,27 +852,46 @@ function renderLeads(leads) {
   if (!Array.isArray(leads) || leads.length === 0) {
     tbody.innerHTML = '';
     noLeads.style.display = 'block';
+    noLeads.textContent = 'No leads found.';
+    return;
+  }
+  // Filter out junk leads
+  const junkEmails = ['@reply.avail.co', '@convo.zillow.com'];
+  const junkNames = ['avail team', 'amanda from follow up boss'];
+  const filtered = leads.filter(l => {
+    const email = (l.email || '').toLowerCase();
+    const name = (l.name || '').toLowerCase();
+    if (junkEmails.some(j => email.includes(j))) return false;
+    if (junkNames.some(j => name === j)) return false;
+    if (name.startsWith('rentals')) return false;
+    return true;
+  });
+  if (!filtered.length) {
+    tbody.innerHTML = '';
+    noLeads.style.display = 'block';
+    noLeads.textContent = 'No real leads found (junk filtered).';
     return;
   }
   noLeads.style.display = 'none';
   const propLabels = { iron65: 'Iron 65', rosalia: 'Rosalia', elks: 'The Elks', mech: 'Mech Enterprise' };
-  tbody.innerHTML = leads.map(l => {
+  tbody.innerHTML = filtered.map(l => {
     const date = l.created_at ? new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '--';
+    const phone = l.phone || '--';
     return `
     <tr>
       <td style="color:var(--text);font-weight:500;">${l.name || '--'}</td>
       <td>${l.email || '--'}</td>
-      <td>${l.phone || '--'}</td>
+      <td>${phone}</td>
       <td><span class="badge badge-${l.source === 'email' ? 'blue' : l.source === 'fub' ? 'purple' : 'gold'}">${l.source || '--'}</span></td>
       <td><span class="badge badge-gold">${propLabels[l.client] || l.client || '--'}</span></td>
       <td style="color:var(--text-muted);font-size:12px;">${date}</td>
       <td><span class="badge badge-${l.enriched ? 'green' : 'red'}">${l.enriched ? 'Enriched' : 'Pending'}</span></td>
-      <td><button class="btn btn-outline btn-sm" onclick="enrichLead('${(l.name||'').replace(/'/g,"\\'")}','${(l.email||'').replace(/'/g,"\\'")}')">Enrich</button></td>
+      <td><button class="btn btn-outline btn-sm" onclick="enrichLead('${(l.name||'').replace(/'/g,"\\'")}','${(l.email||'').replace(/'/g,"\\'")}','${(l.phone||'').replace(/'/g,"\\'")}')">Enrich</button></td>
     </tr>`;
   }).join('');
 }
 
-async function enrichLead(name, email) {
+async function enrichLead(name, email, phone) {
   const detail = document.getElementById('enrich-detail');
   const loading = document.getElementById('enrich-detail-loading');
   const results = document.getElementById('enrich-detail-results');
@@ -882,45 +901,44 @@ async function enrichLead(name, email) {
   results.innerHTML = '';
   detail.scrollIntoView({ behavior: 'smooth' });
 
-  // Simulate enrichment (would use Claude AI web search in production)
-  await new Promise(r => setTimeout(r, 1500));
+  try {
+    const res = await fetch('/.netlify/functions/ai-enrich', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, phone })
+    });
+    const data = await res.json();
 
-  const searchTerm = name || email;
-  results.innerHTML = `
-    <div class="grid-2">
-      <div style="padding:16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
-        <div style="font-size:12px;color:var(--fb);font-weight:600;margin-bottom:8px;">Facebook</div>
-        <div style="color:var(--text-dim);font-size:13px;">Search: "${searchTerm}"</div>
-        <div style="margin-top:8px;"><span class="badge badge-gold">Manual Review</span></div>
-        <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">AI-powered profile matching requires the ai-generate endpoint. Connect via Settings to enable automated enrichment.</div>
+    const linkOrNone = (url, label) => url ? `<a href="${url}" target="_blank" style="color:var(--gold);text-decoration:underline;font-size:13px;">${url}</a>` : `<span style="color:var(--text-muted);font-size:13px;">Not found</span>`;
+    const mentions = (data.web_mentions || []).length > 0
+      ? data.web_mentions.map(m => `<div style="color:var(--text-dim);font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);">${m}</div>`).join('')
+      : '<span style="color:var(--text-muted);font-size:13px;">No mentions found</span>';
+    const confColor = data.confidence === 'high' ? 'green' : data.confidence === 'medium' ? 'gold' : 'red';
+
+    results.innerHTML = `
+      <div style="margin-bottom:16px;"><span class="badge badge-${confColor}">Confidence: ${data.confidence || 'low'}</span></div>
+      <div class="grid-2">
+        <div style="padding:16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
+          <div style="font-size:12px;color:var(--li);font-weight:600;margin-bottom:8px;">LinkedIn</div>
+          ${linkOrNone(data.linkedin, 'LinkedIn')}
+        </div>
+        <div style="padding:16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
+          <div style="font-size:12px;color:var(--fb);font-weight:600;margin-bottom:8px;">Facebook</div>
+          ${linkOrNone(data.facebook, 'Facebook')}
+        </div>
+        <div style="padding:16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
+          <div style="font-size:12px;color:var(--ig);font-weight:600;margin-bottom:8px;">Instagram</div>
+          ${data.instagram ? `<span style="color:var(--gold);font-size:13px;">@${data.instagram.replace('@','')}</span>` : '<span style="color:var(--text-muted);font-size:13px;">Not found</span>'}
+        </div>
+        <div style="padding:16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
+          <div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:8px;">Web Mentions</div>
+          ${mentions}
+        </div>
       </div>
-      <div style="padding:16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
-        <div style="font-size:12px;color:var(--li);font-weight:600;margin-bottom:8px;">LinkedIn</div>
-        <div style="color:var(--text-dim);font-size:13px;">Search: "${searchTerm}"</div>
-        <div style="margin-top:8px;"><span class="badge badge-gold">Manual Review</span></div>
-        <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">Professional profile matching available with AI enrichment enabled.</div>
-      </div>
-      <div style="padding:16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
-        <div style="font-size:12px;color:var(--ig);font-weight:600;margin-bottom:8px;">Instagram</div>
-        <div style="color:var(--text-dim);font-size:13px;">Search: "${searchTerm}"</div>
-        <div style="margin-top:8px;"><span class="badge badge-gold">Manual Review</span></div>
-      </div>
-      <div style="padding:16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
-        <div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:8px;">Web Mentions</div>
-        <div style="color:var(--text-dim);font-size:13px;">Search: "${searchTerm}"</div>
-        <div style="margin-top:8px;"><span class="badge badge-gold">Manual Review</span></div>
-        <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">Web presence scanning identifies public mentions, reviews, and profiles.</div>
-      </div>
-    </div>
-    <div class="mt-16" style="padding:16px;background:rgba(201,168,76,0.05);border:1px solid var(--gold-dim);border-radius:var(--radius);">
-      <div style="font-size:13px;color:var(--gold);font-weight:500;margin-bottom:6px;">Enable AI Enrichment</div>
-      <div style="font-size:12px;color:var(--text-dim);line-height:1.6;">
-        To enable automated lead enrichment with social profile matching and web mentions,
-        create a <code style="background:var(--surface2);padding:2px 6px;border-radius:3px;">/.netlify/functions/ai-generate</code> endpoint
-        that proxies to the Anthropic API with web search enabled.
-      </div>
-    </div>
-  `;
+    `;
+  } catch (err) {
+    results.innerHTML = `<div style="color:var(--red);font-size:13px;">Enrichment error: ${err.message}. Make sure ANTHROPIC_API_KEY is set in Netlify env vars.</div>`;
+  }
   loading.style.display = 'none';
 }
 
