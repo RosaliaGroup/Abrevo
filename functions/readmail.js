@@ -33,19 +33,13 @@ CRITICAL RULES:
 - If someone asks about Section 8, housing vouchers, or rental assistance programs: say "We welcome all legal sources of income. We show the apartment to everyone  our management team reviews all applications individually including credit criteria. Schedule a tour and our leasing agent will walk you through the process"
 - All legal sources of income accepted  management reviews all applications
 - Never discuss income or credit as a barrier to touring  only the leasing agent discusses this at the tour
-- Keep replies concise  bullet points for Q&A, under 100 words, then booking link
-- Always lead with NET EFFECTIVE rent using these EXACT formulas:
-  * 13-month lease, 1 month free: gross x 12/13 (e.g. $2,199 x 12/13 = $2,029.84)
-  * 13-month lease, 1 month free + apply within 24hrs of tour (half month additional): gross x 11.5/13 (e.g. $2,199 x 11.5/13 = $1,945.00)
-  * 24-month lease, 2 months free: gross x 22/24 (e.g. $2,199 x 22/24 = $2,015.75)
-  * 24-month lease, 2 months free + apply within 24hrs of tour (half month additional): gross x 21.5/24 (e.g. $2,199 x 21.5/24 = $1,969.94)
-  * Iron 65 18-month lease, $4,000 rent credit: (gross x 18 - 4000) / 18
-  * Always show both the 13-month and 24-month effective rates
-  * Always mention the 24-hour application bonus saves an additional half month
+- Keep replies SHORT — 3 sentences maximum, then the booking link on its own line
+- Answer the specific question asked in ONE sentence — do not volunteer extra info
+- If they ask about price, give the net effective rent in one line only, then immediately push to booking link
 - Never use markdown bold (**text**) or italic (*text*)
-- Never suggest specific appointment times  always direct to the booking link
-- Ask for phone number if not provided
-- NEVER confirm or deny existing appointments you don't have record of  say "let me confirm with our leasing team and we will reach out shortly"
+- Never suggest specific appointment times — always direct to the booking link
+- Ask for phone number if not already provided — one short sentence
+- NEVER confirm or deny existing appointments you don't have record of — say "let me confirm with our team and we'll reach out shortly"
 - Sign off as: Rosalia Group | Inquiries Team | +18624191763 | inquiries@rosaliagroup.com
 
 PROPERTY KNOWLEDGE BASE:
@@ -643,9 +637,11 @@ ${previousReply ? 'A lead is REPLYING to your previous email. Read their reply a
 
 ${userMessage}
 
-Always end every reply with: 'Book your tour instantly here: https://book.rosaliagroup.com/book' (or /iron65 for Iron 65 inquiries). This is faster than scheduling over email.
+Always end EVERY reply with the booking link on its own line — no exceptions:
+- Iron 65 inquiries: https://book.rosaliagroup.com/iron65
+- All other properties: https://book.rosaliagroup.com/book
 
-Write ONLY the email body. No subject line. MAXIMUM 4 sentences. No bullet points. No lists. Lead with the lead's name and ONE sentence about their property interest. Ask for their phone number and preferred move-in date in ONE sentence. End with the booking link on its own line. Never mention multiple properties or amenities in detail  keep it short and conversational. No markdown. No HTML tags.`;
+Write ONLY the email body. No subject line. MAXIMUM 3 sentences then the booking link. Answer the specific question asked in the fewest words possible. No bullet points. No lists. No markdown. No HTML tags. The booking link must always appear — it is non-negotiable.`;
 
   console.log('Calling Claude API...');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -774,7 +770,7 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone, cl
         notes: mergedNotes,
         replied_at: new Date().toISOString(),
         email_reply: replyText,
-        phone: existing[0].phone || phone || null,
+        phone: phone || existing[0].phone || null,  // prefer newly provided phone over old
       }),
     });
     return existing[0];
@@ -918,6 +914,16 @@ exports.handler = async (event) => {
           // Strip emails from text before extracting phone
           phone = extractPhone(body + ' ' + subject);
         }
+        // For reply threads: always try to extract phone from body regardless of source
+        // This catches cases where lead replies with their phone number
+        if (!phone && isReply) {
+          const replyPhone = extractPhone(body);
+          if (replyPhone) {
+            phone = replyPhone;
+            console.log('Phone extracted from reply body:', phone);
+          }
+        }
+
         console.log('Lead detected! Phone:', phone || 'none found');
 
         const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : fromEmail;
@@ -968,16 +974,21 @@ exports.handler = async (event) => {
           const propertyMatch = subject.match(/for\s+(.+?)(?:,\s*Unit|\s*$)/i);
           const propertyName = propertyMatch ? propertyMatch[1].trim() : '';
           const smsBookingUrl = leadClient === 'iron65' ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
-          // Send SMS: new leads always, reply threads when phone is newly captured
-          if (!hadPhone || !isReply) {
-            if (isReply && !hadPhone) console.log('Phone captured from reply email, sending SMS:', phone);
+          // Send SMS immediately when:
+          // - New lead (no prior record) 
+          // - OR reply thread where phone was just provided for the first time
+          const shouldSendSMS = !hadPhone || !isReply;
+          if (shouldSendSMS) {
+            if (isReply && !hadPhone) console.log('Phone newly provided in reply — sending SMS immediately:', phone);
             await sendSMS(phone, realName || fromName, propertyName, smsBookingUrl);
             if (callAllowed) {
               await triggerCall(phone, realName || fromName);
               console.log('Call triggered during business hours for:', realName || fromName);
             } else {
-              console.log('Outside business hours - skipping call, autocall will handle:', realName || fromName);
+              console.log('Outside business hours — SMS sent, autocall will handle:', realName || fromName);
             }
+          } else {
+            console.log('Phone already on record — skipping duplicate SMS');
           }
         }
 
