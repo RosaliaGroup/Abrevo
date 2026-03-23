@@ -643,7 +643,7 @@ ${previousReply ? 'A lead is REPLYING to your previous email. Read their reply a
 
 ${userMessage}
 
-ALWAYS include the booking link at the end of every reply. For Iron 65 use: https://book.rosaliagroup.com/iron65 — For all other Rosalia properties use: https://book.rosaliagroup.com/book — Format as plain text on its own line: 'Book your tour here: [URL]'
+Always end every reply with: 'Book your tour instantly here: https://book.rosaliagroup.com/book' (or /iron65 for Iron 65 inquiries). This is faster than scheduling over email.
 
 Write ONLY the email body. No subject line. MAXIMUM 4 sentences. No bullet points. No lists. Lead with the lead's name and ONE sentence about their property interest. Ask for their phone number and preferred move-in date in ONE sentence. End with the booking link on its own line. Never mention multiple properties or amenities in detail  keep it short and conversational. No markdown. No HTML tags.`;
 
@@ -685,12 +685,24 @@ async function sendReply(replyTo, subject, replyText, ccEmail) {
   });
   const replySubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`;
   const plainText = replyText.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1');
-  const replyHtml = replyText
+  // Strip markdown, convert URLs to links FIRST, then escape & in non-URL text
+  let cleaned = replyText
     .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/&/g, '&amp;')
-    .replace(/\n/g, '<br>')
-    .replace(/(https?:\/\/[^\s<&]+)/g, '<a href="$1" style="color:#C9A84C;text-decoration:underline;">Book Your Tour Here</a>');
+    .replace(/\*([^*]+)\*/g, '$1');
+  // Replace URLs with placeholder tokens to protect them from & escaping
+  const urls = [];
+  cleaned = cleaned.replace(/(https?:\/\/[^\s<]+)/g, (match) => {
+    urls.push(match);
+    return `__URL_${urls.length - 1}__`;
+  });
+  // Now safe to escape &
+  cleaned = cleaned.replace(/&/g, '&amp;');
+  cleaned = cleaned.replace(/\n/g, '<br>');
+  // Restore URLs as clickable links
+  const replyHtml = cleaned.replace(/__URL_(\d+)__/g, (_, i) => {
+    const url = urls[parseInt(i)];
+    return `<a href="${url}" style="color:#C9A84C;text-decoration:underline;">Book Your Tour Here</a>`;
+  });
   const htmlBody = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">${replyHtml}</div>`;
   const mailOptions = {
     from: `"Rosalia Group Inquiries" <${INBOX_EMAIL}>`,
@@ -951,12 +963,9 @@ exports.handler = async (event) => {
           const propertyMatch = subject.match(/for\s+(.+?)(?:,\s*Unit|\s*$)/i);
           const propertyName = propertyMatch ? propertyMatch[1].trim() : '';
           const smsBookingUrl = leadClient === 'iron65' ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
-          if (isReply && !hadPhone) {
-            // Phone captured from a reply email - send SMS immediately
-            console.log('Phone captured from reply email, sending SMS:', phone);
-            await sendSMS(phone, realName || fromName, propertyName, smsBookingUrl);
-          }
+          // Send SMS: new leads always, reply threads when phone is newly captured
           if (!hadPhone || !isReply) {
+            if (isReply && !hadPhone) console.log('Phone captured from reply email, sending SMS:', phone);
             await sendSMS(phone, realName || fromName, propertyName, smsBookingUrl);
             if (callAllowed) {
               await triggerCall(phone, realName || fromName);
