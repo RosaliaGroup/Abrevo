@@ -5,7 +5,7 @@
 // category: "luxury" | "general" (defaults to "general")
 // ---------------------------------------------
 
-const VAPI_API_KEY = process.env.VAPI_API_KEY;
+const VAPI_API_KEY = process.env.VAPI_KEY || process.env.VAPI_API_KEY;
 const TEXTBELT_KEY = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
 const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
 
@@ -13,12 +13,12 @@ const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form
 const VAPI_CONFIG = {
   luxury: {
     assistantId: '1cae5323-6b83-4434-8461-6330472da140', // Rosalia Luxury Portfolio Outbound
-    phoneNumberId: '339c7317-ab98-4696-8ac3-9c71349557cd',
+    phoneNumberId: '2e2b6713-f631-4e9e-95fa-3418ecc77c0a',
     label: 'Luxury Portfolio',
   },
   general: {
-    assistantId: '53245859-6ed5-467f-b557-88456ee2f10b', // Rosalia General Rentals Outbound
-    phoneNumberId: '339c7317-ab98-4696-8ac3-9c71349557cd',
+    assistantId: '1cae5323-6b83-4434-8461-6330472da140', // Rosalia General Rentals Outbound
+    phoneNumberId: '2e2b6713-f631-4e9e-95fa-3418ecc77c0a',
     label: 'General Rentals',
   },
 };
