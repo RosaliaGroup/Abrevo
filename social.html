@@ -217,6 +217,30 @@
     }
     .toast.show { transform: translateY(0); opacity: 1; }
 
+    /* Monitor */
+    .mon-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px; }
+    .mon-row:last-child { border-bottom:none; }
+    .mon-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .mon-dot.green { background:var(--green); box-shadow:0 0 6px rgba(46,204,113,0.4); }
+    .mon-dot.yellow { background:#F39C12; box-shadow:0 0 6px rgba(243,156,18,0.4); }
+    .mon-dot.red { background:var(--red); box-shadow:0 0 6px rgba(231,76,60,0.4); }
+    .mon-dot.gray { background:var(--text-muted); }
+    .mon-label { color:var(--text); font-weight:500; min-width:140px; }
+    .mon-val { color:var(--text-dim); flex:1; }
+    .mon-error { color:var(--red); font-size:12px; }
+    .mon-success { color:var(--green); font-size:12px; }
+    .mon-metric { text-align:center; padding:12px; background:var(--surface2); border-radius:var(--radius); }
+    .mon-metric .mon-metric-val { font-family:'Syne',sans-serif; font-size:22px; color:var(--text); }
+    .mon-metric .mon-metric-lbl { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:4px; }
+    .mon-feed-item { display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px; }
+    .mon-feed-item:last-child { border-bottom:none; }
+    .mon-feed-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+    .mon-feed-time { color:var(--text-muted); font-size:11px; white-space:nowrap; margin-left:auto; }
+    .mon-metrics-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+    .mon-section-label { font-size:11px; color:var(--gold); letter-spacing:1px; text-transform:uppercase; margin:16px 0 8px; }
+    @keyframes pulse-glow { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .pulse-dot { animation: pulse-glow 2s ease-in-out infinite; }
+
     @media (max-width: 900px) {
       .sidebar { display: none; }
       .main { margin-left: 0; padding: 20px; }
@@ -254,6 +278,11 @@
     <div class="nav-item" data-page="ideas" onclick="showPage('ideas')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7z"/><path d="M9 21h6"/></svg>
       Content Ideas
+    </div>
+    <div class="nav-section">Operations</div>
+    <div class="nav-item" data-page="monitor" onclick="showPage('monitor')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      System Monitor
     </div>
     <div class="nav-section">Settings</div>
     <div class="nav-item" data-page="connect" onclick="showPage('connect')">
@@ -624,6 +653,71 @@
       </div>
     </div>
 
+    <!-- ========== SYSTEM MONITOR ========== -->
+    <div class="page" id="page-monitor">
+      <div class="page-header">
+        <div class="row-between">
+          <div>
+            <h1>System Monitor</h1>
+            <p>Real-time health dashboard for all AI systems</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <span style="font-size:12px;color:var(--text-dim);" id="mon-last-updated"></span>
+            <button class="btn btn-gold" onclick="monitorRefreshAll()">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+              Refresh All
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stat summary row -->
+      <div class="stat-cards" id="mon-stats">
+        <div class="stat-card"><div class="stat-label">Calls Today</div><div class="stat-value" id="mon-calls-today">--</div><div class="stat-sub" id="mon-calls-sub">loading...</div></div>
+        <div class="stat-card"><div class="stat-label">Emails Sent</div><div class="stat-value" id="mon-emails-today">--</div><div class="stat-sub" id="mon-emails-sub">loading...</div></div>
+        <div class="stat-card"><div class="stat-label">Success Rate</div><div class="stat-value" id="mon-success-rate">--</div><div class="stat-sub" id="mon-success-sub">loading...</div></div>
+        <div class="stat-card"><div class="stat-label">Systems Online</div><div class="stat-value" id="mon-systems-up">--</div><div class="stat-sub" id="mon-systems-sub">checking...</div></div>
+      </div>
+
+      <div class="grid-2">
+        <!-- PANEL 1: AI Assistants -->
+        <div class="card">
+          <div class="card-title">AI Assistants Status</div>
+          <div id="mon-assistants"><div class="loading-text"><span class="spinner"></span>Loading Vapi data...</div></div>
+        </div>
+
+        <!-- PANEL 2: Emails -->
+        <div class="card">
+          <div class="card-title">Email Activity</div>
+          <div id="mon-emails"><div class="loading-text"><span class="spinner"></span>Loading email data...</div></div>
+        </div>
+
+        <!-- PANEL 3: Calls & Texts -->
+        <div class="card">
+          <div class="card-title">Calls & Texts</div>
+          <div id="mon-calls"><div class="loading-text"><span class="spinner"></span>Loading call data...</div></div>
+        </div>
+
+        <!-- PANEL 4: Autocall -->
+        <div class="card">
+          <div class="card-title">Autocall Status</div>
+          <div id="mon-autocall"><div class="loading-text"><span class="spinner"></span>Checking autocall...</div></div>
+        </div>
+
+        <!-- PANEL 5: Readmail -->
+        <div class="card">
+          <div class="card-title">Readmail Status</div>
+          <div id="mon-readmail"><div class="loading-text"><span class="spinner"></span>Checking readmail...</div></div>
+        </div>
+
+        <!-- PANEL 6: Activity Feed -->
+        <div class="card">
+          <div class="card-title">Recent Activity Feed</div>
+          <div id="mon-feed" style="max-height:400px;overflow-y:auto;"><div class="loading-text"><span class="spinner"></span>Loading activity...</div></div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -646,6 +740,7 @@ function showPage(id) {
   document.getElementById('page-' + id).classList.add('active');
   document.querySelector(`[data-page="${id}"]`).classList.add('active');
   if (id === 'schedule') renderCalendar();
+  if (id === 'monitor') monitorRefreshAll();
 }
 
 // ---- Toast ----
@@ -1317,6 +1412,358 @@ document.getElementById('flyer-property')?.addEventListener('change', function()
 
 // Initial flyer render
 setTimeout(updateFlyer, 100);
+
+// ========== SYSTEM MONITOR ==========
+const VAPI_KEY = '064f441d-a388-4404-8b6c-05e91e90f1ff';
+const VAPI_BASE = 'https://api.vapi.ai';
+const AUTOCALL_URL = 'https://silver-ganache-1ee2ca.netlify.app/.netlify/functions/autocall';
+const READMAIL_URL = 'https://silver-ganache-1ee2ca.netlify.app/.netlify/functions/readmail';
+
+const ASSISTANT_MAP = {
+  'Rosalia Outbound': 'Alex',
+  'Iron 65 Inbound': 'Jessica',
+  'Iron 65 Outbound': 'Iron 65 Outbound',
+  'Mechanical Inbound': 'Mechanical Inbound'
+};
+
+let monitorInterval = null;
+
+function monTimeAgo(d) {
+  const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+
+function monFmtTime(d) {
+  if (!d) return '--';
+  return new Date(d).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true });
+}
+
+function monDot(color, pulse) {
+  return `<span class="mon-dot ${color}${pulse ? ' pulse-dot' : ''}"></span>`;
+}
+
+async function monFetchVapi(path) {
+  const r = await fetch(VAPI_BASE + path, { headers: { 'Authorization': 'Bearer ' + VAPI_KEY } });
+  if (!r.ok) throw new Error('Vapi ' + r.status);
+  return r.json();
+}
+
+async function monFetchSupabase(table, query) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  });
+  if (!r.ok) throw new Error('Supabase ' + r.status);
+  return r.json();
+}
+
+// PANEL 1: AI Assistants
+async function monLoadAssistants() {
+  const el = document.getElementById('mon-assistants');
+  try {
+    const calls = await monFetchVapi('/call?limit=100');
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate()-1);
+
+    const todayCalls = calls.filter(c => new Date(c.createdAt) >= todayStart);
+    const yesterdayCalls = calls.filter(c => { const d = new Date(c.createdAt); return d >= yesterdayStart && d < todayStart; });
+    const errors = calls.filter(c => c.endedReason === 'error' || c.endedReason === 'call.start.error' || c.endedReason === 'providerfault' || (c.status === 'errored'));
+
+    // Group by assistant
+    const assistants = {};
+    for (const name of Object.values(ASSISTANT_MAP)) assistants[name] = { lastCall: null, status: '--', endedReason: '--', calls: 0 };
+    calls.forEach(c => {
+      const aName = c.assistant?.name || c.assistantId || 'Unknown';
+      let mapped = null;
+      for (const [key, val] of Object.entries(ASSISTANT_MAP)) {
+        if (aName.toLowerCase().includes(key.toLowerCase())) { mapped = val; break; }
+      }
+      if (!mapped) return;
+      assistants[mapped].calls++;
+      if (!assistants[mapped].lastCall || new Date(c.createdAt) > new Date(assistants[mapped].lastCall)) {
+        assistants[mapped].lastCall = c.createdAt;
+        assistants[mapped].status = c.status || '--';
+        assistants[mapped].endedReason = c.endedReason || '--';
+      }
+    });
+
+    let html = '';
+    for (const [name, data] of Object.entries(assistants)) {
+      const isErr = data.status === 'errored' || data.endedReason === 'error';
+      const dot = isErr ? 'red' : (data.lastCall ? 'green' : 'gray');
+      html += `<div class="mon-row">
+        ${monDot(dot, dot==='green')}
+        <span class="mon-label">${name}</span>
+        <span class="mon-val">${data.lastCall ? monTimeAgo(data.lastCall) : 'No calls'}</span>
+        <span class="${isErr ? 'mon-error' : 'mon-val'}">${data.status}</span>
+      </div>`;
+    }
+
+    html += `<div class="mon-metrics-grid" style="margin-top:16px;">
+      <div class="mon-metric"><div class="mon-metric-val">${todayCalls.length}</div><div class="mon-metric-lbl">Today</div></div>
+      <div class="mon-metric"><div class="mon-metric-val">${yesterdayCalls.length}</div><div class="mon-metric-lbl">Yesterday</div></div>
+      <div class="mon-metric"><div class="mon-metric-val" style="color:${errors.length ? 'var(--red)' : 'var(--green)'}">${errors.length}</div><div class="mon-metric-lbl">Errors</div></div>
+    </div>`;
+
+    if (errors.length > 0) {
+      html += `<div class="mon-section-label">Recent Errors</div>`;
+      errors.slice(0,3).forEach(e => {
+        html += `<div class="mon-row">${monDot('red')} <span class="mon-error">${e.endedReason || e.status} — ${monFmtTime(e.createdAt)}</span></div>`;
+      });
+    }
+
+    el.innerHTML = html;
+    document.getElementById('mon-calls-today').textContent = todayCalls.length;
+    document.getElementById('mon-calls-sub').textContent = `vs ${yesterdayCalls.length} yesterday`;
+
+    // Success rate
+    const ended = todayCalls.filter(c => c.status === 'ended');
+    const errored = todayCalls.filter(c => c.status === 'errored' || c.endedReason === 'error');
+    const rate = todayCalls.length ? Math.round(((todayCalls.length - errored.length) / todayCalls.length) * 100) : 0;
+    document.getElementById('mon-success-rate').textContent = todayCalls.length ? rate + '%' : '--';
+    document.getElementById('mon-success-sub').textContent = todayCalls.length ? `${todayCalls.length - errored.length}/${todayCalls.length} successful` : 'no calls yet';
+
+    return calls;
+  } catch(e) {
+    el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Failed to load: ${e.message}</span></div>`;
+    return [];
+  }
+}
+
+// PANEL 2: Emails
+async function monLoadEmails() {
+  const el = document.getElementById('mon-emails');
+  try {
+    const leads = await monFetchSupabase('leads', 'select=name,replied_at,property&replied_at=not.is.null&order=replied_at.desc&limit=20');
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const todayEmails = leads.filter(l => new Date(l.replied_at) >= todayStart);
+
+    document.getElementById('mon-emails-today').textContent = todayEmails.length;
+    document.getElementById('mon-emails-sub').textContent = `${leads.length} recent replies`;
+
+    if (leads.length === 0) {
+      el.innerHTML = `<div class="mon-row">${monDot('yellow')} <span class="mon-val">No email replies found</span></div>`;
+      return leads;
+    }
+
+    let html = `<div class="mon-metrics-grid">
+      <div class="mon-metric"><div class="mon-metric-val">${todayEmails.length}</div><div class="mon-metric-lbl">Sent Today</div></div>
+      <div class="mon-metric"><div class="mon-metric-val">${leads.length}</div><div class="mon-metric-lbl">Recent Total</div></div>
+      <div class="mon-metric"><div class="mon-metric-val">${monDot(todayEmails.length > 0 ? 'green' : 'yellow', true)}</div><div class="mon-metric-lbl">Status</div></div>
+    </div>`;
+    html += `<div class="mon-section-label">Last 10 Replies</div>`;
+    leads.slice(0,10).forEach(l => {
+      html += `<div class="mon-row">
+        ${monDot('green')}
+        <span class="mon-label">${l.name || 'Unknown'}</span>
+        <span class="mon-val">${l.property || '--'}</span>
+        <span class="mon-val" style="text-align:right">${monTimeAgo(l.replied_at)}</span>
+      </div>`;
+    });
+    el.innerHTML = html;
+    return leads;
+  } catch(e) {
+    el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Failed to load: ${e.message}</span></div>`;
+    return [];
+  }
+}
+
+// PANEL 3: Calls & Texts
+async function monLoadCallsTexts(vapiCalls) {
+  const el = document.getElementById('mon-calls');
+  try {
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const last24h = new Date(Date.now() - 86400000);
+
+    const recent = (vapiCalls || []).filter(c => new Date(c.createdAt) >= last24h);
+    const successful = recent.filter(c => c.status === 'ended' && c.endedReason !== 'error');
+    const failed = recent.filter(c => c.status === 'errored' || c.endedReason === 'error' || c.endedReason === 'providerfault');
+    const durations = recent.filter(c => c.duration).map(c => c.duration);
+    const avgDur = durations.length ? Math.round(durations.reduce((a,b) => a+b, 0) / durations.length) : 0;
+
+    // Supabase call attempts
+    let callAttempts = 0;
+    let textsToday = 0;
+    try {
+      const leads = await monFetchSupabase('leads', 'select=call_attempts,phone,updated_at&limit=500');
+      callAttempts = leads.reduce((s, l) => s + (l.call_attempts || 0), 0);
+      textsToday = leads.filter(l => l.phone && l.updated_at && new Date(l.updated_at) >= todayStart).length;
+    } catch(e) { /* ignore */ }
+
+    let html = `<div class="mon-metrics-grid">
+      <div class="mon-metric"><div class="mon-metric-val">${recent.length}</div><div class="mon-metric-lbl">Calls 24h</div></div>
+      <div class="mon-metric"><div class="mon-metric-val">${recent.length ? Math.round((successful.length/recent.length)*100) : 0}%</div><div class="mon-metric-lbl">Success Rate</div></div>
+      <div class="mon-metric"><div class="mon-metric-val">${avgDur ? Math.floor(avgDur/60) + ':' + String(avgDur%60).padStart(2,'0') : '--'}</div><div class="mon-metric-lbl">Avg Duration</div></div>
+    </div>`;
+
+    html += `<div class="mon-row">${monDot(successful.length > 0 ? 'green' : 'gray')} <span class="mon-label">Successful</span><span class="mon-success">${successful.length} calls</span></div>`;
+    html += `<div class="mon-row">${monDot(failed.length > 0 ? 'red' : 'gray')} <span class="mon-label">Failed</span><span class="${failed.length ? 'mon-error' : 'mon-val'}">${failed.length} calls</span></div>`;
+    html += `<div class="mon-row">${monDot('gray')} <span class="mon-label">Total Attempts (DB)</span><span class="mon-val">${callAttempts}</span></div>`;
+    html += `<div class="mon-row">${monDot('gray')} <span class="mon-label">Leads w/ Phone (Today)</span><span class="mon-val">${textsToday}</span></div>`;
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Failed: ${e.message}</span></div>`;
+  }
+}
+
+// PANEL 4: Autocall
+async function monLoadAutocall() {
+  const el = document.getElementById('mon-autocall');
+  try {
+    const r = await fetch(AUTOCALL_URL);
+    const data = await r.json();
+    const hasErrors = data.errors && data.errors.length > 0;
+    const dotColor = hasErrors ? 'red' : 'green';
+
+    let html = `<div class="mon-metrics-grid">
+      <div class="mon-metric"><div class="mon-metric-val">${data.leadsFound ?? data.found ?? '--'}</div><div class="mon-metric-lbl">Leads Found</div></div>
+      <div class="mon-metric"><div class="mon-metric-val">${data.called ?? data.processed ?? '--'}</div><div class="mon-metric-lbl">Called</div></div>
+      <div class="mon-metric"><div class="mon-metric-val">${data.skipped ?? '--'}</div><div class="mon-metric-lbl">Skipped</div></div>
+    </div>`;
+    html += `<div class="mon-row">${monDot(dotColor, true)} <span class="mon-label">Status</span><span class="${hasErrors ? 'mon-error' : 'mon-success'}">${hasErrors ? 'Errors detected' : 'Working'}</span></div>`;
+
+    if (hasErrors) {
+      data.errors.slice(0,3).forEach(err => {
+        html += `<div class="mon-row">${monDot('red')} <span class="mon-error">${typeof err === 'string' ? err : JSON.stringify(err)}</span></div>`;
+      });
+    }
+    el.innerHTML = html;
+    return !hasErrors;
+  } catch(e) {
+    el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Offline: ${e.message}</span></div>`;
+    return false;
+  }
+}
+
+// PANEL 5: Readmail
+async function monLoadReadmail() {
+  const el = document.getElementById('mon-readmail');
+  try {
+    const r = await fetch(READMAIL_URL);
+    const data = await r.json();
+    const hasErrors = data.errors && data.errors.length > 0;
+    const processed = data.processed ?? data.replied ?? 0;
+    const skipped = data.skipped ?? 0;
+    const dotColor = hasErrors ? 'red' : (processed > 0 ? 'green' : (skipped > 0 ? 'yellow' : 'gray'));
+
+    let html = `<div class="mon-metrics-grid">
+      <div class="mon-metric"><div class="mon-metric-val">${data.unread ?? data.total ?? '--'}</div><div class="mon-metric-lbl">Unread</div></div>
+      <div class="mon-metric"><div class="mon-metric-val">${processed}</div><div class="mon-metric-lbl">Processed</div></div>
+      <div class="mon-metric"><div class="mon-metric-val">${skipped}</div><div class="mon-metric-lbl">Skipped</div></div>
+    </div>`;
+
+    const statusText = hasErrors ? 'Errors detected' : (processed > 0 ? 'Processing' : (skipped > 0 ? 'All skipped' : 'Idle'));
+    html += `<div class="mon-row">${monDot(dotColor, true)} <span class="mon-label">Status</span><span class="${hasErrors ? 'mon-error' : (dotColor === 'yellow' ? 'mon-val' : 'mon-success')}">${statusText}</span></div>`;
+
+    if (hasErrors) {
+      (data.errors || []).slice(0,3).forEach(err => {
+        html += `<div class="mon-row">${monDot('red')} <span class="mon-error">${typeof err === 'string' ? err : JSON.stringify(err)}</span></div>`;
+      });
+    }
+    el.innerHTML = html;
+    return !hasErrors;
+  } catch(e) {
+    el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Offline: ${e.message}</span></div>`;
+    return false;
+  }
+}
+
+// PANEL 6: Activity Feed
+async function monLoadFeed(vapiCalls, emailLeads) {
+  const el = document.getElementById('mon-feed');
+  const items = [];
+
+  // Vapi calls
+  (vapiCalls || []).slice(0,15).forEach(c => {
+    items.push({
+      time: new Date(c.createdAt),
+      icon: '\uD83D\uDCDE',
+      text: `Call ${c.status === 'ended' ? 'completed' : c.status} — ${c.assistant?.name || 'Unknown'}${c.endedReason ? ' (' + c.endedReason + ')' : ''}`,
+      color: c.status === 'errored' ? 'mon-error' : 'mon-val'
+    });
+  });
+
+  // Email replies
+  (emailLeads || []).slice(0,10).forEach(l => {
+    items.push({
+      time: new Date(l.replied_at),
+      icon: '\u2709\uFE0F',
+      text: `Email reply sent to ${l.name || 'Unknown'}${l.property ? ' — ' + l.property : ''}`,
+      color: 'mon-val'
+    });
+  });
+
+  // Bookings
+  try {
+    const bookings = await monFetchSupabase('bookings', 'select=*&order=created_at.desc&limit=10');
+    bookings.forEach(b => {
+      items.push({
+        time: new Date(b.created_at),
+        icon: '\uD83D\uDCC5',
+        text: `Booking: ${b.name || b.lead_name || 'Unknown'}${b.property ? ' — ' + b.property : ''}`,
+        color: 'mon-success'
+      });
+    });
+  } catch(e) { /* no bookings table or empty */ }
+
+  items.sort((a,b) => b.time - a.time);
+
+  if (items.length === 0) {
+    el.innerHTML = `<div class="mon-row">${monDot('gray')} <span class="mon-val">No recent activity</span></div>`;
+    return;
+  }
+
+  let html = '';
+  items.slice(0,20).forEach(item => {
+    html += `<div class="mon-feed-item">
+      <span class="mon-feed-icon">${item.icon}</span>
+      <span class="${item.color}">${item.text}</span>
+      <span class="mon-feed-time">${monTimeAgo(item.time)}</span>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+// Master refresh
+async function monitorRefreshAll() {
+  document.getElementById('mon-last-updated').textContent = 'Updating...';
+
+  let systemsUp = 0;
+  const totalSystems = 4;
+
+  const [vapiCalls, emailLeads] = await Promise.all([
+    monLoadAssistants().then(r => { systemsUp++; return r; }).catch(() => []),
+    monLoadEmails().then(r => { systemsUp++; return r; }).catch(() => [])
+  ]);
+
+  const [autocallOk, readmailOk] = await Promise.all([
+    monLoadAutocall().then(ok => { if(ok) systemsUp++; return ok; }).catch(() => false),
+    monLoadReadmail().then(ok => { if(ok) systemsUp++; return ok; }).catch(() => false)
+  ]);
+
+  await Promise.all([
+    monLoadCallsTexts(vapiCalls),
+    monLoadFeed(vapiCalls, emailLeads)
+  ]);
+
+  document.getElementById('mon-systems-up').textContent = systemsUp + '/' + totalSystems;
+  document.getElementById('mon-systems-sub').textContent = systemsUp === totalSystems ? 'all operational' : (totalSystems - systemsUp) + ' issue(s)';
+  document.getElementById('mon-last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+  // Auto-refresh every 60s
+  if (monitorInterval) clearInterval(monitorInterval);
+  monitorInterval = setInterval(() => {
+    if (document.getElementById('page-monitor').classList.contains('active')) {
+      monitorRefreshAll();
+    } else {
+      clearInterval(monitorInterval);
+      monitorInterval = null;
+    }
+  }, 60000);
+}
 </script>
 </body>
 </html>
