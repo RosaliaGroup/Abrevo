@@ -34,6 +34,44 @@
   status = 200
   force = true
 
+# Rosalia Group booking links
+[[redirects]]
+  from = "/book"
+  to = "/booking-rosalia.html"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/reschedule"
+  to = "/booking-rosalia.html?type=reschedule"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/iron65"
+  to = "/booking-form.html"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/iron65-reschedule"
+  to = "/booking-form.html?type=reschedule"
+  status = 302
+  force = true
+
+# Mechanical Enterprise booking links
+[[redirects]]
+  from = "/hvac"
+  to = "/booking-form-hvac.html"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/hvac-reschedule"
+  to = "/booking-form-hvac.html?type=reschedule"
+  status = 302
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
