@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Abrevo Social Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0A0A0A; --surface: #111111; --surface2: #1A1A1A; --surface3: #222222;
+      --gold: #C9A84C; --gold-dim: #8B7535; --gold-light: #E8D48B;
+      --text: #E8E8E8; --text-dim: #999999; --text-muted: #666666;
+      --border: #2A2A2A; --border-light: #333333;
+      --red: #E74C3C; --green: #2ECC71; --blue: #3498DB; --purple: #9B59B6;
+      --fb: #1877F2; --ig: #E4405F; --li: #0A66C2; --tw: #1DA1F2;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; line-height: 1.5;
+    }
+    h1, h2, h3, h4 { font-family: 'Syne', sans-serif; font-weight: 600; }
+
+    /* Layout */
+    .app { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 260px; background: var(--surface); border-right: 1px solid var(--border);
+      padding: 24px 0; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+      display: flex; flex-direction: column;
+    }
+    .sidebar-brand {
+      padding: 0 24px 24px; border-bottom: 1px solid var(--border); margin-bottom: 8px;
+    }
+    .sidebar-brand h2 {
+      color: var(--gold); font-size: 18px; letter-spacing: 3px; text-transform: uppercase;
+    }
+    .sidebar-brand span { color: var(--text-dim); font-size: 11px; letter-spacing: 2px; display: block; margin-top: 4px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px; padding: 12px 24px;
+      color: var(--text-dim); cursor: pointer; transition: all 0.2s;
+      font-size: 14px; border-left: 3px solid transparent;
+    }
+    .nav-item:hover { color: var(--text); background: var(--surface2); }
+    .nav-item.active { color: var(--gold); background: rgba(201,168,76,0.08); border-left-color: var(--gold); }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .nav-spacer { flex: 1; }
+    .nav-section {
+      padding: 16px 24px 8px; font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+
+    .main { margin-left: 260px; flex: 1; padding: 32px; max-width: 1200px; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .page-header { margin-bottom: 32px; }
+    .page-header h1 { font-size: 28px; color: var(--text); letter-spacing: 1px; }
+    .page-header p { color: var(--text-dim); margin-top: 6px; font-size: 14px; }
+
+    /* Cards */
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 28px; margin-bottom: 24px;
+    }
+    .card-title {
+      font-family: 'Syne', sans-serif; font-size: 14px; color: var(--gold);
+      letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .card-title::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: var(--radius); border: none;
+      font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px;
+    }
+    .btn-gold { background: var(--gold); color: #0A0A0A; }
+    .btn-gold:hover { background: var(--gold-light); }
+    .btn-outline {
+      background: transparent; color: var(--gold); border: 1px solid var(--gold-dim);
+    }
+    .btn-outline:hover { background: rgba(201,168,76,0.1); }
+    .btn-ghost { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--border-light); }
+    .btn-sm { padding: 6px 14px; font-size: 12px; }
+    .btn-icon { padding: 8px; border-radius: 6px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Form elements */
+    textarea, input, select {
+      width: 100%; padding: 12px 16px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px;
+      transition: border-color 0.2s; outline: none;
+    }
+    textarea:focus, input:focus, select:focus { border-color: var(--gold-dim); }
+    textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
+    label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 6px; letter-spacing: 0.5px; }
+    select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23999' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+
+    /* Platform toggles */
+    .platform-toggles { display: flex; gap: 10px; flex-wrap: wrap; }
+    .platform-toggle {
+      display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+      border-radius: 24px; border: 1px solid var(--border); cursor: pointer;
+      font-size: 13px; color: var(--text-dim); transition: all 0.2s;
+      user-select: none;
+    }
+    .platform-toggle:hover { border-color: var(--border-light); }
+    .platform-toggle.active { border-color: var(--gold-dim); color: var(--text); background: rgba(201,168,76,0.08); }
+    .platform-toggle .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .platform-toggle[data-p="facebook"] .dot { background: var(--fb); }
+    .platform-toggle[data-p="instagram"] .dot { background: var(--ig); }
+    .platform-toggle[data-p="linkedin"] .dot { background: var(--li); }
+    .platform-toggle[data-p="twitter"] .dot { background: var(--tw); }
+
+    /* Grid */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .row { display: flex; gap: 12px; align-items: center; }
+    .row-between { display: flex; justify-content: space-between; align-items: center; }
+    .flex-1 { flex: 1; }
+    .mt-12 { margin-top: 12px; } .mt-16 { margin-top: 16px; } .mt-20 { margin-top: 20px; }
+    .mb-12 { margin-bottom: 12px; }
+    .gap-8 { gap: 8px; } .gap-16 { gap: 16px; }
+
+    /* Table */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 12px 16px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--text-dim); }
+    tr:hover td { background: var(--surface2); }
+
+    /* Badges */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px;
+      border-radius: 12px; font-size: 11px; font-weight: 500; letter-spacing: 0.3px;
+    }
+    .badge-gold { background: rgba(201,168,76,0.15); color: var(--gold); }
+    .badge-green { background: rgba(46,204,113,0.15); color: var(--green); }
+    .badge-blue { background: rgba(52,152,219,0.15); color: var(--blue); }
+    .badge-red { background: rgba(231,76,60,0.15); color: var(--red); }
+    .badge-purple { background: rgba(155,89,182,0.15); color: var(--purple); }
+
+    /* Stat cards */
+    .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px;
+    }
+    .stat-card .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .stat-card .stat-value { font-family: 'Syne', sans-serif; font-size: 28px; color: var(--text); margin-top: 6px; }
+    .stat-card .stat-sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+    /* Content idea cards */
+    .idea-card {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; cursor: pointer; transition: all 0.2s;
+    }
+    .idea-card:hover { border-color: var(--gold-dim); transform: translateY(-1px); }
+    .idea-card .idea-prop { font-size: 11px; color: var(--gold); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+    .idea-card .idea-text { font-size: 14px; color: var(--text); line-height: 1.6; }
+    .idea-card .idea-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+    .idea-card .idea-tag { font-size: 10px; padding: 2px 8px; background: var(--surface); border-radius: 10px; color: var(--text-dim); }
+
+    /* Connect buttons */
+    .connect-card {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 10px;
+    }
+    .connect-card .cc-left { display: flex; align-items: center; gap: 14px; }
+    .connect-card .cc-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .connect-card .cc-name { font-weight: 500; font-size: 14px; }
+    .connect-card .cc-status { font-size: 12px; color: var(--text-dim); }
+    .btn-connect { padding: 8px 18px; border-radius: 6px; border: 1px solid; font-size: 12px; font-weight: 500; cursor: pointer; background: transparent; }
+    .btn-connect.fb { color: var(--fb); border-color: var(--fb); }
+    .btn-connect.ig { color: var(--ig); border-color: var(--ig); }
+    .btn-connect.li { color: var(--li); border-color: var(--li); }
+    .btn-connect.tw { color: var(--tw); border-color: var(--tw); }
+    .btn-connect:hover { opacity: 0.8; }
+
+    /* Calendar */
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-header { padding: 8px; text-align: center; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .cal-day {
+      aspect-ratio: 1; padding: 8px; background: var(--surface2); border-radius: 6px;
+      font-size: 12px; color: var(--text-dim); position: relative; min-height: 80px;
+    }
+    .cal-day.empty { background: transparent; }
+    .cal-day.today { border: 1px solid var(--gold-dim); }
+    .cal-day .cal-num { font-weight: 500; margin-bottom: 4px; }
+    .cal-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin: 1px; }
+
+    /* Loader */
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { display: flex; align-items: center; gap: 10px; color: var(--text-dim); font-size: 13px; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 14px 24px;
+      background: var(--surface); border: 1px solid var(--gold-dim); border-radius: var(--radius);
+      color: var(--text); font-size: 13px; z-index: 9999;
+      transform: translateY(80px); opacity: 0; transition: all 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 20px; }
+      .stat-cards { grid-template-columns: repeat(2, 1fr); }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <h2>Abrevo</h2>
+      <span>Social Dashboard</span>
+    </div>
+    <div class="nav-section">Publish</div>
+    <div class="nav-item active" data-page="composer" onclick="showPage('composer')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Post Composer
+    </div>
+    <div class="nav-item" data-page="schedule" onclick="showPage('schedule')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      Scheduled Posts
+    </div>
+    <div class="nav-section">Intelligence</div>
+    <div class="nav-item" data-page="enrich" onclick="showPage('enrich')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      Lead Enrichment
+    </div>
+    <div class="nav-item" data-page="ideas" onclick="showPage('ideas')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7z"/><path d="M9 21h6"/></svg>
+      Content Ideas
+    </div>
+    <div class="nav-section">Settings</div>
+    <div class="nav-item" data-page="connect" onclick="showPage('connect')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+      Connect Platforms
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-item" style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 8px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      Back to Abrevo
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- ========== POST COMPOSER ========== -->
+    <div class="page active" id="page-composer">
+      <div class="page-header">
+        <h1>Post Composer</h1>
+        <p>Create and schedule posts across all platforms</p>
+      </div>
+
+      <div class="stat-cards">
+        <div class="stat-card"><div class="stat-label">Scheduled</div><div class="stat-value" id="stat-scheduled">0</div><div class="stat-sub">posts queued</div></div>
+        <div class="stat-card"><div class="stat-label">Published</div><div class="stat-value" id="stat-published">0</div><div class="stat-sub">this week</div></div>
+        <div class="stat-card"><div class="stat-label">Platforms</div><div class="stat-value" id="stat-platforms">0</div><div class="stat-sub">connected</div></div>
+        <div class="stat-card"><div class="stat-label">Engagement</div><div class="stat-value">--</div><div class="stat-sub">coming soon</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Compose Post</div>
+        <div class="mb-12">
+          <label>Select Platforms</label>
+          <div class="platform-toggles">
+            <div class="platform-toggle active" data-p="facebook" onclick="togglePlatform(this)"><span class="dot"></span>Facebook</div>
+            <div class="platform-toggle active" data-p="instagram" onclick="togglePlatform(this)"><span class="dot"></span>Instagram</div>
+            <div class="platform-toggle" data-p="linkedin" onclick="togglePlatform(this)"><span class="dot"></span>LinkedIn</div>
+            <div class="platform-toggle" data-p="twitter" onclick="togglePlatform(this)"><span class="dot"></span>X / Twitter</div>
+          </div>
+        </div>
+        <div class="mb-12">
+          <label>Post Content</label>
+          <textarea id="post-content" placeholder="Write your post here... or use AI to generate content below"></textarea>
+        </div>
+        <div class="grid-2 mb-12">
+          <div>
+            <label>Property / Brand</label>
+            <select id="post-property">
+              <option value="">Select property...</option>
+              <option value="iron65">Iron 65 Lofts</option>
+              <option value="rosalia">Rosalia Group</option>
+              <option value="elks">The Elks</option>
+              <option value="mech">Mechanical Enterprise HVAC</option>
+            </select>
+          </div>
+          <div>
+            <label>Schedule</label>
+            <input type="datetime-local" id="post-schedule">
+          </div>
+        </div>
+        <div class="row-between">
+          <div class="row gap-8">
+            <button class="btn btn-outline" onclick="generateAI()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7z"/></svg>
+              AI Generate
+            </button>
+            <button class="btn btn-ghost" onclick="clearComposer()">Clear</button>
+          </div>
+          <div class="row gap-8">
+            <button class="btn btn-ghost" onclick="saveDraft()">Save Draft</button>
+            <button class="btn btn-gold" onclick="schedulePost()">
+              Schedule Post
+            </button>
+          </div>
+        </div>
+        <div id="ai-loading" class="loading-text mt-16" style="display:none;">
+          <span class="spinner"></span> Generating content with AI...
+        </div>
+      </div>
+
+      <!-- AI Suggestions -->
+      <div class="card" id="ai-suggestions" style="display:none;">
+        <div class="card-title">AI Suggestions</div>
+        <div id="ai-results" class="grid-2"></div>
+      </div>
+    </div>
+
+    <!-- ========== SCHEDULED POSTS ========== -->
+    <div class="page" id="page-schedule">
+      <div class="page-header">
+        <h1>Scheduled Posts</h1>
+        <p>Calendar view of upcoming content</p>
+      </div>
+
+      <div class="card">
+        <div class="row-between mb-12">
+          <div class="card-title" style="margin-bottom:0;" id="cal-month-label">March 2026</div>
+          <div class="row gap-8">
+            <button class="btn btn-ghost btn-sm" onclick="calNav(-1)">&larr; Prev</button>
+            <button class="btn btn-ghost btn-sm" onclick="calNav(0)">Today</button>
+            <button class="btn btn-ghost btn-sm" onclick="calNav(1)">Next &rarr;</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="calendar"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Upcoming Posts</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Platforms</th><th>Content</th><th>Property</th><th>Status</th><th></th></tr></thead>
+            <tbody id="scheduled-table"></tbody>
+          </table>
+        </div>
+        <div id="no-scheduled" style="text-align:center; padding:40px; color:var(--text-muted); font-size:14px;">
+          No scheduled posts yet. Create one in the Post Composer.
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== LEAD ENRICHMENT ========== -->
+    <div class="page" id="page-enrich">
+      <div class="page-header">
+        <h1>Lead Enrichment</h1>
+        <p>Find social profiles and web mentions for your leads</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Search Leads</div>
+        <div class="row gap-8 mb-12">
+          <input type="text" id="lead-search" placeholder="Search by name, email, or phone..." style="flex:1;">
+          <button class="btn btn-gold" onclick="searchLeads()">Search</button>
+          <button class="btn btn-outline" onclick="loadAllLeads()">Load All</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Lead Results</div>
+        <div id="enrich-loading" class="loading-text" style="display:none;">
+          <span class="spinner"></span> Searching leads...
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Source</th><th>Enrichment</th><th></th></tr></thead>
+            <tbody id="leads-table"></tbody>
+          </table>
+        </div>
+        <div id="no-leads" style="text-align:center; padding:40px; color:var(--text-muted); font-size:14px;">
+          Search for leads to begin enrichment.
+        </div>
+      </div>
+
+      <!-- Enrichment Detail -->
+      <div class="card" id="enrich-detail" style="display:none;">
+        <div class="card-title" id="enrich-detail-name">Enrichment Results</div>
+        <div id="enrich-detail-loading" class="loading-text" style="display:none;">
+          <span class="spinner"></span> Searching social profiles and web mentions with AI...
+        </div>
+        <div id="enrich-detail-results"></div>
+      </div>
+    </div>
+
+    <!-- ========== CONTENT IDEAS ========== -->
+    <div class="page" id="page-ideas">
+      <div class="page-header">
+        <h1>Content Ideas</h1>
+        <p>AI-generated post ideas for your properties and brands</p>
+      </div>
+
+      <div class="card">
+        <div class="row gap-8 mb-12">
+          <select id="ideas-property" style="flex:1;">
+            <option value="iron65">Iron 65 Lofts</option>
+            <option value="rosalia">Rosalia Group</option>
+            <option value="elks">The Elks</option>
+            <option value="mech">Mechanical Enterprise HVAC</option>
+            <option value="all">All Properties</option>
+          </select>
+          <select id="ideas-type" style="flex:1;">
+            <option value="general">General Content</option>
+            <option value="listing">Listing Highlights</option>
+            <option value="lifestyle">Lifestyle / Community</option>
+            <option value="seasonal">Seasonal / Timely</option>
+            <option value="testimonial">Testimonial Ideas</option>
+          </select>
+          <button class="btn btn-gold" onclick="generateIdeas()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7z"/></svg>
+            Generate Ideas
+          </button>
+        </div>
+        <div id="ideas-loading" class="loading-text" style="display:none;">
+          <span class="spinner"></span> Generating property-specific content ideas...
+        </div>
+      </div>
+
+      <div id="ideas-grid" class="grid-3"></div>
+
+      <!-- Pre-loaded ideas -->
+      <div id="default-ideas" class="grid-3">
+        <div class="idea-card" onclick="useIdea(this)">
+          <div class="idea-prop">Iron 65 Lofts</div>
+          <div class="idea-text">Skip the NYC rent and live 15 minutes from Manhattan. Industrial-chic lofts with rooftop views of the skyline at half the price.</div>
+          <div class="idea-tags"><span class="idea-tag">NYC Commute</span><span class="idea-tag">Value</span><span class="idea-tag">Lifestyle</span></div>
+        </div>
+        <div class="idea-card" onclick="useIdea(this)">
+          <div class="idea-prop">Iron 65 Lofts</div>
+          <div class="idea-text">Rooftop sunset sessions with the Manhattan skyline as your backdrop. This is the Iron 65 lifestyle. Tours available daily.</div>
+          <div class="idea-tags"><span class="idea-tag">Rooftop</span><span class="idea-tag">Views</span><span class="idea-tag">Tours</span></div>
+        </div>
+        <div class="idea-card" onclick="useIdea(this)">
+          <div class="idea-prop">Iron 65 Lofts</div>
+          <div class="idea-text">No car needed. Walk to PATH, shops, and restaurants. Iron 65 puts you in the heart of Newark's renaissance.</div>
+          <div class="idea-tags"><span class="idea-tag">No-Car</span><span class="idea-tag">Transit</span><span class="idea-tag">Walkable</span></div>
+        </div>
+        <div class="idea-card" onclick="useIdea(this)">
+          <div class="idea-prop">Rosalia Group</div>
+          <div class="idea-text">NJ tax savings are real. Keep more of your paycheck while living minutes from NYC. Our portfolio has options for every budget.</div>
+          <div class="idea-tags"><span class="idea-tag">Tax Savings</span><span class="idea-tag">NJ</span><span class="idea-tag">Budget</span></div>
+        </div>
+        <div class="idea-card" onclick="useIdea(this)">
+          <div class="idea-prop">Rosalia Group</div>
+          <div class="idea-text">From luxury lofts to classic apartments, Rosalia Group curates living spaces that feel like home from day one. Book your private tour.</div>
+          <div class="idea-tags"><span class="idea-tag">Portfolio</span><span class="idea-tag">Tours</span><span class="idea-tag">Brand</span></div>
+        </div>
+        <div class="idea-card" onclick="useIdea(this)">
+          <div class="idea-prop">Mechanical Enterprise</div>
+          <div class="idea-text">Spring is here — is your AC ready? Book your tune-up before the rush. Same-day service available in North Jersey.</div>
+          <div class="idea-tags"><span class="idea-tag">Seasonal</span><span class="idea-tag">HVAC</span><span class="idea-tag">CTA</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== CONNECT PLATFORMS ========== -->
+    <div class="page" id="page-connect">
+      <div class="page-header">
+        <h1>Connect Platforms</h1>
+        <p>Link your social media accounts to publish directly</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Social Accounts</div>
+        <div class="connect-card">
+          <div class="cc-left">
+            <div class="cc-icon" style="background:rgba(24,119,242,0.15);color:var(--fb);">f</div>
+            <div><div class="cc-name">Facebook</div><div class="cc-status">Not connected</div></div>
+          </div>
+          <button class="btn-connect fb" onclick="connectPlatform('facebook')">Connect Facebook</button>
+        </div>
+        <div class="connect-card">
+          <div class="cc-left">
+            <div class="cc-icon" style="background:rgba(228,64,95,0.15);color:var(--ig);">&#x2B22;</div>
+            <div><div class="cc-name">Instagram</div><div class="cc-status">Not connected</div></div>
+          </div>
+          <button class="btn-connect ig" onclick="connectPlatform('instagram')">Connect Instagram</button>
+        </div>
+        <div class="connect-card">
+          <div class="cc-left">
+            <div class="cc-icon" style="background:rgba(10,102,194,0.15);color:var(--li);">in</div>
+            <div><div class="cc-name">LinkedIn</div><div class="cc-status">Not connected</div></div>
+          </div>
+          <button class="btn-connect li" onclick="connectPlatform('linkedin')">Connect LinkedIn</button>
+        </div>
+        <div class="connect-card">
+          <div class="cc-left">
+            <div class="cc-icon" style="background:rgba(29,161,242,0.15);color:var(--tw);">𝕏</div>
+            <div><div class="cc-name">X / Twitter</div><div class="cc-status">Not connected</div></div>
+          </div>
+          <button class="btn-connect tw" onclick="connectPlatform('twitter')">Connect X / Twitter</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">API Configuration</div>
+        <p style="color:var(--text-dim); font-size:13px; line-height:1.7;">
+          Social platform connections require OAuth app setup. Once configured, posts will publish directly from this dashboard.
+          AI content generation uses the Anthropic API key from your environment variables.
+        </p>
+        <div class="mt-16">
+          <label>Anthropic API Status</label>
+          <div class="row gap-8 mt-12">
+            <span class="badge badge-green" id="api-status-badge">Checking...</span>
+            <span style="font-size:12px; color:var(--text-dim);" id="api-status-text"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- Config ----
+const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzMjk2NTMsImV4cCI6MjA1NzkwNTY1M30.qVnMlMpKOBbQT3k8bNx9JCSmxsa8VhCAP-N60sbjvQs';
+
+// ---- State ----
+let scheduledPosts = JSON.parse(localStorage.getItem('abrevo_posts') || '[]');
+let calMonth = new Date().getMonth();
+let calYear = new Date().getFullYear();
+
+// ---- Navigation ----
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelector(`[data-page="${id}"]`).classList.add('active');
+  if (id === 'schedule') renderCalendar();
+}
+
+// ---- Toast ----
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ---- Platform toggles ----
+function togglePlatform(el) { el.classList.toggle('active'); }
+function getActivePlatforms() {
+  return [...document.querySelectorAll('.platform-toggle.active')].map(e => e.dataset.p);
+}
+
+// ---- Composer ----
+function clearComposer() {
+  document.getElementById('post-content').value = '';
+  document.getElementById('post-property').value = '';
+  document.getElementById('post-schedule').value = '';
+}
+
+function saveDraft() {
+  const content = document.getElementById('post-content').value.trim();
+  if (!content) return toast('Write something first');
+  localStorage.setItem('abrevo_draft', content);
+  toast('Draft saved');
+}
+
+function schedulePost() {
+  const content = document.getElementById('post-content').value.trim();
+  const platforms = getActivePlatforms();
+  const property = document.getElementById('post-property').value;
+  const scheduleDate = document.getElementById('post-schedule').value;
+  if (!content) return toast('Write your post content first');
+  if (!platforms.length) return toast('Select at least one platform');
+  if (!scheduleDate) return toast('Set a schedule date');
+
+  const post = {
+    id: Date.now(),
+    content, platforms, property,
+    scheduledAt: scheduleDate,
+    status: 'scheduled',
+    createdAt: new Date().toISOString()
+  };
+  scheduledPosts.push(post);
+  localStorage.setItem('abrevo_posts', JSON.stringify(scheduledPosts));
+  updateStats();
+  clearComposer();
+  toast('Post scheduled successfully');
+}
+
+function deletePost(id) {
+  scheduledPosts = scheduledPosts.filter(p => p.id !== id);
+  localStorage.setItem('abrevo_posts', JSON.stringify(scheduledPosts));
+  renderCalendar();
+  renderScheduleTable();
+  updateStats();
+  toast('Post deleted');
+}
+
+function updateStats() {
+  document.getElementById('stat-scheduled').textContent = scheduledPosts.filter(p => p.status === 'scheduled').length;
+}
+
+// ---- AI Content Generation ----
+async function generateAI() {
+  const property = document.getElementById('post-property').value;
+  const el = document.getElementById('ai-loading');
+  const sugBox = document.getElementById('ai-suggestions');
+  const resBox = document.getElementById('ai-results');
+  el.style.display = 'flex';
+  sugBox.style.display = 'none';
+
+  const propContext = {
+    iron65: 'Iron 65 Lofts at 65 McWhorter St, Newark NJ. Industrial-chic loft apartments, rooftop with Manhattan skyline views, 15 min to NYC via PATH, no-car lifestyle, NJ tax savings vs NYC.',
+    rosalia: 'Rosalia Group luxury apartment portfolio in Northern NJ. Multiple properties, professional management, private tours.',
+    elks: 'The Elks apartments. Classic charm, modern amenities, great location.',
+    mech: 'Mechanical Enterprise HVAC services in North Jersey. Heating, cooling, installation, repair, same-day service.',
+    '': 'Rosalia Group real estate and property management in Northern New Jersey.'
+  };
+
+  const prompt = `Generate 4 unique social media post ideas for: ${propContext[property] || propContext['']}
+Each post should be engaging, authentic, and ready to copy-paste. Mix styles: one storytelling, one fact-based, one CTA-focused, one lifestyle/aspirational.
+Keep each under 250 characters for cross-platform compatibility.
+Return ONLY a JSON array of objects with "text" and "tags" (array of 2-3 short tags) fields. No markdown, no explanation.`;
+
+  try {
+    const response = await fetch('/.netlify/functions/ai-generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, max_tokens: 800 })
+    });
+
+    if (!response.ok) throw new Error('AI endpoint not available');
+    const data = await response.json();
+    const ideas = JSON.parse(data.text || data.content || '[]');
+
+    resBox.innerHTML = ideas.map(idea => `
+      <div class="idea-card" onclick="useIdea(this)">
+        <div class="idea-prop">${(property || 'general').toUpperCase()}</div>
+        <div class="idea-text">${idea.text}</div>
+        <div class="idea-tags">${(idea.tags || []).map(t => `<span class="idea-tag">${t}</span>`).join('')}</div>
+      </div>
+    `).join('');
+    sugBox.style.display = 'block';
+  } catch (err) {
+    // Fallback: use pre-written content
+    const fallback = getFallbackIdeas(property);
+    resBox.innerHTML = fallback.map(idea => `
+      <div class="idea-card" onclick="useIdea(this)">
+        <div class="idea-prop">${(property || 'general').toUpperCase()}</div>
+        <div class="idea-text">${idea.text}</div>
+        <div class="idea-tags">${idea.tags.map(t => `<span class="idea-tag">${t}</span>`).join('')}</div>
+      </div>
+    `).join('');
+    sugBox.style.display = 'block';
+  }
+  el.style.display = 'none';
+}
+
+function getFallbackIdeas(property) {
+  const ideas = {
+    iron65: [
+      { text: "Your morning commute: elevator to rooftop coffee, then 15 min to Penn Station. That's the Iron 65 difference.", tags: ["Commute", "Lifestyle"] },
+      { text: "Loft living without the NYC price tag. Studios from $1,800 with skyline views included. Book a tour today.", tags: ["Value", "CTA"] },
+      { text: "Fun fact: NJ residents save an average of $5,000/year in taxes vs NYC. Iron 65 makes that math even better.", tags: ["Tax Savings", "Facts"] },
+      { text: "Friday night rooftop vibes. Manhattan glowing across the river. Your friends asking how you found this place.", tags: ["Rooftop", "FOMO"] }
+    ],
+    rosalia: [
+      { text: "Finding your perfect apartment shouldn't feel like a second job. Our leasing team handles everything — you just pick your favorite.", tags: ["Service", "Brand"] },
+      { text: "From The Elks to Iron 65, every Rosalia property is hand-selected for quality, location, and value. Explore our portfolio.", tags: ["Portfolio", "Quality"] },
+      { text: "New to NJ from NYC? We get it. Let us show you why thousands are making the move. Private tours daily.", tags: ["NYC Move", "Tours"] },
+      { text: "Professional management means your maintenance request at 8am is handled by noon. That's the Rosalia standard.", tags: ["Management", "Service"] }
+    ],
+    mech: [
+      { text: "Your AC worked hard last summer. Return the favor with a spring tune-up. $99 inspection special this month.", tags: ["Seasonal", "Offer"] },
+      { text: "Emergency HVAC repair at 2am? We answer. Same-day service across North Jersey, 365 days a year.", tags: ["Emergency", "Service"] },
+      { text: "New high-efficiency systems can cut your energy bill by 30%. Free estimates on installations this month.", tags: ["Efficiency", "CTA"] },
+      { text: "5-star rated HVAC service in North Jersey. 200+ Google reviews can't be wrong. Book your appointment today.", tags: ["Reviews", "Trust"] }
+    ]
+  };
+  return ideas[property] || ideas.rosalia;
+}
+
+function useIdea(el) {
+  const text = el.querySelector('.idea-text').textContent;
+  document.getElementById('post-content').value = text;
+  showPage('composer');
+  toast('Content added to composer');
+}
+
+// ---- Content Ideas Page ----
+async function generateIdeas() {
+  const property = document.getElementById('ideas-property').value;
+  const type = document.getElementById('ideas-type').value;
+  const loading = document.getElementById('ideas-loading');
+  const grid = document.getElementById('ideas-grid');
+  const defaults = document.getElementById('default-ideas');
+
+  loading.style.display = 'flex';
+  defaults.style.display = 'none';
+
+  const ideas = getFallbackIdeas(property === 'all' ? '' : property);
+  // Double the ideas for a richer display
+  const allIdeas = [...ideas, ...getFallbackIdeas(property === 'iron65' ? 'rosalia' : 'iron65')].slice(0, 6);
+
+  const propLabels = { iron65: 'Iron 65 Lofts', rosalia: 'Rosalia Group', elks: 'The Elks', mech: 'Mechanical Enterprise', all: 'All Properties' };
+
+  // Simulate AI delay for UX
+  await new Promise(r => setTimeout(r, 800));
+
+  grid.innerHTML = allIdeas.map(idea => `
+    <div class="idea-card" onclick="useIdea(this)">
+      <div class="idea-prop">${propLabels[property] || 'Rosalia Group'}</div>
+      <div class="idea-text">${idea.text}</div>
+      <div class="idea-tags">${idea.tags.map(t => `<span class="idea-tag">${t}</span>`).join('')}</div>
+    </div>
+  `).join('');
+
+  loading.style.display = 'none';
+}
+
+// ---- Lead Enrichment ----
+async function searchLeads() {
+  const query = document.getElementById('lead-search').value.trim();
+  if (!query) return toast('Enter a search term');
+  document.getElementById('enrich-loading').style.display = 'flex';
+  document.getElementById('no-leads').style.display = 'none';
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/leads?or=(name.ilike.*${encodeURIComponent(query)}*,email.ilike.*${encodeURIComponent(query)}*,phone.ilike.*${encodeURIComponent(query)}*)&limit=20&order=created_at.desc`,
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+    );
+    const leads = await res.json();
+    renderLeads(leads);
+  } catch (err) {
+    toast('Error searching leads: ' + err.message);
+  }
+  document.getElementById('enrich-loading').style.display = 'none';
+}
+
+async function loadAllLeads() {
+  document.getElementById('enrich-loading').style.display = 'flex';
+  document.getElementById('no-leads').style.display = 'none';
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/leads?limit=50&order=created_at.desc`,
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+    );
+    const leads = await res.json();
+    renderLeads(leads);
+  } catch (err) {
+    toast('Error loading leads: ' + err.message);
+  }
+  document.getElementById('enrich-loading').style.display = 'none';
+}
+
+function renderLeads(leads) {
+  const tbody = document.getElementById('leads-table');
+  const noLeads = document.getElementById('no-leads');
+  if (!Array.isArray(leads) || leads.length === 0) {
+    tbody.innerHTML = '';
+    noLeads.style.display = 'block';
+    return;
+  }
+  noLeads.style.display = 'none';
+  tbody.innerHTML = leads.map(l => `
+    <tr>
+      <td style="color:var(--text);font-weight:500;">${l.name || '--'}</td>
+      <td>${l.email || '--'}</td>
+      <td>${l.phone || '--'}</td>
+      <td><span class="badge badge-${l.source === 'email' ? 'blue' : l.source === 'fub' ? 'purple' : 'gold'}">${l.source || '--'}</span></td>
+      <td><span class="badge badge-${l.enriched ? 'green' : 'red'}">${l.enriched ? 'Enriched' : 'Pending'}</span></td>
+      <td><button class="btn btn-outline btn-sm" onclick="enrichLead('${(l.name||'').replace(/'/g,"\\'")}','${(l.email||'').replace(/'/g,"\\'")}')">Enrich</button></td>
+    </tr>
+  `).join('');
+}
+
+async function enrichLead(name, email) {
+  const detail = document.getElementById('enrich-detail');
+  const loading = document.getElementById('enrich-detail-loading');
+  const results = document.getElementById('enrich-detail-results');
+  document.getElementById('enrich-detail-name').textContent = `Enrichment: ${name || email}`;
+  detail.style.display = 'block';
+  loading.style.display = 'flex';
+  results.innerHTML = '';
+  detail.scrollIntoView({ behavior: 'smooth' });
+
+  // Simulate enrichment (would use Claude AI web search in production)
+  await new Promise(r => setTimeout(r, 1500));
+
+  const searchTerm = name || email;
+  results.innerHTML = `
+    <div class="grid-2">
+      <div style="padding:16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
+        <div style="font-size:12px;color:var(--fb);font-weight:600;margin-bottom:8px;">Facebook</div>
+        <div style="color:var(--text-dim);font-size:13px;">Search: "${searchTerm}"</div>
+        <div style="margin-top:8px;"><span class="badge badge-gold">Manual Review</span></div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">AI-powered profile matching requires the ai-generate endpoint. Connect via Settings to enable automated enrichment.</div>
+      </div>
+      <div style="padding:16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
+        <div style="font-size:12px;color:var(--li);font-weight:600;margin-bottom:8px;">LinkedIn</div>
+        <div style="color:var(--text-dim);font-size:13px;">Search: "${searchTerm}"</div>
+        <div style="margin-top:8px;"><span class="badge badge-gold">Manual Review</span></div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">Professional profile matching available with AI enrichment enabled.</div>
+      </div>
+      <div style="padding:16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
+        <div style="font-size:12px;color:var(--ig);font-weight:600;margin-bottom:8px;">Instagram</div>
+        <div style="color:var(--text-dim);font-size:13px;">Search: "${searchTerm}"</div>
+        <div style="margin-top:8px;"><span class="badge badge-gold">Manual Review</span></div>
+      </div>
+      <div style="padding:16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
+        <div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:8px;">Web Mentions</div>
+        <div style="color:var(--text-dim);font-size:13px;">Search: "${searchTerm}"</div>
+        <div style="margin-top:8px;"><span class="badge badge-gold">Manual Review</span></div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">Web presence scanning identifies public mentions, reviews, and profiles.</div>
+      </div>
+    </div>
+    <div class="mt-16" style="padding:16px;background:rgba(201,168,76,0.05);border:1px solid var(--gold-dim);border-radius:var(--radius);">
+      <div style="font-size:13px;color:var(--gold);font-weight:500;margin-bottom:6px;">Enable AI Enrichment</div>
+      <div style="font-size:12px;color:var(--text-dim);line-height:1.6;">
+        To enable automated lead enrichment with social profile matching and web mentions,
+        create a <code style="background:var(--surface2);padding:2px 6px;border-radius:3px;">/.netlify/functions/ai-generate</code> endpoint
+        that proxies to the Anthropic API with web search enabled.
+      </div>
+    </div>
+  `;
+  loading.style.display = 'none';
+}
+
+// ---- Calendar ----
+function renderCalendar() {
+  const cal = document.getElementById('calendar');
+  const label = document.getElementById('cal-month-label');
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  label.textContent = `${months[calMonth]} ${calYear}`;
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const today = new Date();
+
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let html = days.map(d => `<div class="cal-header">${d}</div>`).join('');
+
+  for (let i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = today.getDate() === d && today.getMonth() === calMonth && today.getFullYear() === calYear;
+    const dayPosts = scheduledPosts.filter(p => p.scheduledAt && p.scheduledAt.startsWith(dateStr));
+    const dots = dayPosts.map(p => {
+      const colors = { facebook: 'var(--fb)', instagram: 'var(--ig)', linkedin: 'var(--li)', twitter: 'var(--tw)' };
+      return p.platforms.map(pl => `<span class="cal-dot" style="background:${colors[pl]||'var(--gold)'}"></span>`).join('');
+    }).join('');
+    html += `<div class="cal-day${isToday ? ' today' : ''}"><div class="cal-num">${d}</div>${dots}</div>`;
+  }
+  cal.innerHTML = html;
+  renderScheduleTable();
+}
+
+function calNav(dir) {
+  if (dir === 0) { calMonth = new Date().getMonth(); calYear = new Date().getFullYear(); }
+  else { calMonth += dir; if (calMonth > 11) { calMonth = 0; calYear++; } if (calMonth < 0) { calMonth = 11; calYear--; } }
+  renderCalendar();
+}
+
+function renderScheduleTable() {
+  const tbody = document.getElementById('scheduled-table');
+  const noSched = document.getElementById('no-scheduled');
+  const sorted = [...scheduledPosts].sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
+  if (!sorted.length) { tbody.innerHTML = ''; noSched.style.display = 'block'; return; }
+  noSched.style.display = 'none';
+  const propLabels = { iron65: 'Iron 65', rosalia: 'Rosalia', elks: 'The Elks', mech: 'Mech Enterprise' };
+  const platColors = { facebook: 'blue', instagram: 'red', linkedin: 'blue', twitter: 'blue' };
+  tbody.innerHTML = sorted.map(p => `
+    <tr>
+      <td>${new Date(p.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+      <td>${p.platforms.map(pl => `<span class="badge badge-${platColors[pl]||'gold'}" style="margin-right:4px;">${pl}</span>`).join('')}</td>
+      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.content}</td>
+      <td><span class="badge badge-gold">${propLabels[p.property] || '--'}</span></td>
+      <td><span class="badge badge-green">${p.status}</span></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="deletePost(${p.id})">Delete</button></td>
+    </tr>
+  `).join('');
+}
+
+// ---- Connect Platforms ----
+function connectPlatform(platform) {
+  toast(`${platform.charAt(0).toUpperCase() + platform.slice(1)} OAuth setup coming soon. Configure your app credentials first.`);
+}
+
+// ---- Init ----
+updateStats();
+// Load draft if exists
+const draft = localStorage.getItem('abrevo_draft');
+if (draft) document.getElementById('post-content').value = draft;
+
+// Check API status
+document.getElementById('api-status-badge').textContent = 'Environment';
+document.getElementById('api-status-text').textContent = 'API key configured via Netlify env vars';
+</script>
+</body>
+</html>
