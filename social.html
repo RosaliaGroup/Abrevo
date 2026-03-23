@@ -393,12 +393,32 @@
 
       <div class="card">
         <div class="card-title">Lead Results</div>
+        <!-- Selection toolbar -->
+        <div id="lead-toolbar" style="display:none;padding:12px 16px;background:rgba(201,168,76,0.08);border:1px solid var(--gold-dim);border-radius:var(--radius);margin-bottom:16px;">
+          <div class="row-between">
+            <div class="row gap-8">
+              <span style="font-size:13px;color:var(--gold);font-weight:500;" id="selected-count">0 selected</span>
+            </div>
+            <div class="row gap-8">
+              <button class="btn btn-outline btn-sm" onclick="bulkEnrich()">Bulk Enrich</button>
+              <button class="btn btn-ghost btn-sm" onclick="followSelected('linkedin')" style="color:var(--li);border-color:var(--li);">Follow on LinkedIn</button>
+              <button class="btn btn-ghost btn-sm" onclick="followSelected('instagram')" style="color:var(--ig);border-color:var(--ig);">Follow on Instagram</button>
+              <button class="btn btn-ghost btn-sm" onclick="followSelected('facebook')" style="color:var(--fb);border-color:var(--fb);">Follow on Facebook</button>
+            </div>
+          </div>
+          <div id="bulk-progress" style="display:none;margin-top:10px;">
+            <div class="loading-text"><span class="spinner"></span> <span id="bulk-progress-text">Enriching leads...</span></div>
+          </div>
+        </div>
         <div id="enrich-loading" class="loading-text" style="display:none;">
           <span class="spinner"></span> Searching leads...
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Source</th><th>Property</th><th>Date</th><th>Enrichment</th><th></th></tr></thead>
+            <thead><tr>
+              <th style="width:36px;"><input type="checkbox" id="select-all" onchange="toggleSelectAll(this)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold);"></th>
+              <th>Name</th><th>Email</th><th>Phone</th><th>Source</th><th>Property</th><th>Date</th><th>Following</th><th>Enrichment</th><th></th>
+            </tr></thead>
             <tbody id="leads-table"></tbody>
           </table>
         </div>
@@ -873,22 +893,36 @@ function renderLeads(leads) {
     return;
   }
   noLeads.style.display = 'none';
+  window._currentLeads = filtered;
   const propLabels = { iron65: 'Iron 65', rosalia: 'Rosalia', elks: 'The Elks', mech: 'Mech Enterprise' };
-  tbody.innerHTML = filtered.map(l => {
+  tbody.innerHTML = filtered.map((l, i) => {
     const date = l.created_at ? new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '--';
     const phone = l.phone || '--';
+    const key = (l.email || l.name || '').toLowerCase();
+    const follow = getFollowStatus(key);
+    const followBadges = follow.platforms.length > 0
+      ? follow.platforms.map(p => {
+          const colors = { linkedin: 'var(--li)', instagram: 'var(--ig)', facebook: 'var(--fb)' };
+          const labels = { linkedin: 'LI', instagram: 'IG', facebook: 'FB' };
+          return `<span style="display:inline-block;background:${colors[p]};color:#fff;font-size:9px;padding:2px 6px;border-radius:8px;margin-right:3px;font-weight:600;">${labels[p]}</span>`;
+        }).join('') + `<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${follow.date}</div>`
+      : '<span style="color:var(--text-muted);font-size:12px;">--</span>';
     return `
     <tr>
+      <td><input type="checkbox" class="lead-checkbox" data-idx="${i}" onchange="updateToolbar()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold);"></td>
       <td style="color:var(--text);font-weight:500;">${l.name || '--'}</td>
       <td>${l.email || '--'}</td>
       <td>${phone}</td>
       <td><span class="badge badge-${l.source === 'email' ? 'blue' : l.source === 'fub' ? 'purple' : 'gold'}">${l.source || '--'}</span></td>
       <td><span class="badge badge-gold">${propLabels[l.client] || l.client || '--'}</span></td>
       <td style="color:var(--text-muted);font-size:12px;">${date}</td>
+      <td>${followBadges}</td>
       <td><span class="badge badge-${l.enriched ? 'green' : 'red'}">${l.enriched ? 'Enriched' : 'Pending'}</span></td>
       <td><button class="btn btn-outline btn-sm" onclick="enrichLead('${(l.name||'').replace(/'/g,"\\'")}','${(l.email||'').replace(/'/g,"\\'")}','${(l.phone||'').replace(/'/g,"\\'")}')">Enrich</button></td>
     </tr>`;
   }).join('');
+  document.getElementById('select-all').checked = false;
+  updateToolbar();
 }
 
 async function enrichLead(name, email, phone) {
@@ -1012,6 +1046,118 @@ if (draft) document.getElementById('post-content').value = draft;
 // Check API status
 document.getElementById('api-status-badge').textContent = 'Environment';
 document.getElementById('api-status-text').textContent = 'API key configured via Netlify env vars';
+
+// ---- Follow & Selection ----
+function getFollowData() {
+  return JSON.parse(localStorage.getItem('abrevo_follows') || '{}');
+}
+function saveFollowData(data) {
+  localStorage.setItem('abrevo_follows', JSON.stringify(data));
+}
+function getFollowStatus(key) {
+  const data = getFollowData();
+  return data[key] || { platforms: [], date: '' };
+}
+function setFollowStatus(key, platform) {
+  const data = getFollowData();
+  if (!data[key]) data[key] = { platforms: [], date: '' };
+  if (!data[key].platforms.includes(platform)) {
+    data[key].platforms.push(platform);
+    data[key].date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  saveFollowData(data);
+}
+
+function getEnrichCache() {
+  return JSON.parse(localStorage.getItem('abrevo_enrich_cache') || '{}');
+}
+function saveEnrichCache(key, data) {
+  const cache = getEnrichCache();
+  cache[key] = data;
+  localStorage.setItem('abrevo_enrich_cache', JSON.stringify(cache));
+}
+
+function toggleSelectAll(el) {
+  document.querySelectorAll('.lead-checkbox').forEach(cb => { cb.checked = el.checked; });
+  updateToolbar();
+}
+
+function updateToolbar() {
+  const checked = document.querySelectorAll('.lead-checkbox:checked');
+  const toolbar = document.getElementById('lead-toolbar');
+  const count = document.getElementById('selected-count');
+  if (checked.length > 0) {
+    toolbar.style.display = 'block';
+    count.textContent = `${checked.length} selected`;
+  } else {
+    toolbar.style.display = 'none';
+  }
+}
+
+function getSelectedLeads() {
+  const checks = document.querySelectorAll('.lead-checkbox:checked');
+  return [...checks].map(cb => window._currentLeads[parseInt(cb.dataset.idx)]).filter(Boolean);
+}
+
+async function bulkEnrich() {
+  const selected = getSelectedLeads();
+  if (!selected.length) return toast('Select leads first');
+  const progress = document.getElementById('bulk-progress');
+  const progressText = document.getElementById('bulk-progress-text');
+  progress.style.display = 'block';
+  let done = 0;
+  for (const lead of selected) {
+    const key = (lead.email || lead.name || '').toLowerCase();
+    const cached = getEnrichCache()[key];
+    if (cached) { done++; progressText.textContent = `Enriched ${done}/${selected.length}...`; continue; }
+    progressText.textContent = `Enriching ${done + 1}/${selected.length}: ${lead.name || lead.email}...`;
+    try {
+      const res = await fetch('/.netlify/functions/ai-enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: lead.name, email: lead.email, phone: lead.phone })
+      });
+      const data = await res.json();
+      saveEnrichCache(key, data);
+    } catch (e) { /* skip failures */ }
+    done++;
+    progressText.textContent = `Enriched ${done}/${selected.length}...`;
+  }
+  progress.style.display = 'none';
+  toast(`Enriched ${done} leads`);
+  loadAllLeads();
+}
+
+async function followSelected(platform) {
+  const selected = getSelectedLeads();
+  if (!selected.length) return toast('Select leads first');
+  const urlField = { linkedin: 'linkedin', facebook: 'facebook', instagram: 'instagram' };
+  let opened = 0;
+  for (const lead of selected) {
+    const key = (lead.email || lead.name || '').toLowerCase();
+    let cached = getEnrichCache()[key];
+    // Enrich if not cached
+    if (!cached) {
+      try {
+        const res = await fetch('/.netlify/functions/ai-enrich', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: lead.name, email: lead.email, phone: lead.phone })
+        });
+        cached = await res.json();
+        saveEnrichCache(key, cached);
+      } catch (e) { continue; }
+    }
+    const url = cached[urlField[platform]];
+    if (url) {
+      window.open(url, '_blank');
+      opened++;
+    }
+    setFollowStatus(key, platform);
+  }
+  toast(`Opened ${opened} ${platform} profiles. ${selected.length} marked as following.`);
+  loadAllLeads();
+}
 
 // Auto-load leads on page load
 loadAllLeads();
