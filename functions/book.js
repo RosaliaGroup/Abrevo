@@ -136,6 +136,16 @@ Notes:
 ${data.additional_notes || 'N/A'}
   `.trim();
 
+  // 18-hour advance notice check
+  const nowCheck = new Date();
+  const apptDate = new Date(year, month, day, hours, minutes);
+  const hoursUntil = (apptDate - nowCheck) / (1000 * 60 * 60);
+  if (hoursUntil < 18) {
+    const earliest = new Date(nowCheck.getTime() + 18 * 60 * 60 * 1000);
+    const earliestStr = earliest.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return { statusCode: 400, headers, body: JSON.stringify({ error: `Bookings require 18 hours advance notice. Earliest available: ${earliestStr}`, earliest: earliestStr }) };
+  }
+
   const event = await calendar.events.insert({
     calendarId: client.calendarId,
     resource: {
