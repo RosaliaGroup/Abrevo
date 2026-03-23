@@ -12,10 +12,9 @@ const VAPI_KEY = process.env.VAPI_KEY || '064f441d-a388-4404-8b6c-05e91e90f1ff';
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY || '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
-// HVAC-specific Vapi config — uses Jessica assistant (CINC outbound)
-// TODO: Replace JESSICA_ASSISTANT_ID with a dedicated HVAC assistant if created
-const HVAC_ASSISTANT_ID = process.env.HVAC_ASSISTANT_ID || '35f4e4a2-aabc-47be-abfc-630cf6a85d58';
-const HVAC_PHONE_ID = process.env.HVAC_PHONE_ID || '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
+// HVAC-specific Vapi config — Mechanical Enterprise outbound assistant
+const HVAC_ASSISTANT_ID = process.env.HVAC_ASSISTANT_ID || '0f768c27-dd34-4543-bc86-5d83f12d5b09';
+const HVAC_PHONE_ID = process.env.HVAC_PHONE_ID || '184bbe34-dc62-4539-b11b-a0ce970d6e58';
 
 // Booking links
 const HVAC_BOOKING_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form-hvac.html';
