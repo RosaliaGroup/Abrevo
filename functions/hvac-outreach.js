@@ -14,7 +14,7 @@ const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
 // HVAC-specific Vapi config — uses Jessica assistant (CINC outbound)
 // TODO: Replace JESSICA_ASSISTANT_ID with a dedicated HVAC assistant if created
-const HVAC_ASSISTANT_ID = process.env.HVAC_ASSISTANT_ID || '35f4e4a2-aabc-47be-abfc-630cf6a85d58';
+const HVAC_ASSISTANT_ID = process.env.HVAC_ASSISTANT_ID || '0f768c27-dd34-4543-bc86-5d83f12d5b09';
 const HVAC_PHONE_ID = process.env.HVAC_PHONE_ID || '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 
 // Booking links
