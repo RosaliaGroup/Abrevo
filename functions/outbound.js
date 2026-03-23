@@ -7,7 +7,8 @@
 
 const VAPI_API_KEY = process.env.VAPI_KEY || process.env.VAPI_API_KEY;
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
-const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-rosalia';
+const IRON65_BOOKING_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
 
 // Vapi config per category
 const VAPI_CONFIG = {
@@ -143,7 +144,7 @@ exports.handler = async (event) => {
 
     const normalizedPhone = normalizePhone(phone);
     const config = VAPI_CONFIG[category] || VAPI_CONFIG.general;
-    const bookingLink = `${BOOKING_FORM_URL}${normalizedPhone ? '?phone=' + encodeURIComponent(normalizedPhone) : ''}`;
+    const bookingLink = `${category === 'luxury' ? IRON65_BOOKING_URL : BOOKING_FORM_URL}${normalizedPhone ? '?phone=' + encodeURIComponent(normalizedPhone) : ''}`;
     const leadMeta = { property, source, email, bookingLink };
 
     console.log('Outbound request:', { action, category, phone: normalizedPhone, name, source });
