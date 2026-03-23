@@ -21,6 +21,12 @@
   schedule = "0 10 * * *"
   node_bundler = "nft"
 [[redirects]]
+  from = "/social.html"
+  to = "/social.html"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
