@@ -689,9 +689,14 @@ async function sendReply(replyTo, subject, replyText, ccEmail) {
   let cleaned = replyText
     .replace(/\*\*([^*]+)\*\*/g, '$1')
     .replace(/\*([^*]+)\*/g, '$1');
+  // Strip any raw HTML <a> tags the AI may have output — extract the URL first
+  cleaned = cleaned.replace(/<a\s+href=['"]?(https?:\/\/[^'"<>\s]+)['"]?[^>]*>.*?<\/a>/gi, '$1');
+  // Strip any other stray HTML tags
+  cleaned = cleaned.replace(/<[^>]+>/g, '');
   // Replace URLs with placeholder tokens to protect them from & escaping
+  // Regex stops at whitespace, quotes, brackets so it doesn't grab HTML artifacts
   const urls = [];
-  cleaned = cleaned.replace(/(https?:\/\/[^\s<]+)/g, (match) => {
+  cleaned = cleaned.replace(/(https?:\/\/[^\s<>"')\]]+)/g, (match) => {
     urls.push(match);
     return `__URL_${urls.length - 1}__`;
   });

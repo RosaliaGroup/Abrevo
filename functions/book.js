@@ -2,14 +2,65 @@ const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
 
-// Client configurations
+const EMAIL_USER = 'ana@rosaliagroup.com';
+const EMAIL_PASS = 'rmex aonh vvum uobk';
+const NOTIFY_EMAIL = 'inquiries@rosaliagroup.com';
+
+async function sendEmail({ to, cc, subject, html }) {
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+  });
+  return transporter.sendMail({ from: `"Rosalia Group" <${EMAIL_USER}>`, to, cc, subject, html });
+}
+
+async function saveToSupabase(data, calendarEventId) {
+  let phone = String(data.phone || '').replace(/\D/g, '');
+  if (phone.length === 10) phone = '+1' + phone;
+  else if (phone.length === 11 && phone.startsWith('1')) phone = '+' + phone;
+  else if (phone.length === 12 && phone.startsWith('11')) phone = '+1' + phone.slice(2);
+  else if (!phone.startsWith('+')) phone = '+' + phone;
+
+  const row = {
+    full_name: data.full_name || null,
+    phone,
+    email: data.email || null,
+    type: data.property_address || 'Iron 65, Newark NJ',
+    preferred_date: data.preferred_date || null,
+    preferred_time: data.preferred_time || null,
+    budget: data.budget || null,
+    apartment_size: data.apartment_size || null,
+    move_in_date: data.move_in_date || null,
+    income_qualifies: data.income_qualifies || null,
+    credit_qualifies: data.credit_qualifies || null,
+    additional_notes: data.additional_notes || null,
+    client: data.client || 'rosalia',
+    calendar_event_id: calendarEventId || null,
+  };
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': 'return=representation',
+    },
+    body: JSON.stringify(row),
+  });
+  const result = await res.json();
+  console.log('Supabase save:', JSON.stringify(result));
+  return result;
+}
+
 const CLIENTS = {
   rosalia: {
     calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com',
-    notifyPhone: '+12014970225',
-    notifyEmail: 'inquiries@rosaliagroup.com',
+    notifyPhone: '+16462269189',
     notifyName: 'Ana',
     teamName: 'Rosalia Group',
     googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
@@ -18,35 +69,13 @@ const CLIENTS = {
 
 const TEXTBELT_KEY = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
 
-// Email transporter
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'inquiries@rosaliagroup.com',
-    pass: process.env.GMAIL_PASS_INQUIRIES,
-  },
-});
-
 async function sendSMS(phone, message) {
-  if (!phone) return { success: false };
-  // Normalize phone - add +1 if needed
-  let normalizedPhone = phone.toString().replace(/\D/g, '');
-  if (normalizedPhone.length === 10) normalizedPhone = '+1' + normalizedPhone;
-  else if (normalizedPhone.length === 11) normalizedPhone = '+' + normalizedPhone;
-  else normalizedPhone = '+' + normalizedPhone;
-
   const response = await fetch('https://textbelt.com/text', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      phone: normalizedPhone,
-      message,
-      key: TEXTBELT_KEY,
-    }),
+    body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
   });
-  const result = await response.json();
-  console.log('SMS response:', JSON.stringify(result));
-  return result;
+  return response.json();
 }
 
 async function createCalendarEvent(client, data) {
@@ -57,77 +86,30 @@ async function createCalendarEvent(client, data) {
 
   const calendar = google.calendar({ version: 'v3', auth });
 
-  // Parse date and time with proper timezone handling
   let startDateTime;
   try {
-    // Parse date - handles both YYYY-MM-DD (form) and "March 20 2026" (Vapi)
-    let year, monthNum, day;
-    const isoMatch = data.preferred_date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    const textMatch = data.preferred_date.match(/(\w+)\s+(\d+)[,\s]+(\d{4})/);
-    if (isoMatch) {
-      year = parseInt(isoMatch[1]);
-      monthNum = parseInt(isoMatch[2]) - 1;
-      day = parseInt(isoMatch[3]);
-    } else if (textMatch) {
-      const monthMap = {'January':0,'February':1,'March':2,'April':3,'May':4,'June':5,'July':6,'August':7,'September':8,'October':9,'November':10,'December':11,'Jan':0,'Feb':1,'Mar':2,'Apr':3,'Jun':5,'Jul':6,'Aug':7,'Sep':8,'Oct':9,'Nov':10,'Dec':11};
-      monthNum = monthMap[textMatch[1]];
-      day = parseInt(textMatch[2]);
-      year = parseInt(textMatch[3]);
-      if (monthNum === undefined) throw new Error('Invalid month: ' + textMatch[1]);
-    } else {
-      throw new Error('Unrecognized date format: ' + data.preferred_date);
+    startDateTime = new Date(`${data.preferred_date} ${data.preferred_time}`);
+    if (isNaN(startDateTime.getTime())) {
+      startDateTime = new Date(`${data.preferred_date} ${data.preferred_time} EST`);
     }
-    console.log('Parsed date parts:', year, monthNum+1, day);
-    
-    // Parse time
-    const timeParts = data.preferred_time.match(/(\d+):?(\d*)?\s*(AM|PM)/i);
-    if (!timeParts) throw new Error('Invalid time format');
-    let hours = parseInt(timeParts[1]);
-    const minutes = parseInt(timeParts[2] || '0');
-    const period = timeParts[3].toUpperCase();
-    
-    // Convert to 24-hour format
-    if (period === 'PM' && hours !== 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-    
-    // monthNum and day already set above
-    
-    // Create date in Eastern Time (UTC-4 EDT)
-    startDateTime = new Date(Date.UTC(year, monthNum, day, hours + 4, minutes, 0));
-    console.log('Booking date/time:', year, monthNum+1, day, hours, minutes, '-> UTC:', startDateTime.toISOString());
-
-    // Reject bookings in the past
-    const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    if (startDateTime < nowET) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'Cannot book appointments in the past. Please select a future date and time.' }),
-      };
+    if (isNaN(startDateTime.getTime())) {
+      startDateTime = new Date();
+      startDateTime.setDate(startDateTime.getDate() + 1);
+      startDateTime.setHours(12, 0, 0, 0);
     }
-    
   } catch(e) {
-    console.error('Date parsing error:', e.message);
-    // Fallback to tomorrow at noon
     startDateTime = new Date();
     startDateTime.setDate(startDateTime.getDate() + 1);
     startDateTime.setHours(12, 0, 0, 0);
   }
-
   const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
-
-  // Get property address - use property_address field if available, fallback to type
-  const propertyAddress = data.property_address || data.type || 'Appointment';
-  
-  // Format: Caller Name - Building Address
-  const summary = `${data.full_name || 'Guest'} - ${propertyAddress}`;
 
   const description = `
 Phone: ${data.phone || 'N/A'}
 Email: ${data.email || 'N/A'}
 Budget: ${data.budget || 'N/A'}
 Apartment Size: ${data.apartment_size || 'N/A'}
-Property: ${propertyAddress}
+Preferred Area: ${data.preferred_area || 'N/A'}
 Move-In Date: ${data.move_in_date || 'N/A'}
 Income Qualifies: ${data.income_qualifies || 'N/A'}
 Credit Qualifies: ${data.credit_qualifies || 'N/A'}
@@ -136,20 +118,10 @@ Notes:
 ${data.additional_notes || 'N/A'}
   `.trim();
 
-  // 18-hour advance notice check
-  const nowCheck = new Date();
-  const apptDate = new Date(year, month, day, hours, minutes);
-  const hoursUntil = (apptDate - nowCheck) / (1000 * 60 * 60);
-  if (hoursUntil < 18) {
-    const earliest = new Date(nowCheck.getTime() + 18 * 60 * 60 * 1000);
-    const earliestStr = earliest.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-    return { statusCode: 400, headers, body: JSON.stringify({ error: `Bookings require 18 hours advance notice. Earliest available: ${earliestStr}`, earliest: earliestStr }) };
-  }
-
   const event = await calendar.events.insert({
     calendarId: client.calendarId,
     resource: {
-      summary,
+      summary: `${data.full_name} - ${data.type || 'Iron 65'}`,
       description,
       start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
       end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
@@ -178,153 +150,90 @@ exports.handler = async (event) => {
     }
 
     const data = JSON.parse(event.body || '{}');
-    console.log('Booking data received:', JSON.stringify(data));
-
-    // Normalize phone number
-    if (data.phone) {
-      let normalizedPhone = data.phone.toString().replace(/\D/g, '');
-      if (normalizedPhone.length === 10) normalizedPhone = '+1' + normalizedPhone;
-      else if (normalizedPhone.length === 11) normalizedPhone = '+' + normalizedPhone;
-      else if (normalizedPhone.length === 12) normalizedPhone = '+' + normalizedPhone;
-      data.phone = normalizedPhone;
-    }
-
-    // Get property address for notifications
-    const propertyAddress = data.property_address || data.type || 'the property';
 
     // 1. Create Google Calendar event
     let calendarEvent = null;
     try {
       calendarEvent = await createCalendarEvent(client, data);
-      console.log('Calendar event created:', calendarEvent?.id);
     } catch (err) {
       console.error('Calendar error:', err.message);
     }
 
     // 2. Save to Supabase
     try {
-      const supabaseRes = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Prefer': 'return=representation',
-        },
-        body: JSON.stringify({
-          full_name: data.full_name,
-          phone: data.phone,
-          email: data.email,
-          type: data.type,
-          preferred_date: data.preferred_date,
-          preferred_time: data.preferred_time,
-          budget: data.budget,
-          apartment_size: data.apartment_size,
-          preferred_area: data.preferred_area,
-          move_in_date: data.move_in_date,
-          income_qualifies: data.income_qualifies,
-          credit_qualifies: data.credit_qualifies,
-          additional_notes: data.additional_notes,
-          client: clientId,
-          calendar_event_id: calendarEvent?.id,
-        }),
-      });
-      console.log('Saved to Supabase');
+      await saveToSupabase(data, calendarEvent?.id);
     } catch (err) {
       console.error('Supabase error:', err.message);
     }
 
-    // 3. Send SMS to caller
+    // 3. SMS confirmation to caller
     if (data.phone) {
-      const callerMsg = `Your appointment is confirmed!\n\n${propertyAddress}\n${data.preferred_date} at ${data.preferred_time}\n\nRosalia Group will be in touch. See you then!`;
-      try {
-        const smsResult = await sendSMS(data.phone, callerMsg);
-        console.log('Caller SMS sent:', smsResult.success);
-      } catch (err) {
-        console.error('Caller SMS error:', err.message);
-      }
+      const callerMsg = `Your appointment is confirmed!\n\n${data.type || 'Appointment'}\n${data.preferred_date} at ${data.preferred_time}\n\n${client.teamName} will be in touch to coordinate. See you then!`;
+      await sendSMS(data.phone, callerMsg);
     }
 
-    // 4. Send SMS to team
-    const teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${propertyAddress}\nDate: ${data.preferred_date} at ${data.preferred_time}\nBudget: ${data.budget}\nSize: ${data.apartment_size}\nMove-In: ${data.move_in_date}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
-    try {
-      const teamSmsResult = await sendSMS(client.notifyPhone, teamMsg);
-      console.log('Team SMS sent:', teamSmsResult.success);
-    } catch (err) {
-      console.error('Team SMS error:', err.message);
-    }
+    // 4. SMS team notification
+    const teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${data.type}\nDate: ${data.preferred_date} at ${data.preferred_time}\nBudget: ${data.budget}\nArea: ${data.preferred_area}\nMove-In: ${data.move_in_date}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
+    await sendSMS(client.notifyPhone, teamMsg);
 
-    // 5. Send email confirmation to caller (CC inquiries@rosaliagroup.com)
+    // 5. Email confirmation to client
     if (data.email) {
-      const firstName = (data.full_name || '').split(' ')[0] || 'there';
-      const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin:0;padding:0;background:#0A0A0A;font-family:'Georgia',serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;padding:40px 20px;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#111111;border:1px solid #C9A84C;border-radius:4px;overflow:hidden;">
-        <!-- Header -->
-        <tr>
-          <td style="background:#0A0A0A;padding:30px 40px;text-align:center;border-bottom:1px solid #C9A84C;">
-            <div style="color:#C9A84C;font-size:11px;letter-spacing:4px;text-transform:uppercase;">Rosalia Group</div>
-            <div style="color:#C9A84C;font-size:18px;margin-top:6px;">◆</div>
-          </td>
-        </tr>
-        <!-- Body -->
-        <tr>
-          <td style="padding:40px;">
-            <h1 style="color:#C9A84C;font-size:22px;font-weight:normal;letter-spacing:2px;text-transform:uppercase;margin:0 0 24px 0;">Appointment Confirmed</h1>
-            <p style="color:#E8E8E8;font-size:15px;line-height:1.7;margin:0 0 24px 0;">Dear ${firstName},</p>
-            <p style="color:#E8E8E8;font-size:15px;line-height:1.7;margin:0 0 30px 0;">Your private tour has been confirmed. We look forward to welcoming you.</p>
-            <!-- Details Box -->
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;border:1px solid #333;border-radius:4px;margin-bottom:30px;">
-              <tr><td style="padding:24px 28px;">
-                <div style="color:#C9A84C;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">Tour Details</div>
-                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📍 <strong style="color:#C9A84C;">${propertyAddress}</strong></div>
-                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📅 ${data.preferred_date} at ${data.preferred_time}</div>
-                <div style="color:#E8E8E8;font-size:14px;margin-bottom:6px;color:#999;">Size: ${data.apartment_size} &nbsp;|&nbsp; Budget: ${data.budget}/mo</div>
-                <div style="color:#999;font-size:14px;">Move-In: ${data.move_in_date}</div>
-              </td></tr>
-            </table>
-            <p style="color:#999;font-size:13px;line-height:1.7;margin:0 0 30px 0;">Our leasing agent will reach out before your appointment to confirm. If you need to reschedule, simply reply to this email or call us at (862) 333-1681.</p>
-            <!-- CTA -->
-            <div style="text-align:center;margin-bottom:30px;">
-              <a href="https://silver-ganache-1ee2ca.netlify.app/booking-rosalia" style="display:inline-block;background:#C9A84C;color:#0A0A0A;font-size:12px;letter-spacing:3px;text-transform:uppercase;padding:14px 32px;text-decoration:none;font-weight:bold;border-radius:2px;">Manage Appointment</a>
-            </div>
-          </td>
-        </tr>
-        <!-- Footer -->
-        <tr>
-          <td style="background:#0A0A0A;padding:20px 40px;text-align:center;border-top:1px solid #222;">
-            <div style="color:#555;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Rosalia Group &nbsp;|&nbsp; rosaliagroup.com</div>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>
-`;
-
       try {
-        // Send to caller and CC to inquiries
-        console.log('Sending confirmation email to:', data.email, '| GMAIL_USER:', process.env.GMAIL_USER ? 'set' : 'MISSING', '| GMAIL_PASS:', process.env.GMAIL_PASS ? 'set' : 'MISSING');
-        await transporter.sendMail({
-          from: '"Rosalia Group" <inquiries@rosaliagroup.com>',
+        await sendEmail({
           to: data.email,
-          cc: 'inquiries@rosaliagroup.com',
-          subject: 'Appointment Confirmed - Rosalia Group',
-          html: emailHtml,
+          cc: NOTIFY_EMAIL,
+          subject: `Appointment Confirmed - Rosalia Group`,
+          html: `
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+              <h2 style="color:#b8960c;">Appointment Confirmed</h2>
+              <p>Dear ${data.full_name},</p>
+              <p>Your tour appointment has been confirmed. We look forward to seeing you!</p>
+              <table style="border-collapse:collapse;width:100%;margin:20px 0;">
+                <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Date & Time</td><td style="padding:8px;border:1px solid #ddd;">${data.preferred_date} at ${data.preferred_time}</td></tr>
+                <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Property</td><td style="padding:8px;border:1px solid #ddd;">${data.type || 'Iron 65 | 65 Iron Street, Newark NJ'}</td></tr>
+                <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Budget</td><td style="padding:8px;border:1px solid #ddd;">${data.budget || 'N/A'}</td></tr>
+                <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Apartment Size</td><td style="padding:8px;border:1px solid #ddd;">${data.apartment_size || 'N/A'}</td></tr>
+                <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Move-In Date</td><td style="padding:8px;border:1px solid #ddd;">${data.move_in_date || 'N/A'}</td></tr>
+              </table>
+              <p>Questions? Call <a href="tel:+18623331681">(862) 333-1681</a> or email <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a></p>
+              <p>We look forward to seeing you!</p>
+              <p><strong>Rosalia Group</strong><br>65 Iron Street, Newark NJ</p>
+            </div>
+          `,
         });
-        console.log('Email confirmation sent successfully to:', data.email);
+        console.log('Confirmation email sent to', data.email);
       } catch (err) {
         console.error('Email error:', err.message);
       }
+    }
+
+    // 6. Email team notification
+    try {
+      await sendEmail({
+        to: NOTIFY_EMAIL,
+        subject: `New Booking - ${data.full_name}`,
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+            <h2 style="color:#b8960c;">New Booking</h2>
+            <table style="border-collapse:collapse;width:100%;margin:20px 0;">
+              <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Name</td><td style="padding:8px;border:1px solid #ddd;">${data.full_name}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Phone</td><td style="padding:8px;border:1px solid #ddd;">${data.phone}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Email</td><td style="padding:8px;border:1px solid #ddd;">${data.email}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Property</td><td style="padding:8px;border:1px solid #ddd;">${data.type}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Date & Time</td><td style="padding:8px;border:1px solid #ddd;">${data.preferred_date} at ${data.preferred_time}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Budget</td><td style="padding:8px;border:1px solid #ddd;">${data.budget}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Apartment Size</td><td style="padding:8px;border:1px solid #ddd;">${data.apartment_size}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Move-In Date</td><td style="padding:8px;border:1px solid #ddd;">${data.move_in_date}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Income</td><td style="padding:8px;border:1px solid #ddd;">${data.income_qualifies}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Credit</td><td style="padding:8px;border:1px solid #ddd;">${data.credit_qualifies}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Notes</td><td style="padding:8px;border:1px solid #ddd;">${data.additional_notes || 'N/A'}</td></tr>
+            </table>
+          </div>
+        `,
+      });
+      console.log('Team notification email sent');
+    } catch (err) {
+      console.error('Team email error:', err.message);
     }
 
     return {
