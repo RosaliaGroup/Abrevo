@@ -35,11 +35,18 @@ CRITICAL RULES:
 - Never discuss income or credit as a barrier to touring  only the leasing agent discusses this at the tour
 - Keep replies SHORT — 3 sentences maximum, then the booking link on its own line
 - Answer the specific question asked in ONE sentence — do not volunteer extra info
-- If they ask about price, give the net effective rent in one line only, then immediately push to booking link
+- Always lead with NET EFFECTIVE rent using these EXACT formulas:
+  * 13-month lease, 1 month free: gross x 12/13 (e.g. $2,199 x 12/13 = $2,029.84)
+  * 13-month lease, 1 month free + apply within 24hrs of tour (half month additional): gross x 11.5/13 (e.g. $2,199 x 11.5/13 = $1,945.00)
+  * 24-month lease, 2 months free: gross x 22/24 (e.g. $2,199 x 22/24 = $2,015.75)
+  * 24-month lease, 2 months free + apply within 24hrs of tour (half month additional): gross x 21.5/24 (e.g. $2,199 x 21.5/24 = $1,969.94)
+  * Iron 65 18-month lease, $4,000 rent credit: (gross x 18 - 4000) / 18
+  * Always show both the 13-month and 24-month effective rates
+  * Always mention the 24-hour application bonus saves an additional half month
 - Never use markdown bold (**text**) or italic (*text*)
-- Never suggest specific appointment times — always direct to the booking link
-- Ask for phone number if not already provided — one short sentence
-- NEVER confirm or deny existing appointments you don't have record of — say "let me confirm with our team and we'll reach out shortly"
+- Never suggest specific appointment times  always direct to the booking link
+- Ask for phone number if not provided
+- NEVER confirm or deny existing appointments you don't have record of  say "let me confirm with our leasing team and we will reach out shortly"
 - Sign off as: Rosalia Group | Inquiries Team | +18624191763 | inquiries@rosaliagroup.com
 
 PROPERTY KNOWLEDGE BASE:
@@ -637,9 +644,7 @@ ${previousReply ? 'A lead is REPLYING to your previous email. Read their reply a
 
 ${userMessage}
 
-Always end EVERY reply with the booking link on its own line — no exceptions:
-- Iron 65 inquiries: https://book.rosaliagroup.com/iron65
-- All other properties: https://book.rosaliagroup.com/book
+Always end every reply with: 'Book your tour instantly here: https://book.rosaliagroup.com/book' (or /iron65 for Iron 65 inquiries). This is faster than scheduling over email.
 
 Write ONLY the email body. No subject line. MAXIMUM 3 sentences then the booking link. Answer the specific question asked in the fewest words possible. No bullet points. No lists. No markdown. No HTML tags. The booking link must always appear — it is non-negotiable.`;
 
@@ -915,7 +920,6 @@ exports.handler = async (event) => {
           phone = extractPhone(body + ' ' + subject);
         }
         // For reply threads: always try to extract phone from body regardless of source
-        // This catches cases where lead replies with their phone number
         if (!phone && isReply) {
           const replyPhone = extractPhone(body);
           if (replyPhone) {
@@ -974,9 +978,7 @@ exports.handler = async (event) => {
           const propertyMatch = subject.match(/for\s+(.+?)(?:,\s*Unit|\s*$)/i);
           const propertyName = propertyMatch ? propertyMatch[1].trim() : '';
           const smsBookingUrl = leadClient === 'iron65' ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
-          // Send SMS immediately when:
-          // - New lead (no prior record) 
-          // - OR reply thread where phone was just provided for the first time
+          // Send SMS immediately: new lead OR phone newly provided in reply
           const shouldSendSMS = !hadPhone || !isReply;
           if (shouldSendSMS) {
             if (isReply && !hadPhone) console.log('Phone newly provided in reply — sending SMS immediately:', phone);
