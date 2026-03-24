@@ -48,8 +48,8 @@ exports.handler = async (event) => {
     let formUrl;
     if (isHVAC) {
       formUrl = isReschedule
-        ? `${SITE_URL}/reschedule-form-hvac`
-        : `${SITE_URL}/booking-form-hvac`;
+        ? 'https://book.mechanicalenterprise.com/hvac-reschedule'
+        : 'https://book.mechanicalenterprise.com/hvac';
     } else if (isReschedule) {
       formUrl = isIron65
         ? 'https://book.rosaliagroup.com/iron65-reschedule'
