@@ -43,6 +43,7 @@ async function findLeadsToCall() {
     `status=neq.contacted&` +
     `status=neq.rented&` +
     `status=neq.survey_completed&` +
+    `status=neq.dnc&` +
     `or=(call_attempts.is.null,call_attempts.lt.${MAX_CALL_ATTEMPTS})&` +
     `or=(last_call_at.is.null,last_call_at.lt.${minLastCall})&` +
     `limit=5&order=created_at.asc`,

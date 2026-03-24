@@ -952,6 +952,13 @@ exports.handler = async (event) => {
         }
 
         const leadContext = await getLeadContext(checkEmail, realName);
+
+        if (leadContext?.status === 'dnc') {
+          console.log('Skipping DNC lead:', checkEmail);
+          results.skipped++;
+          continue;
+        }
+
         const calendarAppt = await getCalendarAppointment(realName || fromName);
         if (calendarAppt) console.log('Calendar appointment found:', calendarAppt.date, calendarAppt.time);
         if (leadContext) console.log('Lead context found:', leadContext.status);

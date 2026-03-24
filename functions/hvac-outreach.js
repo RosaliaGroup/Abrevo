@@ -18,7 +18,7 @@ const HVAC_ASSISTANT_ID = process.env.HVAC_ASSISTANT_ID || '35f4e4a2-aabc-47be-a
 const HVAC_PHONE_ID = process.env.HVAC_PHONE_ID || '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 
 // Booking links
-const HVAC_BOOKING_URL = 'https://book.mechanicalenterprise.com/hvac';
+const HVAC_BOOKING_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form-hvac.html';
 const HVAC_RESCHEDULE_URL = 'https://silver-ganache-1ee2ca.netlify.app/reschedule-form-hvac.html';
 
 // Notification
@@ -131,7 +131,7 @@ Write a warm, brief email (under 90 words) that:
 2. Mentions their home may qualify for rebates based on when it was built
 3. Offers a free assessment with no obligation
 4. Includes the booking link
-5. Signs off as: Mechanical Enterprise | (862) 419-1763 | sales@mechanicalenterprise.com
+5. Signs off as: Mechanical Enterprise | (862) 444-0000 | sales@mechanicalenterprise.com
 
 Write ONLY the email body, no subject line.`;
 
@@ -260,7 +260,7 @@ exports.handler = async (event) => {
 
       // ── SMS ──
       if ((mode === 'all' || mode === 'sms') && phone) {
-        const smsMsg = `Hi ${name.split(' ')[0] || 'there'}! This is Mechanical Enterprise in NJ. Your home at ${address || 'your property'} may qualify for up to $16,000 in NJ HVAC rebates. Book a FREE assessment: ${HVAC_BOOKING_URL} — (862) 419-1763`;
+        const smsMsg = `Hi ${name.split(' ')[0] || 'there'}! This is Mechanical Enterprise in NJ. Your home at ${address || 'your property'} may qualify for up to $16,000 in NJ HVAC rebates. Book a FREE assessment: ${HVAC_BOOKING_URL} — (862) 444-0000`;
         result.sms = await sendSMS(phone, smsMsg);
         await new Promise(r => setTimeout(r, 300));
       }
