@@ -131,7 +131,7 @@ Write a warm, brief email (under 90 words) that:
 2. Mentions their home may qualify for rebates based on when it was built
 3. Offers a free assessment with no obligation
 4. Includes the booking link
-5. Signs off as: Mechanical Enterprise | (862) 444-0000 | sales@mechanicalenterprise.com
+5. Signs off as: Mechanical Enterprise | (862) 419-1763 | sales@mechanicalenterprise.com
 
 Write ONLY the email body, no subject line.`;
 
@@ -260,7 +260,7 @@ exports.handler = async (event) => {
 
       // ── SMS ──
       if ((mode === 'all' || mode === 'sms') && phone) {
-        const smsMsg = `Hi ${name.split(' ')[0] || 'there'}! This is Mechanical Enterprise in NJ. Your home at ${address || 'your property'} may qualify for up to $16,000 in NJ HVAC rebates. Book a FREE assessment: ${HVAC_BOOKING_URL} — (862) 444-0000`;
+        const smsMsg = `Hi ${name.split(' ')[0] || 'there'}! This is Mechanical Enterprise in NJ. Your home at ${address || 'your property'} may qualify for up to $16,000 in NJ HVAC rebates. Book a FREE assessment: ${HVAC_BOOKING_URL} — (862) 419-1763`;
         result.sms = await sendSMS(phone, smsMsg);
         await new Promise(r => setTimeout(r, 300));
       }
@@ -282,7 +282,12 @@ exports.handler = async (event) => {
       // ── UPDATE STATUS ──
       const contacted = result.call?.success || result.sms?.success || result.email?.success;
       if (contacted) {
-        await updateLeadStatus(lead.id, 'contacted');
+        const now = new Date().toISOString();
+        const extra = { last_contacted_at: now };
+        if (result.call?.success)  extra.call_triggered_at = now;
+        if (result.sms?.success)   extra.sms_sent_at = now;
+        if (result.email?.success) extra.email_sent_at = now;
+        await updateLeadStatus(lead.id, 'contacted', extra);
       }
 
       results.push(result);
