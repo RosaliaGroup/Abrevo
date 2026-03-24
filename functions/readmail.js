@@ -277,8 +277,9 @@ function isFUBLead(from, subject) {
   const s = (subject || '').toLowerCase();
   // Hot Sheet is a daily digest, not a lead
   if (s.includes('hot sheet')) return false;
-  // Direct FUB emails
+  // Direct FUB emails (by domain or display name)
   if (f.includes('followupboss.com')) return true;
+  if (f.includes('follow up boss')) return true;
   // Forwarded FUB lead notifications (Fwd: New Lead from Facebook)
   if (s.includes('new lead from') || s.includes('fwd: new lead')) return true;
   // FUB subject patterns
@@ -472,7 +473,7 @@ function fetchUnreadEmails() {
         imap.search(['UNSEEN', ['SINCE', sinceStr]], (err, results) => {
           if (err) return reject(err);
           if (!results || results.length === 0) { imap.end(); return resolve([]); }
-          const toFetch = results.slice(0, 5);
+          const toFetch = results.slice(0, 20);
           const fetch = imap.fetch(toFetch, { bodies: '', markSeen: true });
           fetch.on('message', (msg) => {
             let buffer = '';
