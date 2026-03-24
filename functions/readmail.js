@@ -8,8 +8,8 @@ const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const INBOX_EMAIL = 'inquiries@rosaliagroup.com';
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
-const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-rosalia';
-const IRON65_BOOKING_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
+const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 
 const VAPI_KEY = process.env.VAPI_KEY || '064f441d-a388-4404-8b6c-05e91e90f1ff';
@@ -55,10 +55,10 @@ PROPERTY KNOWLEDGE BASE:
 # NOTE: Prices, availability, and incentives change daily. Always direct leads to schedule a tour for the most current information.
 
 ## BOOKING LINKS
-- All Rosalia properties (general): https://silver-ganache-1ee2ca.netlify.app/booking-rosalia
-- Iron 65 specifically: https://silver-ganache-1ee2ca.netlify.app/booking-form
-- Reschedule (Rosalia): https://silver-ganache-1ee2ca.netlify.app/reschedule-rosalia
-- Reschedule (Iron 65): https://silver-ganache-1ee2ca.netlify.app/reschedule-form
+- All Rosalia properties (general): https://book.rosaliagroup.com/book
+- Iron 65 specifically: https://book.rosaliagroup.com/iron65
+- Reschedule (Rosalia): https://book.rosaliagroup.com/reschedule
+- Reschedule (Iron 65): https://book.rosaliagroup.com/iron65-reschedule
 
 ## UTILITIES  ALL BUILDINGS
 - Electric: tenant pays (all buildings use electric  no gas)
@@ -170,7 +170,7 @@ Utilities included: none | Tenant pays: electric, water, trash
 Studios from $1,955/mo | 1BR, 2BR, 3BR available
 Private balconies on select units | Steps from Orange train station
 Climate-controlled parking | Bike storage
-Tour booking: https://silver-ganache-1ee2ca.netlify.app/booking-rosalia
+Tour booking: https://book.rosaliagroup.com/book
 
 ### 65 MCWHORTER ST  IRON 65, NEWARK NJ
 Utilities included: none | Tenant pays: electric, water, trash
@@ -186,7 +186,7 @@ NET EFFECTIVE CALCULATIONS (Iron 65):
 Free internet 1 year (apply within 24hrs of tour) | Amenities fee waived 12 months | Security deposit: $1,000
 Amenities: Rooftop with NYC skyline views | Fitness center | Yoga studio | Cold plunge | Saunas | Outdoor kitchen | Game room | Business center | Pet park | Bike storage | Front desk 7 days | Doorman | Security | In-unit W/D
 Tours: Tue-Fri 12pm-6pm | Sat-Sun 12pm-4pm
-Tour booking: https://silver-ganache-1ee2ca.netlify.app/booking-form
+Tour booking: https://book.rosaliagroup.com/iron65
 
 ## FAQ
 Q: Are utilities included?
@@ -640,13 +640,20 @@ ${contextStr}${threadContext}`;
 
 You are ${role}.
 
-${previousReply ? 'A lead is REPLYING to your previous email. Read their reply and respond to what they are asking.' : `A new inquiry email came in. ${nameGreeting} Ask about their needs.${detectedCity}`}
+${previousReply ? 'A lead is REPLYING to your previous email. Read their reply carefully and answer EXACTLY what they asked — do not reintroduce yourself or repeat anything already said.' : `A new inquiry came in. ${nameGreeting}${detectedCity}`}
 
 ${userMessage}
 
-Always end every reply with: 'Book your tour instantly here: https://book.rosaliagroup.com/book' (or /iron65 for Iron 65 inquiries). This is faster than scheduling over email.
+REPLY FORMAT RULES (follow strictly):
+1. FIRST sentence: directly answer the specific question they asked. Do not start with pleasantries.
+2. SECOND sentence (optional): one relevant follow-up point or qualifying question — only if genuinely useful.
+3. FINAL line (required, on its own line): the booking link — always https://book.rosaliagroup.com/book (use https://book.rosaliagroup.com/iron65 ONLY if the inquiry is specifically about Iron 65 / 65 McWhorter).
+4. Never repeat anything said in a previous reply.
+5. No bullet points. No lists. No markdown. No HTML. No subject line.
+6. Do NOT end with "Please let me know if you have any other questions" or similar filler phrases.
+7. Sign off once per email as: Rosalia Group | Inquiries Team | +18624191763
 
-Write ONLY the email body. No subject line. MAXIMUM 3 sentences then the booking link. Answer the specific question asked in the fewest words possible. No bullet points. No lists. No markdown. No HTML tags. The booking link must always appear — it is non-negotiable.`;
+Write ONLY the email body.`;
 
   console.log('Calling Claude API...');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -872,6 +879,10 @@ exports.handler = async (event) => {
           continue;
         }
 
+        const previousReply = await getPreviousThread(fromEmail);
+        const isReply = subject.toLowerCase().startsWith('re:') || !!previousReply;
+        if (isReply) console.log('Thread reply detected');
+
         let phone = null;
         let realEmail = fromEmail;
         let realName = fromName;
@@ -932,10 +943,6 @@ exports.handler = async (event) => {
 
         const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : fromEmail;
         const skipRecentCheck = isAvailLead(from) || from.includes('reply.avail.co') || from.includes('@avail.co') || isFUBLead(from, subject);
-
-        const previousReply = await getPreviousThread(fromEmail);
-        const isReply = subject.toLowerCase().startsWith('re:') || !!previousReply;
-        if (isReply) console.log('Thread reply detected');
 
         if (!isReply && !skipRecentCheck && await repliedRecently(checkEmail)) {
           console.log('Skipping (replied recently, not a thread reply):', checkEmail);
