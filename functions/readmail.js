@@ -646,6 +646,7 @@ ${previousReply ? 'A lead is REPLYING to your previous email. Read their reply c
 ${userMessage}
 
 REPLY FORMAT RULES (follow strictly):
+0. BOOKING INTENT DETECTION: If the lead's message indicates they want to schedule, book, or see the apartment (e.g. contains words like yes, ready, available, schedule, book, tour, when, times, appointment, interested, come in) — respond with ONE sentence max confirming you are sending the link, then put the booking link on the next line. Nothing else. No questions. No follow-up. Example: Great — here is your booking link to pick a time that works for you.
 1. FIRST sentence: directly answer the specific question they asked. Do not start with pleasantries.
 2. SECOND sentence (optional): one relevant follow-up point or qualifying question — only if genuinely useful.
 3. FINAL line (required, on its own line): the booking link — ${leadClient === 'iron65' ? 'always https://book.rosaliagroup.com/iron65' : 'always https://book.rosaliagroup.com/book (use https://book.rosaliagroup.com/iron65 ONLY if the inquiry is specifically about Iron 65 / 65 McWhorter)'}.
