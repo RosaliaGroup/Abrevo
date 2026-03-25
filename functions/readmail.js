@@ -578,7 +578,7 @@ async function repliedRecently(fromEmail) {
   return false;
 }
 
-async function generateReply(from, subject, body, previousReply, leadContext, calendarAppt, leadName) {
+async function generateReply(from, subject, body, previousReply, leadContext, calendarAppt, leadName, leadClient) {
   const isBuyer = /buy|purchase|mortgage|home|house|sell/i.test(body + subject);
 
   let threadContext = '';
@@ -648,7 +648,7 @@ ${userMessage}
 REPLY FORMAT RULES (follow strictly):
 1. FIRST sentence: directly answer the specific question they asked. Do not start with pleasantries.
 2. SECOND sentence (optional): one relevant follow-up point or qualifying question — only if genuinely useful.
-3. FINAL line (required, on its own line): the booking link — always https://book.rosaliagroup.com/book (use https://book.rosaliagroup.com/iron65 ONLY if the inquiry is specifically about Iron 65 / 65 McWhorter).
+3. FINAL line (required, on its own line): the booking link — ${leadClient === 'iron65' ? 'always https://book.rosaliagroup.com/iron65' : 'always https://book.rosaliagroup.com/book (use https://book.rosaliagroup.com/iron65 ONLY if the inquiry is specifically about Iron 65 / 65 McWhorter)'}.
 4. Never repeat anything said in a previous reply.
 5. No bullet points. No lists. No markdown. No HTML. No subject line.
 6. Do NOT end with "Please let me know if you have any other questions" or similar filler phrases.
@@ -963,7 +963,7 @@ exports.handler = async (event) => {
         if (calendarAppt) console.log('Calendar appointment found:', calendarAppt.date, calendarAppt.time);
         if (leadContext) console.log('Lead context found:', leadContext.status);
 
-        const replyText = await generateReply(from, subject, body, previousReply, leadContext, calendarAppt, realName);
+        const replyText = await generateReply(from, subject, body, previousReply, leadContext, calendarAppt, realName, leadClient);
         if (!replyText) { results.skipped++; continue; }
 
         const effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : replyTo;
