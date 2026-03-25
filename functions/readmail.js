@@ -223,7 +223,7 @@ const SKIP_SENDERS = [
   'notifications', 'automated', 'newsletter', 'unsubscribe',
   'realtor.com', 'planhub', 'rentspree',
   'voice.google.com',
-  'txt.voice.google', 'comet.zillow', 'mail.zillow',
+  'txt.voice.google', 'mail.zillow',
   'zillowrentals', 'mail.realtor', 'mail.instagram',
   'no-reply@mail.zillow', 'market-updates@', 'recommendations@',
   'rosaliagroup.com', 'mechanicalenterprise.com',
@@ -264,7 +264,8 @@ const SKIP_SUBJECTS = [
 ];
 
 function isZillowLead(from) {
-  return from.toLowerCase().includes('convo.zillow.com');
+  const f = from.toLowerCase();
+  return f.includes('convo.zillow.com') || f.includes('comet.zillow.com');
 }
 function isAvailDigest(subject) {
   const s = (subject || '').toLowerCase();
