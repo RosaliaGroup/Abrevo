@@ -566,12 +566,12 @@ async function getPreviousThread(fromEmail) {
   return lead?.email_reply || null;
 }
 
-async function repliedRecently(fromEmail) {
+async function repliedRecently(fromEmail, hours = 24) {
   const lead = await getLeadData(fromEmail);
   if (!lead?.replied_at) return false;
   const lastReply = new Date(lead.replied_at);
   const hoursSince = (Date.now() - lastReply.getTime()) / (1000 * 60 * 60);
-  if (hoursSince < 24) {
+  if (hoursSince < hours) {
     console.log(`Duplicate check: already replied to ${fromEmail} ${hoursSince.toFixed(1)} hours ago, skipping`);
     return true;
   }
@@ -945,8 +945,8 @@ exports.handler = async (event) => {
         const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : fromEmail;
         const skipRecentCheck = isAvailLead(from) || from.includes('reply.avail.co') || from.includes('@avail.co') || isFUBLead(from, subject);
 
-        if (!isReply && !skipRecentCheck && await repliedRecently(checkEmail)) {
-          console.log('Skipping (replied recently, not a thread reply):', checkEmail);
+        if (!skipRecentCheck && await repliedRecently(checkEmail, isReply ? 2 : 24)) {
+          console.log('Skipping (replied recently):', checkEmail, isReply ? '(thread, 2h window)' : '(new, 24h window)');
           results.skipped++;
           continue;
         }
