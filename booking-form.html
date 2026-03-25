@@ -346,17 +346,46 @@
   document.getElementById('sp_move_in_date').min = tomorrow;
 
   // Iron 65 qualification rules:
-  // Credit 625+ = qualifies, 600-624 = cosigner, below 600 = disqualified
-  // Income min $6,597/mo
-  var MIN_INCOME = 6597;
-  var CREDIT_FULL = 625;
-  var CREDIT_COSIGNER = 600;
+  // Credit 650+ = qualifies, 600-649 = cosigner, below 600 or Unsure = disqualified
+  // Budget options with max rent for 3x rule
+  var BUDGET_OPTIONS = [
+    { text: 'Under $2,400', maxRent: 2400 },
+    { text: '$2,400 - $2,800', maxRent: 2800 },
+    { text: '$2,800 - $3,200', maxRent: 3200 },
+    { text: '$3,200 - $3,600', maxRent: 3600 },
+    { text: '$3,600+', maxRent: 3600 }
+  ];
 
   var incomeEl = document.getElementById('income');
   var creditEl = document.getElementById('credit');
+  var budgetEl = document.getElementById('budget');
   var cosignerNotice = document.getElementById('noticeCosigner');
   var bookingSection = document.getElementById('bookingSection');
   var specialistSection = document.getElementById('specialistSection');
+
+  function filterBudgetOptions() {
+    var incomeVal = parseInt(incomeEl.value) || 0;
+    var currentBudget = budgetEl.value;
+    budgetEl.innerHTML = '<option value="">Select range</option>';
+
+    var anyAffordable = false;
+    for (var i = 0; i < BUDGET_OPTIONS.length; i++) {
+      var b = BUDGET_OPTIONS[i];
+      var affordable = incomeVal >= b.maxRent * 3;
+      var opt = document.createElement('option');
+      opt.textContent = b.text;
+      opt.value = b.text;
+      if (!affordable) {
+        opt.disabled = true;
+        opt.textContent = b.text + ' (income too low)';
+      } else {
+        anyAffordable = true;
+      }
+      if (b.text === currentBudget && affordable) opt.selected = true;
+      budgetEl.appendChild(opt);
+    }
+    return anyAffordable;
+  }
 
   function checkQualification() {
     var incomeVal = parseInt(incomeEl.value) || 0;
@@ -365,15 +394,24 @@
     cosignerNotice.classList.remove('visible');
 
     // Both must be selected to evaluate
-    if (!incomeEl.value || !creditEl.value) return;
+    if (!incomeEl.value || !creditEl.value) {
+      if (incomeEl.value) filterBudgetOptions();
+      return;
+    }
 
-    var incomeOk = incomeVal >= MIN_INCOME;
-    var creditOk = creditVal >= CREDIT_FULL;
-    var creditCosigner = creditVal >= CREDIT_COSIGNER && creditVal < CREDIT_FULL;
     var creditUnsure = creditVal === 0;
 
-    // Disqualified: credit below 600 AND income below min, OR "Unsure"
-    if (creditUnsure || (creditVal < CREDIT_COSIGNER && !incomeOk)) {
+    // Disqualified: credit below 600 or Unsure
+    if (creditUnsure || creditVal < 600) {
+      showSpecialist();
+      return;
+    }
+
+    // Filter budget options based on 3x rule
+    var anyAffordable = filterBudgetOptions();
+
+    // If no budget options are affordable, show specialist
+    if (!anyAffordable) {
       showSpecialist();
       return;
     }
@@ -381,11 +419,36 @@
     // Show booking form
     showBooking();
 
-    // Cosigner notice: credit 600-624 OR income borderline (below min but credit ok)
-    if (creditCosigner || (!incomeOk && creditOk)) {
+    // Cosigner notice: credit 600-649
+    if (creditVal >= 600 && creditVal < 650) {
       cosignerNotice.classList.add('visible');
     }
   }
+
+  // Check cosigner notice when budget changes (income between 2x and 3x of budget)
+  budgetEl.addEventListener('change', function() {
+    if (!incomeEl.value || !creditEl.value || !budgetEl.value) return;
+    var incomeVal = parseInt(incomeEl.value) || 0;
+    var creditVal = parseInt(creditEl.value);
+    cosignerNotice.classList.remove('visible');
+
+    // Find the selected budget's maxRent
+    var selectedMaxRent = 0;
+    for (var i = 0; i < BUDGET_OPTIONS.length; i++) {
+      if (BUDGET_OPTIONS[i].text === budgetEl.value) {
+        selectedMaxRent = BUDGET_OPTIONS[i].maxRent;
+        break;
+      }
+    }
+
+    // Cosigner if income between 2x and 3x of selected budget OR credit 600-649
+    var incomeCosigner = selectedMaxRent > 0 && incomeVal >= selectedMaxRent * 2 && incomeVal < selectedMaxRent * 3;
+    var creditCosigner = creditVal >= 600 && creditVal < 650;
+
+    if (incomeCosigner || creditCosigner) {
+      cosignerNotice.classList.add('visible');
+    }
+  });
 
   function showBooking() {
     bookingSection.style.display = '';
@@ -523,7 +586,7 @@
           credit_qualifies: document.getElementById('sp_credit').value,
           apartment_size: apartment_size,
           move_in_date: move_in_date,
-          additional_notes: additional_notes,
+          additional_notes: additional_notes + (additional_notes ? ' | ' : '') + 'Income: ' + document.getElementById('sp_income').value + ' | Credit: ' + document.getElementById('sp_credit').value,
           status: 'needs_specialist',
           source: 'disqualified_form',
           property_address: 'Iron 65 - 65 Mcwhorter St, Newark NJ',
