@@ -365,14 +365,14 @@
   // creditMin = minimum credit to fully qualify
   // cosignerMin = minimum credit to qualify with cosigner (below this = disqualified)
   var PROPERTIES = [
-    { label: '502 Market St - The Ballantine, Newark NJ', value: '502 Market St - The Ballantine, Newark NJ', minIncome: 5997, creditMin: 625, cosignerMin: 600, ballantine: true },
-    { label: '486 Market St - River Pointe, Newark NJ', value: '486 Market St - River Pointe, Newark NJ', minIncome: 7050, creditMin: 650, cosignerMin: 625 },
+    { label: '486 Market St - River Pointe, Newark NJ', value: '486 Market St - River Pointe, Newark NJ', minIncome: 7200, creditMin: 650, cosignerMin: 625 },
+    { label: '502 Market St, Newark NJ', value: '502 Market St, Newark NJ', minIncome: 5997, creditMin: 625, cosignerMin: 600 },
     { label: '39 Madison St - Iron Pointe, Newark NJ', value: '39 Madison St - Iron Pointe, Newark NJ', minIncome: 7200, creditMin: 650, cosignerMin: 625 },
-    { label: '556 Market St, Newark NJ', value: '556 Market St, Newark NJ', minIncome: 6000, creditMin: 650, cosignerMin: 625 },
-    { label: '289 Halsey St, Newark NJ', value: '289 Halsey St, Newark NJ', minIncome: 6000, creditMin: 650, cosignerMin: 625 },
-    { label: '77 Christie St, Newark NJ', value: '77 Christie St, Newark NJ', minIncome: 6000, creditMin: 650, cosignerMin: 625 },
-    { label: '1369 South Ave, Plainfield NJ', value: '1369 South Ave, Plainfield NJ', minIncome: 5400, creditMin: 650, cosignerMin: 625 },
-    { label: '475 Main St - The Elks, Orange NJ', value: '475 Main St - The Elks, Orange NJ', minIncome: 7200, creditMin: 650, cosignerMin: 625 }
+    { label: '556 Market St, Newark NJ', value: '556 Market St, Newark NJ', minIncome: 6597, creditMin: 650, cosignerMin: 625 },
+    { label: '289 Halsey St, Newark NJ', value: '289 Halsey St, Newark NJ', minIncome: 6750, creditMin: 650, cosignerMin: 625 },
+    { label: '77 Christie St — The Ballantine, Newark NJ', value: '77 Christie St — The Ballantine, Newark NJ', minIncome: 6387, creditMin: 650, cosignerMin: 625, ballantine: true },
+    { label: '1369 South Ave, Plainfield NJ', value: '1369 South Ave, Plainfield NJ', minIncome: 8325, creditMin: 650, cosignerMin: 625 },
+    { label: '475 Main St - The Elks, Orange NJ', value: '475 Main St - The Elks, Orange NJ', minIncome: 5865, creditMin: 650, cosignerMin: 625 }
   ];
 
   var incomeEl = document.getElementById('income');
@@ -490,7 +490,7 @@
     var val = this.value;
     document.getElementById('other_property_field').style.display = val === 'other' ? 'block' : 'none';
 
-    if (val.indexOf('502 Market') !== -1) {
+    if (val.indexOf('77 Christie') !== -1) {
       ballantineNotice.classList.add('visible');
     } else {
       ballantineNotice.classList.remove('visible');
@@ -611,9 +611,10 @@
           credit_qualifies: document.getElementById('sp_credit').value,
           apartment_size: apartment_size,
           move_in_date: move_in_date,
-          additional_notes: additional_notes,
+          additional_notes: additional_notes + (additional_notes ? ' | ' : '') + 'Income: ' + document.getElementById('sp_income').value + ' | Credit: ' + document.getElementById('sp_credit').value + ' | Needs specialist review',
           status: 'needs_specialist',
           source: 'disqualified_form',
+          property_address: 'Rosalia Group - needs specialist review',
           client: 'rosalia'
         })
       });

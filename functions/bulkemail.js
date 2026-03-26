@@ -5,7 +5,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
-const BOOKING_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
 
 function isValidEmail(email) {
   if (!email) return false;

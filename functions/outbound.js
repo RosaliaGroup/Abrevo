@@ -7,8 +7,8 @@
 
 const VAPI_API_KEY = process.env.VAPI_KEY || process.env.VAPI_API_KEY;
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
-const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-rosalia';
-const IRON65_BOOKING_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
+const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
 
 // Vapi config per category
 const VAPI_CONFIG = {

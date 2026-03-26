@@ -6,7 +6,7 @@ const VAPI_API_KEY = process.env.VAPI_API_KEY;
 const VAPI_PHONE_ID = process.env.VAPI_PHONE_ID;
 const JESSICA_ASSISTANT_ID = process.env.JESSICA_ASSISTANT_ID;
 const ANA_PHONE = '+16462269189';
-const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/iron65';
 
 // -- BUSINESS HOURS CHECK (Eastern Time) --
 // Weekdays: 9AM-6PM | Weekends: 10AM-5PM

@@ -136,6 +136,16 @@ Notes:
 ${data.additional_notes || 'N/A'}
   `.trim();
 
+  // 18-hour advance notice check
+  const nowCheck = new Date();
+  const apptDate = new Date(year, monthNum, day, hours, minutes);
+  const hoursUntil = (apptDate - nowCheck) / (1000 * 60 * 60);
+  if (hoursUntil < 18) {
+    const earliest = new Date(nowCheck.getTime() + 18 * 60 * 60 * 1000);
+    const earliestStr = earliest.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return { statusCode: 400, headers, body: JSON.stringify({ error: `Bookings require 18 hours advance notice. Earliest available: ${earliestStr}`, earliest: earliestStr }) };
+  }
+
   const event = await calendar.events.insert({
     calendarId: client.calendarId,
     resource: {
@@ -180,7 +190,25 @@ exports.handler = async (event) => {
     }
 
     // Get property address for notifications
-    const propertyAddress = data.property_address || data.type || 'the property';
+    const propertyAddress = data.property_address || data.type || 'Iron 65 — 65 Mcwhorter St, Newark NJ';
+
+    // Format date nicely — handles ISO (2026-05-23), long form (May 23 2026), or raw
+    function formatDate(raw) {
+      if (!raw) return 'TBD';
+      // ISO format: 2026-05-23
+      const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (iso) {
+        const d = new Date(`${raw}T12:00:00`);
+        return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      }
+      return raw; // already human-readable
+    }
+
+    const displayDate = formatDate(data.preferred_date);
+    const displayTime = data.preferred_time || 'TBD';
+    const displaySize = data.apartment_size || 'N/A';
+    const displayBudget = data.budget || 'N/A';
+    const displayMoveIn = formatDate(data.move_in_date);
 
     // 1. Create Google Calendar event
     let calendarEvent = null;
@@ -226,7 +254,7 @@ exports.handler = async (event) => {
 
     // 3. Send SMS to caller
     if (data.phone) {
-      const callerMsg = `Your appointment is confirmed!\n\n${propertyAddress}\n${data.preferred_date} at ${data.preferred_time}\n\nRosalia Group will be in touch. See you then!`;
+      const callerMsg = `Your appointment is confirmed!\n\n${propertyAddress}\n${displayDate} at ${displayTime}\n\nRosalia Group will be in touch. See you then!`;
       try {
         const smsResult = await sendSMS(data.phone, callerMsg);
         console.log('Caller SMS sent:', smsResult.success);
@@ -236,7 +264,7 @@ exports.handler = async (event) => {
     }
 
     // 4. Send SMS to team
-    const teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${propertyAddress}\nDate: ${data.preferred_date} at ${data.preferred_time}\nBudget: ${data.budget}\nSize: ${data.apartment_size}\nMove-In: ${data.move_in_date}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
+    const teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${propertyAddress}\nDate: ${displayDate} at ${displayTime}\nBudget: ${displayBudget}\nSize: ${displaySize}\nMove-In: ${displayMoveIn}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
     try {
       const teamSmsResult = await sendSMS(client.notifyPhone, teamMsg);
       console.log('Team SMS sent:', teamSmsResult.success);
@@ -247,6 +275,39 @@ exports.handler = async (event) => {
     // 5. Send email confirmation to caller (CC inquiries@rosaliagroup.com)
     if (data.email) {
       const firstName = (data.full_name || '').split(' ')[0] || 'there';
+      const isSpecialist = data.status === 'needs_specialist';
+
+      const emailSubject = isSpecialist
+        ? 'We Received Your Inquiry — Rosalia Group'
+        : 'Appointment Confirmed - Rosalia Group';
+
+      const emailHeading = isSpecialist ? 'Inquiry Received' : 'Appointment Confirmed';
+      const emailGreeting = isSpecialist
+        ? 'Thank you for reaching out. A leasing specialist will be in touch with you shortly to discuss your needs and schedule a tour.'
+        : 'Your private tour has been confirmed. We look forward to welcoming you.';
+      const emailFooterNote = isSpecialist
+        ? 'A member of our leasing team will contact you soon. If you have any questions in the meantime, simply reply to this email or call us at (862) 333-1681.'
+        : 'Our leasing agent will reach out before your appointment to confirm. If you need to reschedule, simply reply to this email or call us at (862) 333-1681.';
+
+      const detailsBox = isSpecialist
+        ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;border:1px solid #333;border-radius:4px;margin-bottom:30px;">
+              <tr><td style="padding:24px 28px;">
+                <div style="color:#C9A84C;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">Your Inquiry</div>
+                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📍 <strong style="color:#C9A84C;">${propertyAddress}</strong></div>
+                <div style="color:#E8E8E8;font-size:14px;margin-bottom:6px;color:#999;">Size: ${displaySize}</div>
+                <div style="color:#999;font-size:14px;">Move-In: ${displayMoveIn}</div>
+              </td></tr>
+            </table>`
+        : `<table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;border:1px solid #333;border-radius:4px;margin-bottom:30px;">
+              <tr><td style="padding:24px 28px;">
+                <div style="color:#C9A84C;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">Tour Details</div>
+                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📍 <strong style="color:#C9A84C;">${propertyAddress}</strong></div>
+                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📅 ${displayDate} at ${displayTime}</div>
+                <div style="color:#E8E8E8;font-size:14px;margin-bottom:6px;color:#999;">Size: ${displaySize} &nbsp;|&nbsp; Budget: ${displayBudget}/mo</div>
+                <div style="color:#999;font-size:14px;">Move-In: ${displayMoveIn}</div>
+              </td></tr>
+            </table>`;
+
       const emailHtml = `
 <!DOCTYPE html>
 <html>
@@ -268,10 +329,11 @@ exports.handler = async (event) => {
         <!-- Body -->
         <tr>
           <td style="padding:40px;">
-            <h1 style="color:#C9A84C;font-size:22px;font-weight:normal;letter-spacing:2px;text-transform:uppercase;margin:0 0 24px 0;">Appointment Confirmed</h1>
+            <h1 style="color:#C9A84C;font-size:22px;font-weight:normal;letter-spacing:2px;text-transform:uppercase;margin:0 0 24px 0;">${emailHeading}</h1>
             <p style="color:#E8E8E8;font-size:15px;line-height:1.7;margin:0 0 24px 0;">Dear ${firstName},</p>
-            <p style="color:#E8E8E8;font-size:15px;line-height:1.7;margin:0 0 30px 0;">Your private tour has been confirmed. We look forward to welcoming you.</p>
+            <p style="color:#E8E8E8;font-size:15px;line-height:1.7;margin:0 0 30px 0;">${emailGreeting}</p>
             <!-- Details Box -->
+<<<<<<< HEAD
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;border:1px solid #333;border-radius:4px;margin-bottom:30px;">
               <tr><td style="padding:24px 28px;">
                 <div style="color:#C9A84C;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">Tour Details</div>
@@ -282,9 +344,13 @@ exports.handler = async (event) => {
               </td></tr>
             </table>
             <p style="color:#999;font-size:13px;line-height:1.7;margin:0 0 30px 0;">Our leasing agent will reach out before your appointment to confirm. If you need to reschedule, simply reply to this email or call us at (862) 333-1681.</p>
+=======
+            ${detailsBox}
+            <p style="color:#999;font-size:13px;line-height:1.7;margin:0 0 30px 0;">${emailFooterNote}</p>
+>>>>>>> 9e0c3da5556c97fd03d8843b8246fb93b5625c76
             <!-- CTA -->
             <div style="text-align:center;margin-bottom:30px;">
-              <a href="https://silver-ganache-1ee2ca.netlify.app/booking-rosalia" style="display:inline-block;background:#C9A84C;color:#0A0A0A;font-size:12px;letter-spacing:3px;text-transform:uppercase;padding:14px 32px;text-decoration:none;font-weight:bold;border-radius:2px;">Manage Appointment</a>
+              <a href="https://book.rosaliagroup.com/iron65-reschedule" style="display:inline-block;background:#C9A84C;color:#0A0A0A;font-size:12px;letter-spacing:3px;text-transform:uppercase;padding:14px 32px;text-decoration:none;font-weight:bold;border-radius:2px;">Manage Appointment</a>
             </div>
           </td>
         </tr>
@@ -308,7 +374,7 @@ exports.handler = async (event) => {
           from: '"Rosalia Group" <inquiries@rosaliagroup.com>',
           to: data.email,
           cc: 'inquiries@rosaliagroup.com',
-          subject: 'Appointment Confirmed - Rosalia Group',
+          subject: emailSubject,
           html: emailHtml,
         });
         console.log('Email confirmation sent successfully to:', data.email);
@@ -332,3 +398,4 @@ exports.handler = async (event) => {
     };
   }
 };
+

@@ -8,8 +8,8 @@ const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const INBOX_EMAIL = 'inquiries@rosaliagroup.com';
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
-const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-rosalia';
-const IRON65_BOOKING_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form';
+const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
+const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 
 const VAPI_KEY = process.env.VAPI_KEY || '064f441d-a388-4404-8b6c-05e91e90f1ff';
@@ -33,7 +33,8 @@ CRITICAL RULES:
 - If someone asks about Section 8, housing vouchers, or rental assistance programs: say "We welcome all legal sources of income. We show the apartment to everyone  our management team reviews all applications individually including credit criteria. Schedule a tour and our leasing agent will walk you through the process"
 - All legal sources of income accepted  management reviews all applications
 - Never discuss income or credit as a barrier to touring  only the leasing agent discusses this at the tour
-- Keep replies concise  bullet points for Q&A, under 100 words, then booking link
+- Keep replies SHORT — 3 sentences maximum, then the booking link on its own line
+- Answer the specific question asked in ONE sentence — do not volunteer extra info
 - Always lead with NET EFFECTIVE rent using these EXACT formulas:
   * 13-month lease, 1 month free: gross x 12/13 (e.g. $2,199 x 12/13 = $2,029.84)
   * 13-month lease, 1 month free + apply within 24hrs of tour (half month additional): gross x 11.5/13 (e.g. $2,199 x 11.5/13 = $1,945.00)
@@ -54,10 +55,10 @@ PROPERTY KNOWLEDGE BASE:
 # NOTE: Prices, availability, and incentives change daily. Always direct leads to schedule a tour for the most current information.
 
 ## BOOKING LINKS
-- All Rosalia properties (general): https://silver-ganache-1ee2ca.netlify.app/booking-rosalia
-- Iron 65 specifically: https://silver-ganache-1ee2ca.netlify.app/booking-form
-- Reschedule (Rosalia): https://silver-ganache-1ee2ca.netlify.app/reschedule-rosalia
-- Reschedule (Iron 65): https://silver-ganache-1ee2ca.netlify.app/reschedule-form
+- All Rosalia properties (general): https://book.rosaliagroup.com/book
+- Iron 65 specifically: https://book.rosaliagroup.com/iron65
+- Reschedule (Rosalia): https://book.rosaliagroup.com/reschedule
+- Reschedule (Iron 65): https://book.rosaliagroup.com/iron65-reschedule
 
 ## UTILITIES  ALL BUILDINGS
 - Electric: tenant pays (all buildings use electric  no gas)
@@ -169,7 +170,7 @@ Utilities included: none | Tenant pays: electric, water, trash
 Studios from $1,955/mo | 1BR, 2BR, 3BR available
 Private balconies on select units | Steps from Orange train station
 Climate-controlled parking | Bike storage
-Tour booking: https://silver-ganache-1ee2ca.netlify.app/booking-rosalia
+Tour booking: https://book.rosaliagroup.com/book
 
 ### 65 MCWHORTER ST  IRON 65, NEWARK NJ
 Utilities included: none | Tenant pays: electric, water, trash
@@ -185,7 +186,7 @@ NET EFFECTIVE CALCULATIONS (Iron 65):
 Free internet 1 year (apply within 24hrs of tour) | Amenities fee waived 12 months | Security deposit: $1,000
 Amenities: Rooftop with NYC skyline views | Fitness center | Yoga studio | Cold plunge | Saunas | Outdoor kitchen | Game room | Business center | Pet park | Bike storage | Front desk 7 days | Doorman | Security | In-unit W/D
 Tours: Tue-Fri 12pm-6pm | Sat-Sun 12pm-4pm
-Tour booking: https://silver-ganache-1ee2ca.netlify.app/booking-form
+Tour booking: https://book.rosaliagroup.com/iron65
 
 ## FAQ
 Q: Are utilities included?
@@ -222,7 +223,7 @@ const SKIP_SENDERS = [
   'notifications', 'automated', 'newsletter', 'unsubscribe',
   'realtor.com', 'planhub', 'rentspree',
   'voice.google.com',
-  'txt.voice.google', 'comet.zillow', 'mail.zillow',
+  'txt.voice.google', 'mail.zillow',
   'zillowrentals', 'mail.realtor', 'mail.instagram',
   'no-reply@mail.zillow', 'market-updates@', 'recommendations@',
   'rosaliagroup.com', 'mechanicalenterprise.com',
@@ -263,7 +264,8 @@ const SKIP_SUBJECTS = [
 ];
 
 function isZillowLead(from) {
-  return from.toLowerCase().includes('convo.zillow.com');
+  const f = from.toLowerCase();
+  return f.includes('convo.zillow.com') || f.includes('comet.zillow.com');
 }
 function isAvailDigest(subject) {
   const s = (subject || '').toLowerCase();
@@ -276,8 +278,9 @@ function isFUBLead(from, subject) {
   const s = (subject || '').toLowerCase();
   // Hot Sheet is a daily digest, not a lead
   if (s.includes('hot sheet')) return false;
-  // Direct FUB emails
+  // Direct FUB emails (by domain or display name)
   if (f.includes('followupboss.com')) return true;
+  if (f.includes('follow up boss')) return true;
   // Forwarded FUB lead notifications (Fwd: New Lead from Facebook)
   if (s.includes('new lead from') || s.includes('fwd: new lead')) return true;
   // FUB subject patterns
@@ -471,7 +474,7 @@ function fetchUnreadEmails() {
         imap.search(['UNSEEN', ['SINCE', sinceStr]], (err, results) => {
           if (err) return reject(err);
           if (!results || results.length === 0) { imap.end(); return resolve([]); }
-          const toFetch = results.slice(0, 5);
+          const toFetch = results.slice(0, 20);
           const fetch = imap.fetch(toFetch, { bodies: '', markSeen: true });
           fetch.on('message', (msg) => {
             let buffer = '';
@@ -564,14 +567,19 @@ async function getPreviousThread(fromEmail) {
   return lead?.email_reply || null;
 }
 
-async function repliedRecently(fromEmail) {
+async function repliedRecently(fromEmail, hours = 24) {
   const lead = await getLeadData(fromEmail);
   if (!lead?.replied_at) return false;
   const lastReply = new Date(lead.replied_at);
-  return lastReply > new Date(Date.now() - 10 * 60 * 1000);
+  const hoursSince = (Date.now() - lastReply.getTime()) / (1000 * 60 * 60);
+  if (hoursSince < hours) {
+    console.log(`Duplicate check: already replied to ${fromEmail} ${hoursSince.toFixed(1)} hours ago, skipping`);
+    return true;
+  }
+  return false;
 }
 
-async function generateReply(from, subject, body, previousReply, leadContext, calendarAppt, leadName) {
+async function generateReply(from, subject, body, previousReply, leadContext, calendarAppt, leadName, leadClient) {
   const isBuyer = /buy|purchase|mortgage|home|house|sell/i.test(body + subject);
 
   let threadContext = '';
@@ -634,11 +642,21 @@ ${contextStr}${threadContext}`;
 
 You are ${role}.
 
-${previousReply ? 'A lead is REPLYING to your previous email. Read their reply and respond to what they are asking.' : `A new inquiry email came in. ${nameGreeting} Ask about their needs.${detectedCity}`}
+${previousReply ? 'A lead is REPLYING to your previous email. Read their reply carefully and answer EXACTLY what they asked — do not reintroduce yourself or repeat anything already said.' : `A new inquiry came in. ${nameGreeting}${detectedCity}`}
 
 ${userMessage}
 
-Write ONLY the email body. No subject line. MAXIMUM 4 sentences. No bullet points. No lists. Lead with the lead's name and ONE sentence about their property interest. Ask for their phone number and preferred move-in date in ONE sentence. End with the booking link. Never mention multiple properties or amenities in detail  keep it short and conversational. No markdown.`;
+REPLY FORMAT RULES (follow strictly):
+0. BOOKING INTENT DETECTION: If the lead's message indicates they want to schedule, book, or see the apartment (e.g. contains words like yes, ready, available, schedule, book, tour, when, times, appointment, interested, come in) — respond with ONE sentence max confirming you are sending the link, then put the booking link on the next line. Nothing else. No questions. No follow-up. Example: Great — here is your booking link to pick a time that works for you.
+1. FIRST sentence: directly answer the specific question they asked. Do not start with pleasantries.
+2. SECOND sentence (optional): one relevant follow-up point or qualifying question — only if genuinely useful.
+3. FINAL line (required, on its own line): the booking link — ${leadClient === 'iron65' ? 'always https://book.rosaliagroup.com/iron65' : 'always https://book.rosaliagroup.com/book (use https://book.rosaliagroup.com/iron65 ONLY if the inquiry is specifically about Iron 65 / 65 McWhorter)'}.
+4. Never repeat anything said in a previous reply.
+5. No bullet points. No lists. No markdown. No HTML. No subject line.
+6. Do NOT end with "Please let me know if you have any other questions" or similar filler phrases.
+7. Sign off once per email as: Rosalia Group | Inquiries Team | +18624191763
+
+Write ONLY the email body.`;
 
   console.log('Calling Claude API...');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -662,27 +680,52 @@ Write ONLY the email body. No subject line. MAXIMUM 4 sentences. No bullet point
   return data.content?.[0]?.text || '';
 }
 
+const sendReplyTracker = {};
 async function sendReply(replyTo, subject, replyText, ccEmail) {
+  // Track how many times sendReply is called per email address per run
+  sendReplyTracker[replyTo] = (sendReplyTracker[replyTo] || 0) + 1;
+  console.log(`sendReply called for ${replyTo}: ${sendReplyTracker[replyTo]} time(s) this run`);
+  if (sendReplyTracker[replyTo] > 1) {
+    console.log(`DUPLICATE PREVENTED: already sent to ${replyTo} this run, skipping`);
+    return;
+  }
+
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: INBOX_EMAIL, pass: GMAIL_PASS },
   });
   const replySubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`;
-  const htmlText = replyText
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const plainText = replyText.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1');
+  // Strip markdown, convert URLs to links FIRST, then escape & in non-URL text
+  let cleaned = replyText
     .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/\n/g, '<br>')
-    .replace(
-      /(https?:\/\/[^\s<]+)/g,
-      '<a href="$1" style="color:#1a73e8;text-decoration:underline;">Book Your Tour Here</a>'
-    );
+    .replace(/\*([^*]+)\*/g, '$1');
+  // Strip any raw HTML <a> tags the AI may have output — extract the URL first
+  cleaned = cleaned.replace(/<a\s+href=['"]?(https?:\/\/[^'"<>\s]+)['"]?[^>]*>.*?<\/a>/gi, '$1');
+  // Strip any other stray HTML tags
+  cleaned = cleaned.replace(/<[^>]+>/g, '');
+  // Replace URLs with placeholder tokens to protect them from & escaping
+  // Regex stops at whitespace, quotes, brackets so it doesn't grab HTML artifacts
+  const urls = [];
+  cleaned = cleaned.replace(/(https?:\/\/[^\s<>"')\]]+)/g, (match) => {
+    urls.push(match);
+    return `__URL_${urls.length - 1}__`;
+  });
+  // Now safe to escape &
+  cleaned = cleaned.replace(/&/g, '&amp;');
+  cleaned = cleaned.replace(/\n/g, '<br>');
+  // Restore URLs as clickable links
+  const replyHtml = cleaned.replace(/__URL_(\d+)__/g, (_, i) => {
+    const url = urls[parseInt(i)];
+    return `<a href="${url}" style="color:#C9A84C;text-decoration:underline;">Book Your Tour Here</a>`;
+  });
+  const htmlBody = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">${replyHtml}</div>`;
   const mailOptions = {
     from: `"Rosalia Group Inquiries" <${INBOX_EMAIL}>`,
     to: replyTo,
     subject: replySubject,
-    text: replyText.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1'),
-    html: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.8;color:#333;max-width:600px;">${htmlText}</div>`,
+    text: plainText,
+    html: htmlBody,
   };
   if (ccEmail && ccEmail !== replyTo) {
     mailOptions.cc = ccEmail;
@@ -742,7 +785,7 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone, cl
         notes: mergedNotes,
         replied_at: new Date().toISOString(),
         email_reply: replyText,
-        phone: existing[0].phone || phone || null,
+        phone: phone || existing[0].phone || null,  // prefer newly provided phone over old
       }),
     });
     return existing[0];
@@ -798,6 +841,7 @@ exports.handler = async (event) => {
     const rawEmails = await fetchUnreadEmails();
     console.log(`Found ${rawEmails.length} unread emails`);
     const results = { processed: 0, skipped: 0, not_lead: 0, errors: 0 };
+    const processedEmails = new Set(); // Prevent processing same sender twice per run
 
     for (const raw of rawEmails) {
       try {
@@ -818,6 +862,14 @@ exports.handler = async (event) => {
 
         console.log('Processing:', from, '|', subject);
 
+        // Per-run dedup: skip if we already processed this sender
+        if (processedEmails.has(fromEmail.toLowerCase())) {
+          console.log('Skipping (already processed this run):', fromEmail);
+          results.skipped++;
+          continue;
+        }
+        processedEmails.add(fromEmail.toLowerCase());
+
         if (shouldSkip(from, subject)) {
           console.log('Skipping (automated):', from);
           results.skipped++;
@@ -829,6 +881,10 @@ exports.handler = async (event) => {
           results.not_lead++;
           continue;
         }
+
+        const previousReply = await getPreviousThread(fromEmail);
+        const isReply = subject.toLowerCase().startsWith('re:') || !!previousReply;
+        if (isReply) console.log('Thread reply detected');
 
         let phone = null;
         let realEmail = fromEmail;
@@ -877,27 +933,39 @@ exports.handler = async (event) => {
           // Strip emails from text before extracting phone
           phone = extractPhone(body + ' ' + subject);
         }
+        // For reply threads: always try to extract phone from body regardless of source
+        if (!phone && isReply) {
+          const replyPhone = extractPhone(body);
+          if (replyPhone) {
+            phone = replyPhone;
+            console.log('Phone extracted from reply body:', phone);
+          }
+        }
+
         console.log('Lead detected! Phone:', phone || 'none found');
 
         const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : fromEmail;
         const skipRecentCheck = isAvailLead(from) || from.includes('reply.avail.co') || from.includes('@avail.co') || isFUBLead(from, subject);
 
-        const previousReply = await getPreviousThread(fromEmail);
-        const isReply = subject.toLowerCase().startsWith('re:') || !!previousReply;
-        if (isReply) console.log('Thread reply detected');
-
-        if (!isReply && !skipRecentCheck && await repliedRecently(checkEmail)) {
-          console.log('Skipping (replied recently, not a thread reply):', checkEmail);
+        if (!skipRecentCheck && await repliedRecently(checkEmail, isReply ? 2 : 24)) {
+          console.log('Skipping (replied recently):', checkEmail, isReply ? '(thread, 2h window)' : '(new, 24h window)');
           results.skipped++;
           continue;
         }
 
         const leadContext = await getLeadContext(checkEmail, realName);
+
+        if (leadContext?.status === 'dnc') {
+          console.log('Skipping DNC lead:', checkEmail);
+          results.skipped++;
+          continue;
+        }
+
         const calendarAppt = await getCalendarAppointment(realName || fromName);
         if (calendarAppt) console.log('Calendar appointment found:', calendarAppt.date, calendarAppt.time);
         if (leadContext) console.log('Lead context found:', leadContext.status);
 
-        const replyText = await generateReply(from, subject, body, previousReply, leadContext, calendarAppt, realName);
+        const replyText = await generateReply(from, subject, body, previousReply, leadContext, calendarAppt, realName, leadClient);
         if (!replyText) { results.skipped++; continue; }
 
         const effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : replyTo;
@@ -924,17 +992,22 @@ exports.handler = async (event) => {
         if (phone) {
           const existingLead = await getLeadData(fromEmail);
           const hadPhone = existingLead?.phone && existingLead.phone.replace(/\D/g, '').length >= 10;
-          if (!hadPhone || !isReply) {
-            const propertyMatch = subject.match(/for\s+(.+?)(?:,\s*Unit|\s*$)/i);
-            const propertyName = propertyMatch ? propertyMatch[1].trim() : '';
-            const smsBookingUrl = leadClient === 'iron65' ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
+          const propertyMatch = subject.match(/for\s+(.+?)(?:,\s*Unit|\s*$)/i);
+          const propertyName = propertyMatch ? propertyMatch[1].trim() : '';
+          const smsBookingUrl = leadClient === 'iron65' ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
+          // Send SMS immediately: new lead OR phone newly provided in reply
+          const shouldSendSMS = !hadPhone || !isReply;
+          if (shouldSendSMS) {
+            if (isReply && !hadPhone) console.log('Phone newly provided in reply — sending SMS immediately:', phone);
             await sendSMS(phone, realName || fromName, propertyName, smsBookingUrl);
             if (callAllowed) {
               await triggerCall(phone, realName || fromName);
               console.log('Call triggered during business hours for:', realName || fromName);
             } else {
-              console.log('Outside business hours - skipping call, autocall will handle:', realName || fromName);
+              console.log('Outside business hours — SMS sent, autocall will handle:', realName || fromName);
             }
+          } else {
+            console.log('Phone already on record — skipping duplicate SMS');
           }
         }
 

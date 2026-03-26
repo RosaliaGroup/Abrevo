@@ -105,6 +105,38 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing required fields' }) };
     }
 
+    // 18-hour advance notice check
+    {
+      const months = {january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11};
+      const textMatch = (preferred_date || '').match(/(\w+)\s+(\d+)[,\s]+(\d{4})/);
+      const isoMatch = (preferred_date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      let year, monthNum, day;
+      if (isoMatch) {
+        year = parseInt(isoMatch[1]); monthNum = parseInt(isoMatch[2]) - 1; day = parseInt(isoMatch[3]);
+      } else if (textMatch) {
+        monthNum = months[textMatch[1].toLowerCase()] ?? 0;
+        day = parseInt(textMatch[2]); year = parseInt(textMatch[3]);
+      }
+      if (year) {
+        let hours = 10, minutes = 0;
+        const timeMatch = (preferred_time || '').match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (timeMatch) {
+          hours = parseInt(timeMatch[1]); minutes = parseInt(timeMatch[2]);
+          if (timeMatch[3].toUpperCase() === 'PM' && hours !== 12) hours += 12;
+          if (timeMatch[3].toUpperCase() === 'AM' && hours === 12) hours = 0;
+        }
+        const etOffset = -4;
+        const start = new Date(Date.UTC(year, monthNum, day, hours - etOffset, minutes));
+        const now = new Date();
+        const hoursUntilAppointment = (start - now) / (1000 * 60 * 60);
+        if (hoursUntilAppointment < 18) {
+          const earliest = new Date(now.getTime() + 18 * 60 * 60 * 1000);
+          const earliestStr = earliest.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          return { statusCode: 400, headers, body: JSON.stringify({ error: `Appointments require 18 hours advance notice. Earliest available: ${earliestStr}` }) };
+        }
+      }
+    }
+
     // Create calendar event - non-blocking
     let eventId = null;
     let calendarError = null;
