@@ -333,21 +333,8 @@ exports.handler = async (event) => {
             <p style="color:#E8E8E8;font-size:15px;line-height:1.7;margin:0 0 24px 0;">Dear ${firstName},</p>
             <p style="color:#E8E8E8;font-size:15px;line-height:1.7;margin:0 0 30px 0;">${emailGreeting}</p>
             <!-- Details Box -->
-<<<<<<< HEAD
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;border:1px solid #333;border-radius:4px;margin-bottom:30px;">
-              <tr><td style="padding:24px 28px;">
-                <div style="color:#C9A84C;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">Tour Details</div>
-                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">ðŸ“ <strong style="color:#C9A84C;">${propertyAddress}</strong></div>
-                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">ðŸ“… ${data.preferred_date} at ${data.preferred_time}</div>
-                <div style="color:#E8E8E8;font-size:14px;margin-bottom:6px;color:#999;">Size: ${data.apartment_size} &nbsp;|&nbsp; Budget: ${data.budget}/mo</div>
-                <div style="color:#999;font-size:14px;">Move-In: ${data.move_in_date}</div>
-              </td></tr>
-            </table>
-            <p style="color:#999;font-size:13px;line-height:1.7;margin:0 0 30px 0;">Our leasing agent will reach out before your appointment to confirm. If you need to reschedule, simply reply to this email or call us at (862) 333-1681.</p>
-=======
             ${detailsBox}
             <p style="color:#999;font-size:13px;line-height:1.7;margin:0 0 30px 0;">${emailFooterNote}</p>
->>>>>>> 9e0c3da5556c97fd03d8843b8246fb93b5625c76
             <!-- CTA -->
             <div style="text-align:center;margin-bottom:30px;">
               <a href="https://book.rosaliagroup.com/iron65-reschedule" style="display:inline-block;background:#C9A84C;color:#0A0A0A;font-size:12px;letter-spacing:3px;text-transform:uppercase;padding:14px 32px;text-decoration:none;font-weight:bold;border-radius:2px;">Manage Appointment</a>
