@@ -50,6 +50,10 @@ async function sendSMS(phone, message) {
 }
 
 async function createCalendarEvent(client, data) {
+  if (data.preferred_date == null) {
+    throw new Error('No preferred_date provided - skipping calendar');
+  }
+
   const auth = new google.auth.GoogleAuth({
     credentials: client.googleCredentials,
     scopes: ['https://www.googleapis.com/auth/calendar'],
@@ -210,13 +214,17 @@ exports.handler = async (event) => {
     const displayBudget = data.budget || 'N/A';
     const displayMoveIn = formatDate(data.move_in_date);
 
-    // 1. Create Google Calendar event
+    // 1. Create Google Calendar event (skip for specialist forms or missing date)
     let calendarEvent = null;
-    try {
-      calendarEvent = await createCalendarEvent(client, data);
-      console.log('Calendar event created:', calendarEvent?.id);
-    } catch (err) {
-      console.error('Calendar error:', err.message);
+    if (data.status === 'needs_specialist' || !data.preferred_date) {
+      console.log('Skipping calendar creation — status:', data.status, 'preferred_date:', data.preferred_date);
+    } else {
+      try {
+        calendarEvent = await createCalendarEvent(client, data);
+        console.log('Calendar event created:', calendarEvent?.id);
+      } catch (err) {
+        console.error('Calendar error:', err.message);
+      }
     }
 
     // 2. Save to Supabase
@@ -264,7 +272,9 @@ exports.handler = async (event) => {
     }
 
     // 4. Send SMS to team
-    const teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${propertyAddress}\nDate: ${displayDate} at ${displayTime}\nBudget: ${displayBudget}\nSize: ${displaySize}\nMove-In: ${displayMoveIn}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
+    let teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${propertyAddress}\nDate: ${displayDate} at ${displayTime}\nBudget: ${displayBudget}\nSize: ${displaySize}\nMove-In: ${displayMoveIn}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
+    // Strip any URLs from team SMS
+    teamMsg = teamMsg.replace(/https?:\/\/[^\s]+/gi, '').replace(/\s{2,}/g, ' ').trim();
     try {
       const teamSmsResult = await sendSMS(client.notifyPhone, teamMsg);
       console.log('Team SMS sent:', teamSmsResult.success);
