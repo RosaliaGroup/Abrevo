@@ -1,4 +1,4 @@
-const { google } = require('googleapis');
+﻿const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
@@ -262,7 +262,7 @@ exports.handler = async (event) => {
         <tr>
           <td style="background:#0A0A0A;padding:30px 40px;text-align:center;border-bottom:1px solid #C9A84C;">
             <div style="color:#C9A84C;font-size:11px;letter-spacing:4px;text-transform:uppercase;">Rosalia Group</div>
-            <div style="color:#C9A84C;font-size:18px;margin-top:6px;">◆</div>
+            <div style="color:#C9A84C;font-size:18px;margin-top:6px;">â—†</div>
           </td>
         </tr>
         <!-- Body -->
@@ -275,8 +275,8 @@ exports.handler = async (event) => {
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;border:1px solid #333;border-radius:4px;margin-bottom:30px;">
               <tr><td style="padding:24px 28px;">
                 <div style="color:#C9A84C;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">Tour Details</div>
-                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📍 <strong style="color:#C9A84C;">${propertyAddress}</strong></div>
-                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📅 ${data.preferred_date} at ${data.preferred_time}</div>
+                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">ðŸ“ <strong style="color:#C9A84C;">${propertyAddress}</strong></div>
+                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">ðŸ“… ${data.preferred_date} at ${data.preferred_time}</div>
                 <div style="color:#E8E8E8;font-size:14px;margin-bottom:6px;color:#999;">Size: ${data.apartment_size} &nbsp;|&nbsp; Budget: ${data.budget}/mo</div>
                 <div style="color:#999;font-size:14px;">Move-In: ${data.move_in_date}</div>
               </td></tr>
