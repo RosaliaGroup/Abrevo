@@ -63,9 +63,9 @@ async function createCalendarEvent(client, data) {
 
   // Parse date and time with proper timezone handling
   let startDateTime;
+  let year, monthNum, day, hours, minutes;
   try {
     // Parse date - handles both YYYY-MM-DD (form) and "March 20 2026" (Vapi)
-    let year, monthNum, day;
     const isoMatch = data.preferred_date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     const textMatch = data.preferred_date.match(/(\w+)\s+(\d+)[,\s]+(\d{4})/);
     if (isoMatch) {
@@ -86,8 +86,8 @@ async function createCalendarEvent(client, data) {
     // Parse time
     const timeParts = data.preferred_time.match(/(\d+):?(\d*)?\s*(AM|PM)/i);
     if (!timeParts) throw new Error('Invalid time format');
-    let hours = parseInt(timeParts[1]);
-    const minutes = parseInt(timeParts[2] || '0');
+    hours = parseInt(timeParts[1]);
+    minutes = parseInt(timeParts[2] || '0');
     const period = timeParts[3].toUpperCase();
     
     // Convert to 24-hour format
