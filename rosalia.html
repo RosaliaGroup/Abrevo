@@ -149,7 +149,7 @@
     .badge-purple { background: rgba(155,89,182,0.15); color: var(--purple); }
 
     /* Stat cards */
-    .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 28px; }
     .stat-card {
       background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
       padding: 20px;
@@ -677,6 +677,7 @@
         <div class="stat-card"><div class="stat-label">Emails Sent</div><div class="stat-value" id="mon-emails-today">--</div><div class="stat-sub" id="mon-emails-sub">loading...</div></div>
         <div class="stat-card"><div class="stat-label">Success Rate</div><div class="stat-value" id="mon-success-rate">--</div><div class="stat-sub" id="mon-success-sub">loading...</div></div>
         <div class="stat-card"><div class="stat-label">Systems Online</div><div class="stat-value" id="mon-systems-up">--</div><div class="stat-sub" id="mon-systems-sub">checking...</div></div>
+        <div class="stat-card"><div class="stat-label">Unanswered Leads</div><div class="stat-value" id="mon-unanswered-count">--</div><div class="stat-sub" id="mon-unanswered-sub">loading...</div></div>
       </div>
 
       <div class="grid-2">
@@ -714,6 +715,30 @@
         <div class="card">
           <div class="card-title">Recent Activity Feed</div>
           <div id="mon-feed" style="max-height:400px;overflow-y:auto;"><div class="loading-text"><span class="spinner"></span>Loading activity...</div></div>
+        </div>
+
+        <!-- PANEL 7: Unanswered Leads -->
+        <div class="card">
+          <div class="card-title">Unanswered Leads</div>
+          <div id="mon-unanswered"><div class="loading-text"><span class="spinner"></span>Loading leads...</div></div>
+        </div>
+
+        <!-- PANEL 8: Bookings Today -->
+        <div class="card">
+          <div class="card-title">Bookings Today</div>
+          <div id="mon-bookings-today"><div class="loading-text"><span class="spinner"></span>Loading bookings...</div></div>
+        </div>
+
+        <!-- PANEL 9: Call Quality (24h) -->
+        <div class="card">
+          <div class="card-title">Call Quality (24h)</div>
+          <div id="mon-call-quality"><div class="loading-text"><span class="spinner"></span>Analyzing calls...</div></div>
+        </div>
+
+        <!-- PANEL 10: SMS Credits -->
+        <div class="card">
+          <div class="card-title">SMS Credits</div>
+          <div id="mon-sms-credits"><div class="loading-text"><span class="spinner"></span>Checking credits...</div></div>
         </div>
       </div>
     </div>
@@ -1416,8 +1441,8 @@ setTimeout(updateFlyer, 100);
 // ========== SYSTEM MONITOR ==========
 const VAPI_KEY = '064f441d-a388-4404-8b6c-05e91e90f1ff';
 const VAPI_BASE = 'https://api.vapi.ai';
-const AUTOCALL_URL = 'https://silver-ganache-1ee2ca.netlify.app/.netlify/functions/autocall';
-const READMAIL_URL = 'https://silver-ganache-1ee2ca.netlify.app/.netlify/functions/readmail';
+const AUTOCALL_URL = 'https://abrevo.co/.netlify/functions/autocall';
+const READMAIL_URL = 'https://abrevo.co/.netlify/functions/readmail';
 
 const ASSISTANT_MAP = {
   'Rosalia Outbound': 'Alex',
@@ -1727,12 +1752,157 @@ async function monLoadFeed(vapiCalls, emailLeads) {
   el.innerHTML = html;
 }
 
+// PANEL 7: Unanswered Leads
+async function monLoadUnanswered() {
+  const el = document.getElementById('mon-unanswered');
+  try {
+    const since = new Date(Date.now() - 86400000).toISOString();
+    const leads = await monFetchSupabase('leads', `select=name,source,created_at,phone&replied_at=is.null&created_at=gte.${since}&order=created_at.desc`);
+
+    const now = Date.now();
+    const stale = leads.filter(l => (now - new Date(l.created_at).getTime()) > 30 * 60 * 1000);
+
+    document.getElementById('mon-unanswered-count').textContent = leads.length;
+    document.getElementById('mon-unanswered-count').style.color = stale.length > 0 ? 'var(--red)' : 'var(--green)';
+    document.getElementById('mon-unanswered-sub').textContent = stale.length > 0 ? `${stale.length} over 30 min old` : 'all recent';
+
+    if (leads.length === 0) {
+      el.innerHTML = `<div class="mon-row">${monDot('green', true)} <span class="mon-success">All leads answered</span></div>`;
+      return;
+    }
+
+    let html = `<div class="mon-metrics-grid">
+      <div class="mon-metric"><div class="mon-metric-val" style="color:${stale.length ? 'var(--red)' : 'var(--text)'}">${leads.length}</div><div class="mon-metric-lbl">Unanswered</div></div>
+      <div class="mon-metric"><div class="mon-metric-val" style="color:${stale.length ? 'var(--red)' : 'var(--green)'}">${stale.length}</div><div class="mon-metric-lbl">&gt;30 Min Old</div></div>
+      <div class="mon-metric"><div class="mon-metric-val">${leads.length - stale.length}</div><div class="mon-metric-lbl">Recent</div></div>
+    </div>`;
+    html += `<div class="mon-section-label">Waiting for Reply</div>`;
+    leads.slice(0, 10).forEach(l => {
+      const age = monTimeAgo(l.created_at);
+      const isOld = (now - new Date(l.created_at).getTime()) > 30 * 60 * 1000;
+      html += `<div class="mon-row">
+        ${monDot(isOld ? 'red' : 'yellow', isOld)}
+        <span class="mon-label">${l.name || 'Unknown'}</span>
+        <span class="mon-val">${l.source || '--'}</span>
+        <span class="mon-val">${l.phone || '--'}</span>
+        <span class="mon-val" style="text-align:right">${age}</span>
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Failed: ${e.message}</span></div>`;
+  }
+}
+
+// PANEL 8: Bookings Today
+async function monLoadBookingsToday() {
+  const el = document.getElementById('mon-bookings-today');
+  try {
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const tomorrowStart = new Date(todayStart); tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+    const bookings = await monFetchSupabase('bookings', `select=full_name,phone,preferred_date,preferred_time,calendar_event_id,created_at&created_at=gte.${todayStart.toISOString()}&created_at=lt.${tomorrowStart.toISOString()}&order=created_at.desc`);
+
+    const withCal = bookings.filter(b => b.calendar_event_id);
+    const noCal = bookings.filter(b => !b.calendar_event_id);
+
+    let html = `<div class="mon-metrics-grid">
+      <div class="mon-metric"><div class="mon-metric-val">${bookings.length}</div><div class="mon-metric-lbl">Total Today</div></div>
+      <div class="mon-metric"><div class="mon-metric-val" style="color:var(--green)">${withCal.length}</div><div class="mon-metric-lbl">On Calendar</div></div>
+      <div class="mon-metric"><div class="mon-metric-val" style="color:${noCal.length ? 'var(--red)' : 'var(--text)'}">${noCal.length}</div><div class="mon-metric-lbl">Missing Cal</div></div>
+    </div>`;
+
+    if (bookings.length === 0) {
+      html += `<div class="mon-row">${monDot('gray')} <span class="mon-val">No bookings today</span></div>`;
+    } else {
+      html += `<div class="mon-section-label">Today's Bookings</div>`;
+      bookings.forEach(b => {
+        const hasCal = !!b.calendar_event_id;
+        html += `<div class="mon-row">
+          ${monDot(hasCal ? 'green' : 'red')}
+          <span class="mon-label">${b.full_name || 'Unknown'}</span>
+          <span class="mon-val">${b.phone || '--'}</span>
+          <span class="mon-val">${b.preferred_date || '--'} ${b.preferred_time || ''}</span>
+          <span class="mon-val" style="text-align:right">${hasCal ? 'Cal OK' : 'No Cal'}</span>
+        </div>`;
+      });
+    }
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Failed: ${e.message}</span></div>`;
+  }
+}
+
+// PANEL 9: Call Quality (24h)
+function monLoadCallQuality(vapiCalls) {
+  const el = document.getElementById('mon-call-quality');
+  try {
+    const last24h = new Date(Date.now() - 86400000);
+    const recent = (vapiCalls || []).filter(c => new Date(c.createdAt) >= last24h);
+    const total = recent.length;
+
+    const voicemail = recent.filter(c => c.endedReason === 'voicemail');
+    const customerEnded = recent.filter(c => c.endedReason === 'customer-ended-call');
+    const connected30 = recent.filter(c => c.duration && c.duration > 30);
+    const silenceTimeout = recent.filter(c => c.endedReason === 'silence-timed-out');
+
+    const vmPct = total ? Math.round((voicemail.length / total) * 100) : 0;
+    const cePct = total ? Math.round((customerEnded.length / total) * 100) : 0;
+    const isRed = vmPct > 50 || (total > 0 && connected30.length === 0);
+
+    let html = `<div class="mon-metrics-grid">
+      <div class="mon-metric"><div class="mon-metric-val">${total}</div><div class="mon-metric-lbl">Total Calls</div></div>
+      <div class="mon-metric"><div class="mon-metric-val" style="color:${vmPct > 50 ? 'var(--red)' : 'var(--text)'}">${vmPct}%</div><div class="mon-metric-lbl">Voicemail</div></div>
+      <div class="mon-metric"><div class="mon-metric-val">${cePct}%</div><div class="mon-metric-lbl">Customer Ended</div></div>
+    </div>`;
+
+    html += `<div class="mon-row">${monDot(connected30.length > 0 ? 'green' : (total > 0 ? 'red' : 'gray'))} <span class="mon-label">Connected &gt;30s</span><span class="${connected30.length > 0 ? 'mon-success' : (total > 0 ? 'mon-error' : 'mon-val')}">${connected30.length} calls</span></div>`;
+    html += `<div class="mon-row">${monDot(silenceTimeout.length > 0 ? 'yellow' : 'gray')} <span class="mon-label">Silence Timed Out</span><span class="mon-val">${silenceTimeout.length} calls</span></div>`;
+    html += `<div class="mon-row">${monDot(voicemail.length > 0 ? 'yellow' : 'gray')} <span class="mon-label">Voicemail</span><span class="mon-val">${voicemail.length} calls</span></div>`;
+    html += `<div class="mon-row">${monDot(isRed ? 'red' : 'green', true)} <span class="mon-label">Quality</span><span class="${isRed ? 'mon-error' : 'mon-success'}">${isRed ? 'Needs attention' : 'Good'}</span></div>`;
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Failed: ${e.message}</span></div>`;
+  }
+}
+
+// PANEL 10: SMS Credits
+async function monLoadSmsCredits() {
+  const el = document.getElementById('mon-sms-credits');
+  try {
+    const [r1, r2] = await Promise.all([
+      fetch('https://textbelt.com/quota/0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW').then(r => r.json()),
+      fetch('https://textbelt.com/quota/06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr').then(r => r.json())
+    ]);
+
+    const q1 = r1.quotaRemaining ?? 0;
+    const q2 = r2.quotaRemaining ?? 0;
+
+    function creditColor(q) { return q < 100 ? 'var(--red)' : q < 500 ? '#F39C12' : 'var(--green)'; }
+    function creditDot(q) { return q < 100 ? 'red' : q < 500 ? 'yellow' : 'green'; }
+
+    let html = `<div class="mon-metrics-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="mon-metric"><div class="mon-metric-val" style="color:${creditColor(q1)}">${q1}</div><div class="mon-metric-lbl">Key 1 (book.js)</div></div>
+      <div class="mon-metric"><div class="mon-metric-val" style="color:${creditColor(q2)}">${q2}</div><div class="mon-metric-lbl">Key 2 (readmail)</div></div>
+    </div>`;
+
+    html += `<div class="mon-row">${monDot(creditDot(q1), q1 < 100)} <span class="mon-label">Key 1 — book.js</span><span class="${q1 < 100 ? 'mon-error' : 'mon-val'}">${q1} remaining</span></div>`;
+    html += `<div class="mon-row">${monDot(creditDot(q2), q2 < 100)} <span class="mon-label">Key 2 — readmail/outreach</span><span class="${q2 < 100 ? 'mon-error' : 'mon-val'}">${q2} remaining</span></div>`;
+
+    el.innerHTML = html;
+    return { q1, q2 };
+  } catch(e) {
+    el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Failed: ${e.message}</span></div>`;
+    return null;
+  }
+}
+
 // Master refresh
 async function monitorRefreshAll() {
   document.getElementById('mon-last-updated').textContent = 'Updating...';
 
   let systemsUp = 0;
-  const totalSystems = 4;
+  let totalSystems = 4; // vapi, email, autocall, readmail — SMS keys added below
 
   const [vapiCalls, emailLeads] = await Promise.all([
     monLoadAssistants().then(r => { systemsUp++; return r; }).catch(() => []),
@@ -1746,8 +1916,19 @@ async function monitorRefreshAll() {
 
   await Promise.all([
     monLoadCallsTexts(vapiCalls),
-    monLoadFeed(vapiCalls, emailLeads)
+    monLoadFeed(vapiCalls, emailLeads),
+    monLoadUnanswered(),
+    monLoadBookingsToday(),
+    monLoadSmsCredits().then(sms => {
+      if (sms) {
+        totalSystems += 2;
+        if (sms.q1 >= 100) systemsUp++;
+        if (sms.q2 >= 100) systemsUp++;
+      }
+    }).catch(() => {})
   ]);
+
+  monLoadCallQuality(vapiCalls);
 
   document.getElementById('mon-systems-up').textContent = systemsUp + '/' + totalSystems;
   document.getElementById('mon-systems-sub').textContent = systemsUp === totalSystems ? 'all operational' : (totalSystems - systemsUp) + ' issue(s)';
