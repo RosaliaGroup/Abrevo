@@ -333,7 +333,7 @@ exports.handler = async (event) => {
         <tr>
           <td style="background:#0A0A0A;padding:30px 40px;text-align:center;border-bottom:1px solid #C9A84C;">
             <div style="color:#C9A84C;font-size:11px;letter-spacing:4px;text-transform:uppercase;">Rosalia Group</div>
-            <div style="color:#C9A84C;font-size:18px;margin-top:6px;">â—†</div>
+            <div style="color:#C9A84C;font-size:18px;margin-top:6px;">&#9670;</div>
           </td>
         </tr>
         <!-- Body -->
