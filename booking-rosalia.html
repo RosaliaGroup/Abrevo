@@ -256,6 +256,11 @@
 
           <div class="notice-confirm">Please note: All appointments are subject to confirmation by our leasing team. Due to high demand, we will reach out to confirm your visit and ensure the best experience.</div>
 
+          <div class="field" style="display:flex;align-items:flex-start;gap:10px;">
+            <input type="checkbox" id="sms_consent" required style="margin-top:3px;width:16px;height:16px;flex-shrink:0;accent-color:var(--gold);" />
+            <label for="sms_consent" style="font-size:12px;color:var(--text-muted);line-height:1.5;text-transform:none;letter-spacing:0;">I agree to receive SMS messages from Rosalia Group about my appointment confirmation, reminders, and property availability. Message and data rates may apply. Reply STOP to opt out.</label>
+          </div>
+
           <button type="submit" class="btn" id="submitBtn">Reserve My Tour &rarr;</button>
 
         </div>
@@ -319,6 +324,11 @@
         </div>
 
         <div id="spFormError" class="error-msg"></div>
+
+        <div class="field" style="display:flex;align-items:flex-start;gap:10px;">
+          <input type="checkbox" id="sp_sms_consent" required style="margin-top:3px;width:16px;height:16px;flex-shrink:0;accent-color:var(--gold);" />
+          <label for="sp_sms_consent" style="font-size:12px;color:var(--text-muted);line-height:1.5;text-transform:none;letter-spacing:0;">I agree to receive SMS messages from Rosalia Group about my appointment confirmation, reminders, and property availability. Message and data rates may apply. Reply STOP to opt out.</label>
+        </div>
 
         <button type="button" class="btn" id="spSubmitBtn">Connect Me with a Specialist &rarr;</button>
       </div>
@@ -524,6 +534,12 @@
       return;
     }
 
+    if (!document.getElementById('sms_consent').checked) {
+      errorEl.textContent = 'Please agree to receive SMS messages to continue.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
     var dateObj = new Date(preferred_date_raw + 'T12:00:00');
     var preferred_date = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -591,6 +607,12 @@
 
     if (!full_name || !phone || !email || !apartment_size || !move_in_date) {
       errorEl.textContent = 'Please fill in all required fields.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    if (!document.getElementById('sp_sms_consent').checked) {
+      errorEl.textContent = 'Please agree to receive SMS messages to continue.';
       errorEl.style.display = 'block';
       return;
     }
