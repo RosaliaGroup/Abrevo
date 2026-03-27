@@ -116,6 +116,12 @@
   force = true
 
 [[redirects]]
+  from = "/sms-terms-hvac"
+  to = "/sms-terms-hvac.html"
+  status = 302
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
