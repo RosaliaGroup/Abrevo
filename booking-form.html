@@ -344,6 +344,7 @@
 
 </div>
 <script>
+function safeHtml(str) { var d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML; }
 (function() {
   var params = new URLSearchParams(window.location.search);
   var phoneParam = params.get('phone');
@@ -551,9 +552,9 @@
         document.getElementById('bookingSection').style.display = 'none';
         document.getElementById('successState').style.display = 'block';
         document.getElementById('confirmDetails').innerHTML =
-          '<strong>Appointment</strong>' + preferred_date + ' at ' + preferred_time +
-          '<br><br><strong>Name</strong>' + full_name +
-          '<br><br><strong>Property</strong>Iron 65 &middot; 65 Mcwhorter St, Newark NJ';
+          '<strong>Appointment</strong> ' + safeHtml(preferred_date) + ' at ' + safeHtml(preferred_time) +
+          '<br><br><strong>Name</strong> ' + safeHtml(full_name) +
+          '<br><br><strong>Property</strong> Iron 65 &middot; 65 Mcwhorter St, Newark NJ';
       } else {
         throw new Error(data.error || 'Booking failed');
       }

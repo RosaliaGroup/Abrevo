@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Handles Vapi booking webhooks for Rosalia Group",
   "dependencies": {
+    "googleapis": "^128.0.0",
+    "imap": "^0.8.19",
+    "mailparser": "^3.6.5",
     "nodemailer": "^6.9.8"
   }
 }

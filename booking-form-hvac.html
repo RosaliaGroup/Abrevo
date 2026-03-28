@@ -107,6 +107,7 @@
     </div>
   </div>
   <script>
+    function safeHtml(str) { var d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML; }
     // Block past dates
     var today = new Date().toISOString().split('T')[0];
     document.getElementById('preferred_date').min = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -161,11 +162,11 @@
           document.getElementById('formState').style.display = 'none';
           document.getElementById('successState').style.display = 'block';
           document.getElementById('confirmDetails').innerHTML =
-            '<div><strong>Name:</strong> ' + full_name + '</div>' +
-            '<div><strong>Date:</strong> ' + preferred_date + '</div>' +
-            '<div><strong>Time:</strong> ' + preferred_time + '</div>' +
-            '<div><strong>Service:</strong> ' + appointment_type.replace(/_/g,' ') + '</div>' +
-            '<div><strong>Address:</strong> ' + property_address + '</div>';
+            '<div><strong>Name:</strong> ' + safeHtml(full_name) + '</div>' +
+            '<div><strong>Date:</strong> ' + safeHtml(preferred_date) + '</div>' +
+            '<div><strong>Time:</strong> ' + safeHtml(preferred_time) + '</div>' +
+            '<div><strong>Service:</strong> ' + safeHtml(appointment_type.replace(/_/g,' ')) + '</div>' +
+            '<div><strong>Address:</strong> ' + safeHtml(property_address) + '</div>';
         } else {
           errEl.textContent = data.error || 'Something went wrong. Call (862) 419-1763.';
           errEl.style.display = 'block';
