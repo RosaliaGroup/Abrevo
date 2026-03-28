@@ -602,10 +602,24 @@ async function getPreviousThread(fromEmail) {
   return lead?.email_reply || null;
 }
 
-async function repliedRecently(fromEmail, hours = 24) {
+async function repliedRecently(fromEmail, hours = 24, emailReceivedAt = null) {
   const lead = await getLeadData(fromEmail);
   if (!lead?.replied_at) return false;
   const lastReply = new Date(lead.replied_at);
+
+  // For thread replies (hours === 2): if the lead's email arrived AFTER our last reply,
+  // they wrote back — always respond regardless of time window
+  if (emailReceivedAt && hours === 2) {
+    const received = new Date(emailReceivedAt);
+    if (received > lastReply) {
+      console.log(`Thread reply: lead email (${received.toISOString()}) is newer than our reply (${lastReply.toISOString()}) — responding`);
+      return false;
+    }
+    // Our reply was sent AFTER this email — we already replied to it
+    console.log(`Thread reply: already replied (${lastReply.toISOString()}) after this email (${received.toISOString()}) — skipping`);
+    return true;
+  }
+
   const hoursSince = (Date.now() - lastReply.getTime()) / (1000 * 60 * 60);
   if (hoursSince < hours) {
     console.log(`Duplicate check: already replied to ${fromEmail} ${hoursSince.toFixed(1)} hours ago, skipping`);
@@ -990,7 +1004,8 @@ exports.handler = async (event) => {
         const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : fromEmail;
         const skipRecentCheck = isAvailLead(from) || from.includes('reply.avail.co') || from.includes('@avail.co') || isFUBLead(from, subject);
 
-        if (!skipRecentCheck && await repliedRecently(checkEmail, isReply ? 2 : 24)) {
+        const receivedAt = parsed.date || null;
+        if (!skipRecentCheck && await repliedRecently(checkEmail, isReply ? 2 : 24, receivedAt)) {
           console.log('Skipping (replied recently):', checkEmail, isReply ? '(thread, 2h window)' : '(new, 24h window)');
           results.skipped++;
           continue;
