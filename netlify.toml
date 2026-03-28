@@ -122,6 +122,18 @@
   force = true
 
 [[redirects]]
+  from = "/cancel"
+  to = "/cancel-reschedule.html"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "https://book.rosaliagroup.com/cancel"
+  to = "/cancel-reschedule.html"
+  status = 302
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Appointment &mdash; Rosalia Group</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #C9A84C;
+      --gold-light: #E8D49A;
+      --black: #0A0A0A;
+      --dark: #111111;
+      --dark2: #1A1A1A;
+      --text: #E8E8E8;
+      --text-muted: #888;
+      --border: rgba(201, 168, 76, 0.2);
+      --red: #E74C3C;
+      --radius: 4px;
+    }
+    html, body {
+      min-height: 100vh;
+      background: var(--black);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+    }
+    body {
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 90% 90%, rgba(201,168,76,0.04) 0%, transparent 50%);
+    }
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px 80px;
+    }
+    .header { text-align: center; margin-bottom: 48px; animation: fadeUp 0.6s ease both; }
+    .logo-mark { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 32px; text-decoration: none; }
+    .logo-icon { width: 36px; height: 36px; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; transform: rotate(45deg); }
+    .logo-icon span { transform: rotate(-45deg); font-family: 'Cormorant Garamond', serif; font-size: 14px; color: var(--gold); font-weight: 500; }
+    .logo-text { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 400; letter-spacing: 0.15em; color: var(--text); text-transform: uppercase; }
+    .header h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(32px, 6vw, 48px); font-weight: 300; line-height: 1.1; color: #fff; margin-bottom: 12px; }
+    .header h1 em { font-style: italic; color: var(--gold); }
+    .header p { font-size: 14px; color: var(--text-muted); letter-spacing: 0.05em; }
+    .divider { display: flex; align-items: center; gap: 16px; margin: 0 auto 40px; width: 100%; max-width: 480px; animation: fadeUp 0.6s 0.1s ease both; }
+    .divider-line { flex: 1; height: 1px; background: var(--border); }
+    .divider-diamond { width: 6px; height: 6px; background: var(--gold); transform: rotate(45deg); flex-shrink: 0; }
+    .card {
+      width: 100%; max-width: 480px;
+      background: var(--dark);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 36px 32px;
+      animation: fadeUp 0.6s 0.2s ease both;
+    }
+    .appt-details {
+      background: var(--dark2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 32px;
+    }
+    .appt-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 12px;
+    }
+    .appt-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 14px;
+    }
+    .appt-row .label { color: var(--text-muted); }
+    .appt-row .value { color: var(--text); font-weight: 400; }
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px 24px;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-gold {
+      background: var(--gold);
+      color: var(--black);
+    }
+    .btn-gold:hover { background: var(--gold-light); }
+    .btn-cancel {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .btn-cancel:hover { border-color: var(--red); color: var(--red); }
+    .btn-red {
+      background: var(--red);
+      color: #fff;
+    }
+    .btn-red:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    select {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--dark2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      appearance: none;
+      cursor: pointer;
+      margin-bottom: 16px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+    }
+    select:focus { border-color: var(--gold); }
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 20px;
+      font-weight: 400;
+      color: var(--text);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .hidden { display: none; }
+    .error-msg {
+      color: var(--red);
+      font-size: 13px;
+      text-align: center;
+      margin-top: 12px;
+    }
+    .success-state {
+      text-align: center;
+      padding: 20px 0;
+    }
+    .success-state h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      font-weight: 300;
+      color: var(--gold);
+      margin-bottom: 16px;
+    }
+    .success-state p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+    .back-link {
+      display: inline-block;
+      margin-top: 24px;
+      color: var(--gold);
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+    }
+    .back-link:hover { color: var(--gold-light); }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 520px) {
+      .card { padding: 28px 20px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <a class="logo-mark" href="https://rosaliagroup.com">
+      <div class="logo-icon"><span>R</span></div>
+      <div class="logo-text">Rosalia Group</div>
+    </a>
+    <h1>Manage Your <em>Appointment</em></h1>
+    <p>Reschedule or cancel your upcoming tour</p>
+  </div>
+
+  <div class="divider">
+    <div class="divider-line"></div>
+    <div class="divider-diamond"></div>
+    <div class="divider-line"></div>
+  </div>
+
+  <div class="card">
+    <!-- Appointment Details -->
+    <div class="appt-details">
+      <div class="appt-label">Your Appointment</div>
+      <div class="appt-row"><span class="label">Name</span><span class="value" id="appt-name">--</span></div>
+      <div class="appt-row"><span class="label">Property</span><span class="value" id="appt-property">--</span></div>
+      <div class="appt-row"><span class="label">Date</span><span class="value" id="appt-date">--</span></div>
+      <div class="appt-row"><span class="label">Time</span><span class="value" id="appt-time">--</span></div>
+    </div>
+
+    <!-- Main Actions -->
+    <div id="mainActions">
+      <div class="btn-group">
+        <a href="https://book.rosaliagroup.com/reschedule" class="btn btn-gold">Reschedule My Appointment</a>
+        <button class="btn btn-cancel" onclick="showCancelForm()">Cancel My Appointment</button>
+      </div>
+    </div>
+
+    <!-- Cancel Confirmation -->
+    <div id="cancelForm" class="hidden">
+      <div class="section-title">Are you sure?</div>
+      <label>Reason for cancellation</label>
+      <select id="cancelReason">
+        <option value="">Select a reason</option>
+        <option value="Changed plans">Changed plans</option>
+        <option value="Found another place">Found another place</option>
+        <option value="Doesn't fit my budget">Doesn't fit my budget</option>
+        <option value="Other">Other</option>
+      </select>
+      <div class="btn-group">
+        <button class="btn btn-red" id="confirmCancelBtn" onclick="submitCancellation()">Submit Cancellation</button>
+        <button class="btn btn-cancel" onclick="hideCancelForm()">Go Back</button>
+      </div>
+      <div class="error-msg hidden" id="cancelError"></div>
+    </div>
+
+    <!-- Success State -->
+    <div id="successState" class="hidden">
+      <div class="success-state">
+        <h2>Appointment Cancelled</h2>
+        <p>Your appointment has been cancelled. If you change your mind, you can always book a new tour.</p>
+        <a href="https://book.rosaliagroup.com/book" class="back-link">Book a New Tour</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function safeText(str) { return str || '--'; }
+
+var params = new URLSearchParams(window.location.search);
+var name = params.get('name') || '';
+var date = params.get('date') || '';
+var time = params.get('time') || '';
+var property = params.get('property') || '';
+var phone = params.get('phone') || '';
+
+document.getElementById('appt-name').textContent = safeText(name);
+document.getElementById('appt-property').textContent = safeText(property);
+document.getElementById('appt-date').textContent = safeText(date);
+document.getElementById('appt-time').textContent = safeText(time);
+
+function showCancelForm() {
+  document.getElementById('mainActions').classList.add('hidden');
+  document.getElementById('cancelForm').classList.remove('hidden');
+}
+
+function hideCancelForm() {
+  document.getElementById('cancelForm').classList.add('hidden');
+  document.getElementById('mainActions').classList.remove('hidden');
+}
+
+async function submitCancellation() {
+  var reason = document.getElementById('cancelReason').value;
+  var errorEl = document.getElementById('cancelError');
+  var btn = document.getElementById('confirmCancelBtn');
+  errorEl.classList.add('hidden');
+
+  if (!reason) {
+    errorEl.textContent = 'Please select a reason for cancellation.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  if (!phone) {
+    errorEl.textContent = 'Missing phone number. Please contact us at (862) 333-1681.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Cancelling...';
+
+  try {
+    var SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
+    var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
+
+    var normalizedPhone = phone.replace(/\D/g, '');
+    if (normalizedPhone.length === 10) normalizedPhone = '+1' + normalizedPhone;
+    else if (normalizedPhone.length === 11) normalizedPhone = '+' + normalizedPhone;
+    else normalizedPhone = '+' + normalizedPhone;
+
+    var res = await fetch(SUPABASE_URL + '/rest/v1/bookings?phone=eq.' + encodeURIComponent(normalizedPhone) + '&order=created_at.desc&limit=1', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        status: 'cancelled',
+        additional_notes: 'Cancelled by lead. Reason: ' + reason
+      })
+    });
+
+    if (!res.ok) throw new Error('Update failed');
+
+    document.getElementById('cancelForm').classList.add('hidden');
+    document.getElementById('successState').classList.remove('hidden');
+  } catch (e) {
+    errorEl.textContent = 'Something went wrong. Please call us at (862) 333-1681 to cancel.';
+    errorEl.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Submit Cancellation';
+  }
+}
+</script>
+</body>
+</html>
