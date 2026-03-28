@@ -1,12 +1,12 @@
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
 const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
-const RESPOND_URL = 'https://silver-ganache-1ee2ca.netlify.app/.netlify/functions/respondRosalia';
+const RESPOND_URL = 'https://abrevo.co/.netlify/functions/respondRosalia';
 const VAPI_API_KEY = process.env.VAPI_API_KEY;
 const VAPI_PHONE_ID = process.env.VAPI_PHONE_ID;
 const JESSICA_ASSISTANT_ID = process.env.JESSICA_ASSISTANT_ID;
 const ANA_PHONE = '+16462269189';
-const BOOKING_FORM_URL = 'https://silver-ganache-1ee2ca.netlify.app/rosalia-booking';
+const BOOKING_FORM_URL = 'https://abrevo.co/rosalia-booking';
 
 // ── BUSINESS HOURS CHECK (Eastern Time) ──
 // Weekdays: 9AM-6PM | Weekends: 10AM-5PM

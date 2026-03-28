@@ -5,7 +5,7 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
-const SITE_URL = 'https://silver-ganache-1ee2ca.netlify.app';
+const SITE_URL = 'https://abrevo.co';
 
 // Find leads to survey:
 // 1. Had a tour (called_at set) but no application after 7 days

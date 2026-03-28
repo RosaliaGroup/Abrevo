@@ -18,8 +18,8 @@ const HVAC_ASSISTANT_ID = process.env.HVAC_ASSISTANT_ID || '35f4e4a2-aabc-47be-a
 const HVAC_PHONE_ID = process.env.HVAC_PHONE_ID || '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 
 // Booking links
-const HVAC_BOOKING_URL = 'https://silver-ganache-1ee2ca.netlify.app/booking-form-hvac.html';
-const HVAC_RESCHEDULE_URL = 'https://silver-ganache-1ee2ca.netlify.app/reschedule-form-hvac.html';
+const HVAC_BOOKING_URL = 'https://abrevo.co/booking-form-hvac.html';
+const HVAC_RESCHEDULE_URL = 'https://abrevo.co/reschedule-form-hvac.html';
 
 // Notification
 const ANA_PHONE = '+16462269189';
