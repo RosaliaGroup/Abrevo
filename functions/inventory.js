@@ -1,14 +1,11 @@
 const { google } = require('googleapis');
 
 const SPREADSHEET_IDS = [
-  '11WJUGtexAf_20-8ct9jfeH0fZwMel4I_N220AEJMHQQ',
-  '1wW9imoahNBC58__GRO950kb8QwB43TYyct5x0NxWLRg',
-  '13IlT1MzhP8-6Zz9ru51OzpKvP6jQNSMq',
   '1BxPKElP2XJ3dk6TV5Ri8247ecXiRx4_nNmtTylGjlyA'
 ];
 
 function getAuth() {
-  const creds = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+  const creds = JSON.parse(process.env.GOOGLE_SHEETS_CREDENTIALS || process.env.GOOGLE_CREDENTIALS || '{}');
   return new google.auth.GoogleAuth({
     credentials: creds,
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
