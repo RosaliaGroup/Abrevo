@@ -379,6 +379,41 @@ function parseWebflowEmail(body) {
 
 const LEAD_KEYWORDS = /rent|apartment|unit|tour|showing|available|bedroom|studio|price|lease|apply|application|move.in|listing|looking|interested|inquiry|inquire|buy|purchase|mortgage|home|house|sell|property|schedule|viewing|question|info|information/i;
 
+function isListingAlert(from, subject) {
+  const f = (from || '').toLowerCase();
+  const s = (subject || '').toLowerCase();
+  const alertSenders = ['zillowrentals', 'mail.zillow', 'noreply@avail.co', 'notifications@avail.co'];
+  const alertSubjects = ['expir', 'renew', 'relist', 'repost', 'your listing', 'listing update', 'listing expired', 'activate your listing', 'boost your listing', 'listing ending', 'listing paused'];
+  const senderMatch = alertSenders.some(a => f.includes(a));
+  const subjectMatch = alertSubjects.some(a => s.includes(a));
+  return senderMatch && subjectMatch;
+}
+
+async function saveListingAlert(from, subject, body) {
+  const f = (from || '').toLowerCase();
+  const platform = f.includes('zillow') ? 'zillow' : 'avail';
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/listing_alerts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({
+        platform,
+        subject: (subject || '').slice(0, 500),
+        body: (body || '').slice(0, 2000),
+        received_at: new Date().toISOString()
+      })
+    });
+    console.log('Listing alert saved:', platform, subject);
+  } catch (e) {
+    console.error('Failed to save listing alert:', e.message);
+  }
+}
+
 function shouldSkip(from, subject) {
   // Known lead sources always pass through
   if (isZillowLead(from)) return false;
@@ -869,6 +904,14 @@ exports.handler = async (event) => {
           continue;
         }
         processedEmails.add(fromEmail.toLowerCase());
+
+        // Detect listing expiration/renewal alerts
+        if (isListingAlert(from, subject)) {
+          console.log('Listing alert detected:', from, subject);
+          await saveListingAlert(from, subject, body);
+          results.skipped++;
+          continue;
+        }
 
         if (shouldSkip(from, subject)) {
           console.log('Skipping (automated):', from);

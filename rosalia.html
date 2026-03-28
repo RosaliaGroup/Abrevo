@@ -288,6 +288,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
       System Monitor
     </div>
+    <div class="nav-item" data-page="alerts" onclick="showPage('alerts')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      Listing Alerts
+    </div>
     <div class="nav-section">Settings</div>
     <div class="nav-item" data-page="connect" onclick="showPage('connect')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
@@ -822,6 +826,35 @@
       </div>
     </div>
 
+    <!-- ========== LISTING ALERTS ========== -->
+    <div class="page" id="page-alerts">
+      <div class="page-header">
+        <div class="row-between">
+          <div>
+            <h1>Listing Alerts</h1>
+            <p>Expiration and renewal notices from Zillow & Avail</p>
+          </div>
+          <button class="btn btn-gold" onclick="loadListingAlerts()">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="stat-cards" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;" id="alerts-stats">
+        <div class="stat-card"><div class="stat-label">Total Alerts</div><div class="stat-value" id="alerts-total">--</div><div class="stat-sub">all time</div></div>
+        <div class="stat-card"><div class="stat-label">Urgent</div><div class="stat-value" id="alerts-urgent" style="color:var(--red);">--</div><div class="stat-sub">&gt;2 days old</div></div>
+        <div class="stat-card"><div class="stat-label">This Week</div><div class="stat-value" id="alerts-week">--</div><div class="stat-sub">last 7 days</div></div>
+      </div>
+
+      <div id="alerts-content">
+        <div class="loading-text" style="text-align:center;padding:60px 0;color:var(--text-dim);">
+          <span class="spinner"></span> Loading alerts...
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -846,6 +879,7 @@ function showPage(id) {
   if (id === 'schedule') renderCalendar();
   if (id === 'monitor') monitorRefreshAll();
   if (id === 'inventory') loadInventory();
+  if (id === 'alerts') loadListingAlerts();
 }
 
 // ---- Inventory ----
@@ -1049,6 +1083,77 @@ function renderInventoryCards(properties) {
   container.innerHTML = html;
 }
 function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ---- Listing Alerts ----
+async function loadListingAlerts() {
+  var container = document.getElementById('alerts-content');
+  container.innerHTML = '<div class="loading-text" style="text-align:center;padding:60px 0;color:var(--text-dim);"><span class="spinner"></span> Loading alerts...</div>';
+  try {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/listing_alerts?select=*&order=received_at.desc&limit=50', {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+    });
+    if (!r.ok) {
+      var errData = await r.json().catch(function() { return {}; });
+      if (r.status === 404 || (errData.message && errData.message.includes('relation'))) {
+        container.innerHTML = '<div class="card" style="text-align:center;padding:40px;">' +
+          '<p style="color:var(--red);font-size:14px;">Table "listing_alerts" not found</p>' +
+          '<p style="color:var(--text-dim);font-size:13px;margin-top:12px;">Create it in Supabase SQL Editor:</p>' +
+          '<pre style="text-align:left;background:var(--surface2);padding:16px;border-radius:8px;margin-top:12px;font-size:12px;color:var(--text);overflow-x:auto;">' +
+          'CREATE TABLE listing_alerts (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  platform text NOT NULL,\n  subject text,\n  body text,\n  received_at timestamptz DEFAULT now(),\n  UNIQUE(subject, received_at)\n);</pre></div>';
+        return;
+      }
+      throw new Error('Fetch failed: ' + r.status);
+    }
+    var alerts = await r.json();
+    var now = Date.now();
+    var weekAgo = now - 7 * 86400000;
+    var twoDaysMs = 2 * 86400000;
+    var oneDayMs = 86400000;
+
+    var urgent = alerts.filter(function(a) { return (now - new Date(a.received_at).getTime()) > twoDaysMs; });
+    var thisWeek = alerts.filter(function(a) { return new Date(a.received_at).getTime() >= weekAgo; });
+
+    document.getElementById('alerts-total').textContent = alerts.length;
+    document.getElementById('alerts-urgent').textContent = urgent.length;
+    document.getElementById('alerts-urgent').style.color = urgent.length > 0 ? 'var(--red)' : 'var(--green)';
+    document.getElementById('alerts-week').textContent = thisWeek.length;
+
+    if (alerts.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:60px 0;"><div style="font-size:40px;margin-bottom:16px;opacity:0.3;">&#128276;</div><p style="color:var(--text-dim);font-size:15px;">No listing alerts found</p><p style="color:var(--text-muted);font-size:13px;margin-top:8px;">Alerts will appear here when Zillow or Avail send expiration notices</p></div>';
+      return;
+    }
+
+    var html = '';
+    alerts.forEach(function(a) {
+      var age = now - new Date(a.received_at).getTime();
+      var urgency = age > twoDaysMs ? 'red' : (age > oneDayMs ? 'yellow' : 'green');
+      var urgencyLabel = age > twoDaysMs ? 'Urgent' : (age > oneDayMs ? 'Aging' : 'Recent');
+      var isZillow = a.platform === 'zillow';
+      var platformColor = isZillow ? 'background:rgba(52,103,235,0.15);color:#3467EB;' : 'background:rgba(46,204,113,0.15);color:var(--green);';
+      var platformName = isZillow ? 'Zillow' : 'Avail';
+      var timeAgo = monTimeAgo(a.received_at);
+
+      html += '<div class="card" style="padding:20px;margin-bottom:12px;">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">';
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">';
+      html += '<span class="badge" style="' + platformColor + '">' + platformName + '</span>';
+      html += '<span class="badge" style="background:rgba(' + (urgency === 'red' ? '231,76,60' : urgency === 'yellow' ? '243,156,18' : '46,204,113') + ',0.15);color:var(--' + (urgency === 'yellow' ? 'gold' : urgency) + ');">' + urgencyLabel + '</span>';
+      html += '</div>';
+      html += '<div style="font-size:14px;color:var(--text);font-weight:500;margin-bottom:4px;">' + escapeHtml(a.subject || 'No subject') + '</div>';
+      html += '</div>';
+      html += '<div style="text-align:right;flex-shrink:0;">';
+      html += '<div style="font-size:12px;color:var(--text-muted);">' + timeAgo + '</div>';
+      html += '<div class="mon-dot ' + urgency + '" style="margin-top:6px;margin-left:auto;"></div>';
+      html += '</div>';
+      html += '</div>';
+      html += '</div>';
+    });
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = '<div class="card" style="text-align:center;padding:40px;"><p style="color:var(--red);font-size:14px;">Failed to load alerts</p><p style="color:var(--text-dim);font-size:13px;margin-top:8px;">' + escapeHtml(e.message) + '</p></div>';
+  }
+}
 
 // ---- Toast ----
 function toast(msg) {
