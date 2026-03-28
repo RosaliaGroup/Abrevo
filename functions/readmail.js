@@ -261,6 +261,7 @@ const SKIP_SUBJECTS = [
   'stage changed', 'deal updated', 'note added',
   'hot sheet', 'follow up boss hot sheet',
   'daily hot leads', 'no appointments',
+  'appointment confirmed', 'your tour is confirmed', 'booking confirmed', 'tour confirmed', 'your appointment',
 ];
 
 function isZillowLead(from) {
@@ -594,6 +595,25 @@ async function getCalendarAppointment(leadName) {
   } catch (e) {
     console.error('Calendar lookup error:', e.message);
     return null;
+  }
+}
+
+async function hasExistingBooking(phone, email) {
+  try {
+    const filters = [];
+    if (phone) filters.push(`phone.eq.${encodeURIComponent(phone)}`);
+    if (email) filters.push(`email.eq.${encodeURIComponent(email)}`);
+    if (filters.length === 0) return false;
+    const orClause = filters.join(',');
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings?or=(${orClause})&preferred_date=not.is.null&limit=1`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.length > 0;
+  } catch (e) {
+    console.error('hasExistingBooking error:', e.message);
+    return false;
   }
 }
 
@@ -1016,6 +1036,18 @@ exports.handler = async (event) => {
         if (leadContext?.status === 'dnc') {
           console.log('Skipping DNC lead:', checkEmail);
           results.skipped++;
+          continue;
+        }
+
+        // Check if lead already has an upcoming booking — send short confirmation instead of AI reply
+        if (!isReply && await hasExistingBooking(phone, realEmail || fromEmail)) {
+          console.log('Lead already has booking, sending confirmation:', realEmail || fromEmail);
+          const confirmName = (realName || fromName || '').split(/\s/)[0] || 'there';
+          const confirmReply = `Hi ${confirmName}, you're all set! Your tour is confirmed. Our leasing agent will reach out before your appointment. See you soon! — Rosalia Group`;
+          const confirmTarget = isAvailLead(from) ? fromEmail : realEmail || replyTo;
+          await sendReply(confirmTarget, subject, confirmReply);
+          await saveLead(realEmail || fromEmail, realName || fromName, subject, body, confirmReply, phone, leadClient);
+          results.replied++;
           continue;
         }
 
