@@ -755,12 +755,66 @@
             <h1>Property Inventory</h1>
             <p>Live vacancy data from landlord sheets</p>
           </div>
-          <button class="btn btn-gold" onclick="loadInventory()">
+          <button class="btn btn-gold" onclick="loadInventory(true)">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
         </div>
       </div>
+
+      <!-- Search/Filter Bar -->
+      <div class="card" style="padding:20px;margin-bottom:24px;">
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end;">
+          <div style="flex:2;min-width:200px;">
+            <label>Search</label>
+            <input type="text" id="inv-search" placeholder="Address, building, city..." oninput="filterInventory()" style="padding:10px 14px;">
+          </div>
+          <div style="flex:1;min-width:120px;">
+            <label>Bedrooms</label>
+            <select id="inv-beds" onchange="filterInventory()">
+              <option value="">Any</option>
+              <option value="studio">Studio</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3+</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:140px;">
+            <label>Max Price</label>
+            <select id="inv-price" onchange="filterInventory()">
+              <option value="">Any</option>
+              <option value="2000">Under $2,000</option>
+              <option value="2500">Under $2,500</option>
+              <option value="3000">Under $3,000</option>
+              <option value="3500">Under $3,500</option>
+              <option value="9999">$3,500+</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:130px;">
+            <label>City</label>
+            <select id="inv-city" onchange="filterInventory()">
+              <option value="">Any</option>
+              <option value="Newark">Newark</option>
+              <option value="Jersey City">Jersey City</option>
+              <option value="Plainfield">Plainfield</option>
+              <option value="Orange">Orange</option>
+              <option value="Elizabeth">Elizabeth</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:130px;">
+            <label>Availability</label>
+            <select id="inv-avail" onchange="filterInventory()">
+              <option value="">All</option>
+              <option value="vacant">Vacant Only</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results count -->
+      <div id="inv-results-count" style="font-size:13px;color:var(--text-dim);margin-bottom:16px;"></div>
+
+      <!-- Property cards grid -->
       <div id="inventory-content">
         <div class="loading-text" style="text-align:center;padding:60px 0;color:var(--text-dim);">
           <span class="spinner"></span> Loading inventory...
@@ -796,49 +850,203 @@ function showPage(id) {
 
 // ---- Inventory ----
 var inventoryLoaded = false;
-async function loadInventory() {
+var inventoryProperties = [];
+
+// Column index map based on sheet headers
+var INV_COL = {};
+function invMapColumns(headers) {
+  var map = { sheetName:0, notes:1, company:2, buildingName:3, aptName:4, offer:5, address:6, city:7, state:8, pincode:9, unit:10, floor:11, available:12, bedrooms:13, bathrooms:14, sqft:15, price:16, utilities:17 };
+  // Try to auto-detect from headers
+  headers.forEach(function(h, i) {
+    var hl = (h || '').toLowerCase().trim();
+    if (hl.includes('sheet')) map.sheetName = i;
+    else if (hl === 'notes') map.notes = i;
+    else if (hl.includes('company')) map.company = i;
+    else if (hl.includes('building')) map.buildingName = i;
+    else if (hl.includes('apt') || hl.includes('name') && hl.includes('city')) map.aptName = i;
+    else if (hl.includes('offer') || hl.includes('promo')) map.offer = i;
+    else if (hl.includes('address')) map.address = i;
+    else if (hl === 'city') map.city = i;
+    else if (hl === 'state') map.state = i;
+    else if (hl.includes('pin') || hl.includes('zip')) map.pincode = i;
+    else if (hl === 'unit') map.unit = i;
+    else if (hl === 'floor') map.floor = i;
+    else if (hl.includes('avail')) map.available = i;
+    else if (hl.includes('bed')) map.bedrooms = i;
+    else if (hl.includes('bath')) map.bathrooms = i;
+    else if (hl.includes('sqft') || hl.includes('sq ft') || hl.includes('square')) map.sqft = i;
+    else if (hl.includes('price') || hl.includes('rent')) map.price = i;
+    else if (hl.includes('util')) map.utilities = i;
+  });
+  INV_COL = map;
+}
+
+function invGet(row, key) { return (row[INV_COL[key]] || '').trim(); }
+
+function invParsePrice(s) {
+  if (!s) return 0;
+  var n = parseFloat(s.replace(/[^0-9.]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+async function loadInventory(force) {
   var container = document.getElementById('inventory-content');
-  if (!inventoryLoaded) {
-    container.innerHTML = '<div style="text-align:center;padding:60px 0;color:var(--text-dim);"><span class="spinner"></span> Loading inventory...</div>';
-  }
+  if (inventoryLoaded && !force) { filterInventory(); return; }
+  container.innerHTML = '<div style="text-align:center;padding:60px 0;color:var(--text-dim);"><span class="spinner"></span> Loading inventory...</div>';
+  document.getElementById('inv-results-count').textContent = '';
   try {
     var res = await fetch('/.netlify/functions/inventory');
     var data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Fetch failed');
-    var html = '';
-    data.sheets.forEach(function(sheet, i) {
-      html += '<div class="card" style="margin-bottom:24px;">';
-      html += '<div class="card-title">Sheet ' + (i + 1) + (sheet.tab ? ' — ' + sheet.tab : '') + '</div>';
-      if (sheet.error) {
-        html += '<p style="color:var(--red);font-size:13px;">Error: ' + sheet.error + '</p>';
-      } else if (sheet.headers.length === 0) {
-        html += '<p style="color:var(--text-dim);font-size:13px;">No data found</p>';
-      } else {
-        html += '<div style="overflow-x:auto;">';
-        html += '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
-        html += '<thead><tr>';
-        sheet.headers.forEach(function(h) {
-          html += '<th style="text-align:left;padding:10px 12px;border-bottom:2px solid var(--gold-dim);color:var(--gold);font-size:11px;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">' + escapeHtml(h) + '</th>';
+    inventoryProperties = [];
+    data.sheets.forEach(function(sheet) {
+      if (sheet.error || !sheet.headers.length) return;
+      invMapColumns(sheet.headers);
+      sheet.rows.forEach(function(row) {
+        var addr = invGet(row, 'address');
+        var building = invGet(row, 'buildingName');
+        if (!addr && !building) return; // skip empty rows
+        inventoryProperties.push({
+          sheetName: invGet(row, 'sheetName'),
+          notes: invGet(row, 'notes'),
+          company: invGet(row, 'company'),
+          buildingName: building,
+          aptName: invGet(row, 'aptName'),
+          offer: invGet(row, 'offer'),
+          address: addr,
+          city: invGet(row, 'city'),
+          state: invGet(row, 'state'),
+          pincode: invGet(row, 'pincode'),
+          unit: invGet(row, 'unit'),
+          floor: invGet(row, 'floor'),
+          available: invGet(row, 'available'),
+          bedrooms: invGet(row, 'bedrooms'),
+          bathrooms: invGet(row, 'bathrooms'),
+          sqft: invGet(row, 'sqft'),
+          price: invGet(row, 'price'),
+          priceNum: invParsePrice(invGet(row, 'price')),
+          utilities: invGet(row, 'utilities')
         });
-        html += '</tr></thead><tbody>';
-        sheet.rows.forEach(function(row, ri) {
-          var bg = ri % 2 === 0 ? 'var(--surface2)' : 'transparent';
-          html += '<tr style="background:' + bg + ';">';
-          for (var c = 0; c < sheet.headers.length; c++) {
-            html += '<td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-dim);white-space:nowrap;">' + escapeHtml(row[c] || '') + '</td>';
-          }
-          html += '</tr>';
-        });
-        html += '</tbody></table></div>';
-        html += '<p style="margin-top:8px;font-size:11px;color:var(--text-muted);">' + sheet.rows.length + ' rows</p>';
-      }
-      html += '</div>';
+      });
     });
-    container.innerHTML = html;
     inventoryLoaded = true;
+    filterInventory();
   } catch (e) {
     container.innerHTML = '<div class="card" style="text-align:center;padding:40px;"><p style="color:var(--red);font-size:14px;">Failed to load inventory</p><p style="color:var(--text-dim);font-size:13px;margin-top:8px;">' + escapeHtml(e.message) + '</p></div>';
   }
+}
+
+function filterInventory() {
+  var search = (document.getElementById('inv-search').value || '').toLowerCase();
+  var beds = document.getElementById('inv-beds').value;
+  var maxPrice = document.getElementById('inv-price').value;
+  var city = document.getElementById('inv-city').value;
+  var avail = document.getElementById('inv-avail').value;
+
+  var filtered = inventoryProperties.filter(function(p) {
+    // Text search
+    if (search) {
+      var haystack = (p.address + ' ' + p.buildingName + ' ' + p.city + ' ' + p.aptName).toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
+    // Bedrooms
+    if (beds) {
+      var pBed = p.bedrooms.toLowerCase().replace(/\s/g, '');
+      if (beds === 'studio') {
+        if (!pBed.includes('studio') && pBed !== '0') return false;
+      } else if (beds === '3') {
+        var bn = parseInt(pBed);
+        if (isNaN(bn) || bn < 3) return false;
+      } else {
+        if (!pBed.startsWith(beds)) return false;
+      }
+    }
+    // Max price
+    if (maxPrice) {
+      var mp = parseInt(maxPrice);
+      if (mp === 9999) {
+        if (p.priceNum < 3500) return false;
+      } else {
+        if (p.priceNum <= 0 || p.priceNum > mp) return false;
+      }
+    }
+    // City
+    if (city) {
+      if (!p.city.toLowerCase().includes(city.toLowerCase())) return false;
+    }
+    // Availability
+    if (avail === 'vacant') {
+      var av = p.available.toLowerCase();
+      if (!av.includes('vacant') && !av.includes('available') && !av.includes('yes')) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('inv-results-count').textContent = filtered.length + ' propert' + (filtered.length === 1 ? 'y' : 'ies') + ' found';
+  renderInventoryCards(filtered);
+}
+
+function renderInventoryCards(properties) {
+  var container = document.getElementById('inventory-content');
+  if (properties.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:60px 0;"><div style="font-size:40px;margin-bottom:16px;opacity:0.3;">&#127968;</div><p style="color:var(--text-dim);font-size:15px;">No properties match your filters</p><p style="color:var(--text-muted);font-size:13px;margin-top:8px;">Try adjusting your search criteria</p></div>';
+    return;
+  }
+
+  var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;">';
+  properties.forEach(function(p) {
+    var isVacant = p.available.toLowerCase().includes('vacant') || p.available.toLowerCase().includes('available') || p.available.toLowerCase().includes('yes');
+    var title = p.buildingName || p.aptName || p.address || 'Property';
+    var subtitle = p.aptName && p.buildingName ? p.aptName : '';
+    var priceDisplay = p.price || 'Contact for price';
+    var priceFormatted = p.priceNum > 0 ? '$' + p.priceNum.toLocaleString() + '/mo' : priceDisplay;
+
+    html += '<div class="card" style="padding:0;overflow:hidden;transition:border-color 0.2s;cursor:default;" onmouseover="this.style.borderColor=\'var(--gold-dim)\'" onmouseout="this.style.borderColor=\'var(--border)\'">';
+
+    // Header with availability badge
+    html += '<div style="padding:20px 20px 0;display:flex;justify-content:space-between;align-items:flex-start;">';
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div style="font-family:Syne,sans-serif;font-size:16px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</div>';
+    if (subtitle) {
+      html += '<div style="font-size:13px;color:var(--text-dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(subtitle) + '</div>';
+    }
+    html += '</div>';
+    html += '<span class="badge ' + (isVacant ? 'badge-green' : 'badge-gold') + '" style="flex-shrink:0;margin-left:10px;">' + (isVacant ? 'Vacant' : (p.available || 'Unknown')) + '</span>';
+    html += '</div>';
+
+    // Address
+    if (p.address) {
+      html += '<div style="padding:6px 20px 0;font-size:13px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">';
+      html += escapeHtml(p.address + (p.unit ? ', Unit ' + p.unit : '') + (p.city ? ', ' + p.city : '') + (p.state ? ' ' + p.state : ''));
+      html += '</div>';
+    }
+
+    // Price
+    html += '<div style="padding:12px 20px 0;font-family:Syne,sans-serif;font-size:24px;font-weight:700;color:var(--gold);">' + escapeHtml(priceFormatted) + '</div>';
+
+    // Pills: Beds | Baths | Sqft
+    html += '<div style="padding:12px 20px 0;display:flex;gap:8px;flex-wrap:wrap;">';
+    if (p.bedrooms) html += '<span style="padding:4px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text-dim);">' + escapeHtml(p.bedrooms) + ' Bed</span>';
+    if (p.bathrooms) html += '<span style="padding:4px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text-dim);">' + escapeHtml(p.bathrooms) + ' Bath</span>';
+    if (p.sqft) html += '<span style="padding:4px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text-dim);">' + escapeHtml(p.sqft) + ' sqft</span>';
+    if (p.floor) html += '<span style="padding:4px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text-dim);">Floor ' + escapeHtml(p.floor) + '</span>';
+    html += '</div>';
+
+    // Offer
+    if (p.offer) {
+      html += '<div style="padding:10px 20px 0;"><span class="badge badge-purple" style="font-size:11px;">' + escapeHtml(p.offer) + '</span></div>';
+    }
+
+    // Footer: Company + utilities
+    html += '<div style="padding:14px 20px;margin-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">';
+    html += '<span style="font-size:11px;color:var(--text-muted);letter-spacing:0.5px;">' + escapeHtml(p.company || 'Unknown source') + '</span>';
+    if (p.utilities) html += '<span style="font-size:11px;color:var(--text-muted);">' + escapeHtml(p.utilities) + '</span>';
+    html += '</div>';
+
+    html += '</div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
 }
 function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
