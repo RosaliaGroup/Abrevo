@@ -2187,7 +2187,7 @@ async function monLoadBookingsToday() {
   try {
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
     const tomorrowStart = new Date(todayStart); tomorrowStart.setDate(tomorrowStart.getDate() + 1);
-    const bookings = await monFetchSupabase('bookings', `select=full_name,phone,preferred_date,preferred_time,calendar_event_id,created_at&created_at=gte.${todayStart.toISOString()}&created_at=lt.${tomorrowStart.toISOString()}&order=created_at.desc`);
+    const bookings = await monFetchSupabase('bookings', `select=full_name,phone,preferred_date,preferred_time,calendar_event_id,created_at,type&created_at=gte.${todayStart.toISOString()}&created_at=lt.${tomorrowStart.toISOString()}&order=created_at.desc`);
 
     const withCal = bookings.filter(b => b.calendar_event_id);
     const noCal = bookings.filter(b => !b.calendar_event_id);
@@ -2202,20 +2202,68 @@ async function monLoadBookingsToday() {
       html += `<div class="mon-row">${monDot('gray')} <span class="mon-val">No bookings today</span></div>`;
     } else {
       html += `<div class="mon-section-label">Today's Bookings</div>`;
-      bookings.forEach(b => {
+      bookings.forEach((b, idx) => {
         const hasCal = !!b.calendar_event_id;
-        html += `<div class="mon-row">
-          ${monDot(hasCal ? 'green' : 'red')}
-          <span class="mon-label">${b.full_name || 'Unknown'}</span>
-          <span class="mon-val">${b.phone || '--'}</span>
-          <span class="mon-val">${b.preferred_date || '--'} ${b.preferred_time || ''}</span>
-          <span class="mon-val" style="text-align:right">${hasCal ? 'Cal OK' : 'No Cal'}</span>
+        const cancelUrl = `https://book.rosaliagroup.com/cancel?name=${encodeURIComponent(b.full_name||'')}&date=${encodeURIComponent(b.preferred_date||'')}&time=${encodeURIComponent(b.preferred_time||'')}&property=${encodeURIComponent(b.type||'')}&phone=${encodeURIComponent(b.phone||'')}`;
+        html += `<div style="padding:10px 0;border-bottom:1px solid var(--border);">
+          <div class="mon-row" style="border-bottom:none;padding:0;">
+            ${monDot(hasCal ? 'green' : 'red')}
+            <span class="mon-label">${b.full_name || 'Unknown'}</span>
+            <span class="mon-val">${b.phone || '--'}</span>
+            <span class="mon-val">${b.preferred_date || '--'} ${b.preferred_time || ''}</span>
+            <span class="mon-val" style="text-align:right">${hasCal ? 'Cal OK' : 'No Cal'}</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:6px;padding-left:20px;">
+            <button class="btn btn-outline btn-sm" onclick="monCopyCancelLink('${cancelUrl.replace(/'/g,"\\'")}')">Copy Cancel Link</button>
+            <button class="btn btn-outline btn-sm" id="sms-btn-${idx}" onclick="monSmsCancelLink('${(b.phone||'').replace(/'/g,"\\'")}','${(b.full_name||'').replace(/'/g,"\\'")}','${cancelUrl.replace(/'/g,"\\'")}',${idx})">Send via SMS</button>
+          </div>
         </div>`;
       });
     }
     el.innerHTML = html;
   } catch(e) {
     el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Failed: ${e.message}</span></div>`;
+  }
+}
+
+const TEXTBELT_KEY_1 = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
+
+function monCopyCancelLink(url) {
+  navigator.clipboard.writeText(url).then(() => toast('Cancel link copied!'));
+}
+
+async function monSmsCancelLink(phone, name, url, idx) {
+  if (!phone) { toast('No phone number'); return; }
+  const btn = document.getElementById('sms-btn-' + idx);
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  try {
+    let normalizedPhone = phone.replace(/\D/g, '');
+    if (normalizedPhone.length === 10) normalizedPhone = '+1' + normalizedPhone;
+    else if (normalizedPhone.length === 11) normalizedPhone = '+' + normalizedPhone;
+    else normalizedPhone = '+' + normalizedPhone;
+    const firstName = (name || '').split(/\s/)[0] || 'there';
+    const msg = `Hi ${firstName}, here is your appointment management link: ${url} — you can reschedule or cancel here.`;
+    const r = await fetch('https://textbelt.com/text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: normalizedPhone, message: msg, key: TEXTBELT_KEY_1 })
+    });
+    const data = await r.json();
+    if (data.success) {
+      btn.textContent = 'Sent!';
+      btn.style.borderColor = 'var(--green)';
+      btn.style.color = 'var(--green)';
+      toast('SMS sent to ' + firstName);
+    } else {
+      throw new Error(data.error || 'SMS failed');
+    }
+  } catch (e) {
+    btn.textContent = 'Failed';
+    btn.style.borderColor = 'var(--red)';
+    btn.style.color = 'var(--red)';
+    toast('SMS failed: ' + e.message);
+    setTimeout(() => { btn.textContent = 'Send via SMS'; btn.disabled = false; btn.style.borderColor = ''; btn.style.color = ''; }, 3000);
   }
 }
 
