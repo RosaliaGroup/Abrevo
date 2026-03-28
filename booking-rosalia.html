@@ -541,6 +541,26 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
       return;
     }
 
+    // HARD BLOCK: Income must meet 3x rent for selected property
+    var incomeVal = getIncomeVal();
+    var selectedProp = null;
+    for (var pi = 0; pi < PROPERTIES.length; pi++) {
+      if (PROPERTIES[pi].value === property_raw || PROPERTIES[pi].value === property_name) { selectedProp = PROPERTIES[pi]; break; }
+    }
+    if (selectedProp && incomeVal < selectedProp.minIncome) {
+      errorEl.textContent = 'Your income does not meet the 3x rent requirement for ' + safeHtml(selectedProp.label) + '. Please consider applying through TheGuarantors.com or using a co-signer.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    // HARD BLOCK: Credit must be 650+ or have co-signer
+    var creditVal = getCreditVal();
+    if (creditVal < 650) {
+      errorEl.textContent = 'Our properties require a minimum credit score of 650. You can apply through TheGuarantors.com to get pre-approved, or use a co-signer. Contact us at (862) 333-1681 for assistance.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
     var dateObj = new Date(preferred_date_raw + 'T12:00:00');
     var preferred_date = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
