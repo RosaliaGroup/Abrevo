@@ -1,7 +1,7 @@
 const { google } = require('googleapis');
 
 const SPREADSHEET_IDS = [
-  '1BxPKElP2XJ3dk6TV5Ri8247ecXiRx4_nNmtTylGjlyA'
+  '17JZID4T1Vz7JOuCkztNNm73gLCnAwlLGWx3gRMUyCJI'
 ];
 
 function getAuth() {
