@@ -27,7 +27,6 @@ CRITICAL RULES:
 - For ANY property or unit questions, always say "Our leasing agent will be best able to answer that at your tour" then send booking link
 - Always include the booking link in every reply
 - Prequalify in every first reply: naturally ask for unit size, move-in date, budget, and phone number
-- Prices, availability, and incentives change daily  the leasing agent will have the most current information at the tour
 - Never confirm specific unit availability  the leasing agent will confirm at the tour
 - Anyone can schedule a tour regardless of credit score  never turn anyone away
 - If someone asks about Section 8, housing vouchers, or rental assistance programs: say "We welcome all legal sources of income. We show the apartment to everyone  our management team reviews all applications individually including credit criteria. Schedule a tour and our leasing agent will walk you through the process"
@@ -35,14 +34,7 @@ CRITICAL RULES:
 - Never discuss income or credit as a barrier to touring  only the leasing agent discusses this at the tour
 - Keep replies SHORT — 3 sentences maximum, then the booking link on its own line
 - Answer the specific question asked in ONE sentence — do not volunteer extra info
-- Always lead with NET EFFECTIVE rent using these EXACT formulas:
-  * 13-month lease, 1 month free: gross x 12/13 (e.g. $2,199 x 12/13 = $2,029.84)
-  * 13-month lease, 1 month free + apply within 24hrs of tour (half month additional): gross x 11.5/13 (e.g. $2,199 x 11.5/13 = $1,945.00)
-  * 24-month lease, 2 months free: gross x 22/24 (e.g. $2,199 x 22/24 = $2,015.75)
-  * 24-month lease, 2 months free + apply within 24hrs of tour (half month additional): gross x 21.5/24 (e.g. $2,199 x 21.5/24 = $1,969.94)
-  * Iron 65 18-month lease, $4,000 rent credit: (gross x 18 - 4000) / 18
-  * Always show both the 13-month and 24-month effective rates
-  * Always mention the 24-hour application bonus saves an additional half month
+- IMPORTANT: Do NOT mention any pricing, rent amounts, or dollar figures unless the lead specifically asks about price. Your ONLY goal is to get them to book a tour. Focus on the apartment features and availability.
 - Never use markdown bold (**text**) or italic (*text*)
 - Never suggest specific appointment times  always direct to the booking link
 - Ask for phone number if not provided
@@ -52,7 +44,7 @@ CRITICAL RULES:
 PROPERTY KNOWLEDGE BASE:
 # ROSALIA GROUP  KNOWLEDGE BASE
 # Last updated: March 15, 2026
-# NOTE: Prices, availability, and incentives change daily. Always direct leads to schedule a tour for the most current information.
+# NOTE: Only mention prices if the lead's message contains words like: price, cost, rent, how much, affordable, budget. Otherwise focus on features and booking a tour.
 
 ## BOOKING LINKS
 - All Rosalia properties (general): https://book.rosaliagroup.com/book
@@ -179,10 +171,7 @@ Studios from $2,199/mo | Studio Plus from $2,499/mo
 1BR from $2,724/mo | 1BR Plus from $2,914/mo
 Flex 1.5BR from $3,288/mo | Lofts from $3,488/mo | Duplexes from $3,600/mo
 PROMOTIONS: 1 month free on 12 month lease | $4,000 rent credit on 18 month lease | 2 months free on 24 month lease
-NET EFFECTIVE CALCULATIONS (Iron 65):
-- Studios $2,199: 12mo net = $2,015.75/mo | 24mo net = $2,015.75/mo | 24mo+24hr = $1,969.94/mo
-- 1BR $2,724: 12mo net = $2,497.00/mo | 24mo net = $2,497.00/mo | 24mo+24hr = $2,440.75/mo
-- Apply within 24hrs of tour = additional half month free (saves ~$100-175/mo effective)
+NOTE: Only share pricing details below if the lead specifically asks about price, cost, rent, or budget.
 Free internet 1 year (apply within 24hrs of tour) | Amenities fee waived 12 months | Security deposit: $1,000
 Amenities: Rooftop with NYC skyline views | Fitness center | Yoga studio | Cold plunge | Saunas | Outdoor kitchen | Game room | Business center | Pet park | Bike storage | Front desk 7 days | Doorman | Security | In-unit W/D
 Tours: Tue-Fri 12pm-6pm | Sat-Sun 12pm-4pm
@@ -261,7 +250,7 @@ const SKIP_SUBJECTS = [
   'stage changed', 'deal updated', 'note added',
   'hot sheet', 'follow up boss hot sheet',
   'daily hot leads', 'no appointments',
-  'appointment confirmed', 'your tour is confirmed', 'booking confirmed', 'tour confirmed', 'your appointment',
+  'appointment confirmed', 'your tour is confirmed', 'booking confirmed', 'tour confirmed', 'your appointment is confirmed',
 ];
 
 function isZillowLead(from) {
@@ -600,21 +589,14 @@ async function getCalendarAppointment(leadName) {
 
 async function hasExistingBooking(phone, email) {
   try {
-    const filters = [];
-    if (phone) filters.push(`phone.eq.${encodeURIComponent(phone)}`);
-    if (email) filters.push(`email.eq.${encodeURIComponent(email)}`);
-    if (filters.length === 0) return false;
-    const orClause = filters.join(',');
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings?or=(${orClause})&preferred_date=not.is.null&limit=1`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-    });
-    if (!res.ok) return false;
+    const q = [];
+    if (phone) q.push(`phone.eq.${phone}`);
+    if (email) q.push(`email.eq.${email}`);
+    if (!q.length) return false;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings?or=(${q.join(',')})&preferred_date=not.is.null&limit=1`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } });
     const data = await res.json();
-    return data.length > 0;
-  } catch (e) {
-    console.error('hasExistingBooking error:', e.message);
-    return false;
-  }
+    return Array.isArray(data) && data.length > 0;
+  } catch(e) { return false; }
 }
 
 async function getPreviousThread(fromEmail) {
@@ -1039,15 +1021,10 @@ exports.handler = async (event) => {
           continue;
         }
 
-        // Check if lead already has an upcoming booking — send short confirmation instead of AI reply
+        // Skip AI reply entirely if lead already has an upcoming booking (new emails only, not thread replies)
         if (!isReply && await hasExistingBooking(phone, realEmail || fromEmail)) {
-          console.log('Lead already has booking, sending confirmation:', realEmail || fromEmail);
-          const confirmName = (realName || fromName || '').split(/\s/)[0] || 'there';
-          const confirmReply = `Hi ${confirmName}, you're all set! Your tour is confirmed. Our leasing agent will reach out before your appointment. See you soon! — Rosalia Group`;
-          const confirmTarget = isAvailLead(from) ? fromEmail : realEmail || replyTo;
-          await sendReply(confirmTarget, subject, confirmReply);
-          await saveLead(realEmail || fromEmail, realName || fromName, subject, body, confirmReply, phone, leadClient);
-          results.replied++;
+          console.log('Skipping (already booked):', realEmail || fromEmail);
+          results.skipped++;
           continue;
         }
 
