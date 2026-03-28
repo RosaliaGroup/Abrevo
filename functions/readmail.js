@@ -847,7 +847,7 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone, cl
       'Content-Type': 'application/json',
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
-      Prefer: 'return=representation',
+      Prefer: 'return=representation,resolution=merge-duplicates',
     },
     body: JSON.stringify({
       name: fromName,
@@ -1007,7 +1007,7 @@ exports.handler = async (event) => {
         const skipRecentCheck = isAvailLead(from) || from.includes('reply.avail.co') || from.includes('@avail.co') || isFUBLead(from, subject);
 
         const receivedAt = parsed.date || null;
-        if (!skipRecentCheck && await repliedRecently(checkEmail, isReply ? 2 : 24, receivedAt)) {
+        if (!skipRecentCheck && await repliedRecently(checkEmail, isReply ? 2 : 4, receivedAt)) {
           console.log('Skipping (replied recently):', checkEmail, isReply ? '(thread, 2h window)' : '(new, 24h window)');
           results.skipped++;
           continue;
