@@ -31,6 +31,40 @@ async function testEndpoint(name, url) {
   }
 }
 
+async function testBookEndpoint() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    // POST with test data — book.js requires these fields; use a test phone to avoid real bookings
+    const testData = {
+      full_name: 'HEALTHCHECK_TEST',
+      phone: '+10000000000',
+      email: 'healthcheck@test.invalid',
+      preferred_date: 'January 1 2099',
+      preferred_time: '12:00 PM',
+      budget: 'Under $2,500',
+      apartment_size: '1BR',
+      move_in_date: 'January 1 2099',
+      income_qualifies: 'Test',
+      credit_qualifies: '700+',
+      additional_notes: 'AUTOMATED HEALTH CHECK — ignore',
+      status: 'healthcheck'
+    };
+    const r = await fetch(`${BASE_URL}/book`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(testData),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    // We expect 200 (success) or 4xx (validation reject) — both mean the function is alive
+    // 5xx means the function is broken
+    return { name: 'book', ok: r.status < 500, status: r.status };
+  } catch (e) {
+    return { name: 'book', ok: false, status: 0, error: e.message };
+  }
+}
+
 async function testTextbelt(key, label) {
   try {
     const r = await fetch(`https://textbelt.com/quota/${key}`);
@@ -148,7 +182,7 @@ exports.handler = async (event) => {
 
   // Test function endpoints in parallel
   const [bookTest, readmailTest, autocallTest, inventoryTest] = await Promise.all([
-    testEndpoint('book', `${BASE_URL}/book`),
+    testBookEndpoint(),
     testEndpoint('readmail', `${BASE_URL}/readmail`),
     testEndpoint('autocall', `${BASE_URL}/autocall`),
     testEndpoint('inventory', `${BASE_URL}/inventory`)
