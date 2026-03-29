@@ -184,6 +184,10 @@ exports.handler = async (event) => {
     const data = JSON.parse(event.body || '{}');
     console.log('Booking data received:', JSON.stringify(data));
 
+    if (!data.full_name && !data.phone) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing required fields: full_name and phone' }) };
+    }
+
     // Normalize phone number
     if (data.phone) {
       let normalizedPhone = data.phone.toString().replace(/\D/g, '');
@@ -271,15 +275,19 @@ exports.handler = async (event) => {
       }
     }
 
-    // 4. Send SMS to team
-    let teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${propertyAddress}\nDate: ${displayDate} at ${displayTime}\nBudget: ${displayBudget}\nSize: ${displaySize}\nMove-In: ${displayMoveIn}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
-    // Strip any URLs from team SMS
-    teamMsg = teamMsg.replace(/https?:\/\/[^\s]+/gi, '').replace(/\s{2,}/g, ' ').trim();
-    try {
-      const teamSmsResult = await sendSMS(client.notifyPhone, teamMsg);
-      console.log('Team SMS sent:', teamSmsResult.success);
-    } catch (err) {
-      console.error('Team SMS error:', err.message);
+    // 4. Send SMS to team (skip for null/healthcheck bookings)
+    if (data.full_name && !data.full_name.includes('HEALTHCHECK') && client.notifyPhone) {
+      let teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${propertyAddress}\nDate: ${displayDate} at ${displayTime}\nBudget: ${displayBudget}\nSize: ${displaySize}\nMove-In: ${displayMoveIn}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
+      // Strip any URLs from team SMS
+      teamMsg = teamMsg.replace(/https?:\/\/[^\s]+/gi, '').replace(/\s{2,}/g, ' ').trim();
+      try {
+        const teamSmsResult = await sendSMS(client.notifyPhone, teamMsg);
+        console.log('Team SMS sent:', teamSmsResult.success);
+      } catch (err) {
+        console.error('Team SMS error:', err.message);
+      }
+    } else {
+      console.log('Skipping team SMS — no valid full_name or healthcheck request');
     }
 
     // 5. Send email confirmation to caller (CC inquiries@rosaliagroup.com)
