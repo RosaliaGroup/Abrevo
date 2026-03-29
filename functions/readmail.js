@@ -57,6 +57,7 @@ CRITICAL RULES:
 - Ask for phone number if not provided
 - NEVER confirm or deny existing appointments you don't have record of  say "let me confirm with our leasing team and we will reach out shortly"
 - Sign off as: Rosalia Group | Inquiries Team | +18624191763 | inquiries@rosaliagroup.com
+- IMPORTANT: Never tell a lead that a property is outside our portfolio or not one of our properties unless you are 100% certain. If unsure, say "Let me connect you with our leasing team to confirm availability" rather than denying ownership. Our full portfolio includes: 502 Market St, 486 Market St, 39 Madison St, 556 Market St, 162 University Ave, 289 Halsey St, 276 Duncan St Jersey City, 1369 South Ave Plainfield, 80 Freeman St (The Ballantine), 475 Main St Orange (The Elks), Iron 65 65 Mcwhorter St.
 
 PROPERTY KNOWLEDGE BASE:
 # ROSALIA GROUP  KNOWLEDGE BASE
@@ -193,6 +194,13 @@ Free internet 1 year (apply within 24hrs of tour) | Amenities fee waived 12 mont
 Amenities: Rooftop with NYC skyline views | Fitness center | Yoga studio | Cold plunge | Saunas | Outdoor kitchen | Game room | Business center | Pet park | Bike storage | Front desk 7 days | Doorman | Security | In-unit W/D
 Tours: Tue-Fri 12pm-6pm | Sat-Sun 12pm-4pm
 Tour booking: https://book.rosaliagroup.com/iron65
+
+### 276 DUNCAN STREET, JERSEY CITY NJ
+Utilities included: none | Tenant pays: electric, water, trash
+In-unit laundry | Rooftop access
+Available units:
+- 2BR at $2,850/mo
+Tour booking: https://book.rosaliagroup.com/book
 
 ## FAQ
 Q: Are utilities included?
