@@ -33,11 +33,10 @@ async function testEndpoint(name, url) {
 
 async function testBookEndpoint() {
   try {
-    // Simple GET ping — checks if function is alive without triggering SMS, calendar, or Supabase
-    const r = await fetch(`${BASE_URL}/book`, { method: 'GET' });
+    const r = await fetch('https://abrevo.co/.netlify/functions/book', { method: 'GET' });
     return { name: 'book', ok: r.status < 500, status: r.status };
-  } catch (e) {
-    return { name: 'book', ok: false, status: 0, error: e.message };
+  } catch(e) {
+    return { name: 'book', ok: false, error: e.message };
   }
 }
 
