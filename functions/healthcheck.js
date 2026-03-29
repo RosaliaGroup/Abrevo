@@ -155,22 +155,6 @@ ACTION REQUIRED: Investigate the issues listed above.`;
   }
 }
 
-async function sendAlertSMS(issues) {
-  try {
-    const summary = issues.slice(0, 3).join('; ');
-    const extra = issues.length > 3 ? ` (+${issues.length - 3} more)` : '';
-    const msg = `Abrevo Alert: ${summary}${extra}`;
-    await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: ALERT_PHONE, message: msg, key: TEXTBELT_KEY_1 })
-    });
-    console.log('Alert SMS sent to', ALERT_PHONE);
-  } catch (e) {
-    console.error('Alert SMS failed:', e.message);
-  }
-}
-
 // ---- Main handler ----
 
 exports.handler = async (event) => {
@@ -229,10 +213,7 @@ exports.handler = async (event) => {
   // Send alerts if issues found
   if (errors.length > 0) {
     console.log('Issues found:', errors);
-    await Promise.all([
-      sendAlertEmail(errors, record),
-      sendAlertSMS(errors)
-    ]);
+    await sendAlertEmail(errors, record);
   } else {
     console.log('All systems healthy');
   }
