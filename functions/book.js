@@ -388,6 +388,26 @@ exports.handler = async (event) => {
       }
     }
 
+    // Create task for specialist leads needing manual follow-up
+    if (data.status === 'needs_specialist') {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({
+            lead_name: data.full_name,
+            lead_email: data.email,
+            lead_phone: data.phone,
+            task_type: 'specialist_followup',
+            description: `Specialist inquiry submitted. Property: ${propertyAddress}. Size: ${data.apartment_size}. Move-in: ${data.move_in_date}. Budget: ${data.budget}. Needs manual follow-up — did not qualify for standard booking.`
+          })
+        });
+        console.log('Specialist task created for:', data.full_name);
+      } catch (err) {
+        console.error('Task creation error:', err.message);
+      }
+    }
+
     return {
       statusCode: 200,
       headers,

@@ -1065,6 +1065,15 @@ exports.handler = async (event) => {
           continue;
         }
 
+        // Skip AI reply for specialist-status leads — create task for human follow-up
+        const leadData = await getLeadData(checkEmail);
+        if (leadData?.status === 'needs_specialist' && !isReply) {
+          await createTask(realName || fromName, checkEmail, phone, 'specialist_followup', `Specialist lead sent new email: "${body.slice(0,300)}"`);
+          console.log('Skipping (specialist lead):', checkEmail);
+          results.skipped++;
+          continue;
+        }
+
         // Task detection — create tasks for specific lead requests
         const leadName = realName || fromName || '';
         const msgLower = body.toLowerCase();
