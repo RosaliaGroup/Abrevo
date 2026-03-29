@@ -389,6 +389,27 @@ function parseWebflowEmail(body) {
   }
   if (buildingMatch) lead.property = buildingMatch[1].split('--')[0].trim();
   if (bedroomsMatch) lead.bedrooms = bedroomsMatch[1].split('--')[0].trim();
+
+  // Handle single-line format: "Full Name: X Email Address: Y Cell Phone: Z"
+  if (!lead.email) {
+    const inlineEmail = body.match(/Email Address:\s*([^\s]+@[^\s]+)/i);
+    if (inlineEmail) lead.email = inlineEmail[1].trim();
+  }
+  if (!lead.name || !lead.phone) {
+    if (!lead.name) {
+      const inlineName = body.match(/Full Name:\s*([^E]+?)(?=Email|$)/i);
+      if (inlineName) lead.name = inlineName[1].trim();
+    }
+    if (!lead.phone) {
+      const inlinePhone = body.match(/Cell Phone:\s*([\d\s\(\)\-\.]+?)(?=Current|Building|Bedrooms|$)/i);
+      if (inlinePhone) {
+        let p = inlinePhone[1].replace(/\D/g, '');
+        if (p.length === 10) p = '+1' + p;
+        lead.phone = p;
+      }
+    }
+  }
+
   return lead;
 }
 
@@ -1013,11 +1034,13 @@ exports.handler = async (event) => {
           }
           console.log('Avail lead - Name:', realName, 'Email:', realEmail, 'Client:', leadClient || 'rosalia');
         } else if (isWebflowLead(from, subject)) {
+          console.log('Resipointe lead detected - from:', from, 'subject:', subject);
           const p = parseWebflowEmail(body);
+          console.log('Parsed Resipointe lead:', JSON.stringify(p));
           if (p.phone) phone = p.phone;
           if (p.email) realEmail = p.email;
           if (p.name) realName = p.name;
-          console.log('Webflow lead - Name:', realName, 'Email:', realEmail);
+          console.log('Resipointe realEmail:', realEmail, 'phone:', phone, 'name:', realName);
         } else if (isZillowLead(from)) {
           // Zillow relay emails don't contain phone numbers
           const p = parseZillowEmail(body);
