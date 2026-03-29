@@ -1076,6 +1076,29 @@ exports.handler = async (event) => {
         // For Avail leads: reply to relay so it appears in Avail platform, CC real email
         const avail = isAvailLead(from);
         const isFUB = isFUBLead(from, subject);
+
+        // For FUB leads with no real email (Facebook/Instagram leads) — skip email reply, use SMS+call only
+        if (isFUB && !realEmail) {
+          console.log('FUB lead with no email (Facebook/Instagram) — skipping email reply, SMS+call only');
+          await saveLead(fromEmail, realName || fromName, subject, body, null, phone, leadClient);
+          await notifyAna(realName || fromName || from, subject, phone, false);
+          if (phone) {
+            const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+            const etHour = nowET.getHours();
+            const etDay = nowET.getDay();
+            const callAllowed = (etDay >= 1 && etDay <= 5) ? (etHour >= 9 && etHour < 18) :
+                                (etDay === 6) ? (etHour >= 10 && etHour < 17) :
+                                (etHour >= 11 && etHour < 17);
+            const smsBookingUrl = leadClient === 'iron65' ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
+            await sendSMS(phone, realName || fromName, '', smsBookingUrl);
+            if (callAllowed) {
+              await triggerCall(phone, realName || fromName);
+            }
+          }
+          results.processed++;
+          continue;
+        }
+
         const replyTarget = avail ? fromEmail : realEmail || effectiveReplyTo;
         const ccEmail = avail && realEmail && realEmail !== fromEmail ? realEmail : null;
         await sendReply(replyTarget, subject, replyText, ccEmail);
