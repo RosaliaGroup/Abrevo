@@ -630,6 +630,17 @@ async function repliedRecently(fromEmail, hours = 24, emailReceivedAt = null) {
   return false;
 }
 
+async function createTask(leadName, leadEmail, leadPhone, taskType, description) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ lead_name: leadName, lead_email: leadEmail, lead_phone: leadPhone, task_type: taskType, description })
+    });
+    console.log('Task created:', taskType, leadEmail);
+  } catch(e) { console.error('Task creation failed:', e.message); }
+}
+
 async function generateReply(from, subject, body, previousReply, leadContext, calendarAppt, leadName, leadClient) {
   const isBuyer = /buy|purchase|mortgage|home|house|sell/i.test(body + subject);
 
@@ -1027,6 +1038,31 @@ exports.handler = async (event) => {
           console.log('Skipping (already booked):', realEmail || fromEmail);
           results.skipped++;
           continue;
+        }
+
+        // Task detection — create tasks for specific lead requests
+        const leadName = realName || fromName || '';
+        const msgLower = body.toLowerCase();
+        const wantsFloorPlan = /floor\s*plan|layout|floorplan/.test(msgLower);
+        const wantsPricing = /\bprice\b|\bpricing\b|how much|what.{0,10}cost|monthly rent|what.{0,10}rate/.test(msgLower);
+        const wantsSpecificUnit = /specific unit|unit number|apartment number|which unit/.test(msgLower);
+        const wantsOptOut = /remove me|unsubscribe|stop email|opt out|do not contact|no further|don.t contact/.test(msgLower);
+
+        if (wantsOptOut) {
+          await createTask(leadName, checkEmail, phone, 'opt_out', `Lead requested opt-out: "${body.slice(0,200)}"`);
+          await fetch(`${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(checkEmail)}`, { method: 'PATCH', headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'dnc', call_attempts: 99 }) });
+          console.log('Opt-out processed for:', checkEmail);
+          results.skipped++;
+          continue;
+        }
+        if (wantsFloorPlan) {
+          await createTask(leadName, checkEmail, phone, 'floor_plan_request', `Lead requested floor plans for ${leadContext?.property || 'property'}: "${body.slice(0,200)}"`);
+        }
+        if (wantsPricing) {
+          await createTask(leadName, checkEmail, phone, 'pricing_request', `Lead requested specific pricing: "${body.slice(0,200)}"`);
+        }
+        if (wantsSpecificUnit) {
+          await createTask(leadName, checkEmail, phone, 'unit_request', `Lead requested specific unit info: "${body.slice(0,200)}"`);
         }
 
         const calendarAppt = await getCalendarAppointment(realName || fromName);

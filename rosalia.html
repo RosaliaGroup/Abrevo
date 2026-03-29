@@ -288,6 +288,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
       System Monitor
     </div>
+    <div class="nav-item" data-page="tasks" onclick="showPage('tasks')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      Tasks <span id="tasks-badge" style="background:var(--red);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:6px;display:none;"></span>
+    </div>
     <div class="nav-item" data-page="alerts" onclick="showPage('alerts')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
       Listing Alerts
@@ -842,6 +846,34 @@
       </div>
     </div>
 
+    <!-- ========== TASKS ========== -->
+    <div class="page" id="page-tasks">
+      <div class="page-header">
+        <div class="row-between">
+          <div>
+            <h1>Tasks</h1>
+            <p>Follow-ups for floor plans, pricing, opt-outs, and special requests</p>
+          </div>
+          <button class="btn btn-gold" onclick="loadTasks()">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="stat-cards" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value" id="tasks-pending">--</div><div class="stat-sub">open tasks</div></div>
+        <div class="stat-card"><div class="stat-label">Urgent</div><div class="stat-value" id="tasks-urgent" style="color:var(--red);">--</div><div class="stat-sub">&gt;24 hours old</div></div>
+        <div class="stat-card"><div class="stat-label">Resolved Today</div><div class="stat-value" id="tasks-resolved">--</div><div class="stat-sub">completed</div></div>
+      </div>
+
+      <div id="tasks-content">
+        <div class="loading-text" style="text-align:center;padding:60px 0;color:var(--text-dim);">
+          <span class="spinner"></span> Loading tasks...
+        </div>
+      </div>
+    </div>
+
     <!-- ========== LISTING ALERTS ========== -->
     <div class="page" id="page-alerts">
       <div class="page-header">
@@ -896,6 +928,7 @@ function showPage(id) {
   if (id === 'monitor') monitorRefreshAll();
   if (id === 'inventory') loadInventory();
   if (id === 'alerts') loadListingAlerts();
+  if (id === 'tasks') loadTasks();
 }
 
 // ---- Inventory ----
@@ -2498,6 +2531,103 @@ async function loadHealthHistory() {
     el.innerHTML = html;
   } catch (e) {
     el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Failed to load history: ${escapeHtml(e.message)}</span></div>`;
+  }
+}
+
+// ---- Tasks ----
+async function loadTasks() {
+  const container = document.getElementById('tasks-content');
+  container.innerHTML = '<div class="loading-text" style="text-align:center;padding:40px 0;color:var(--text-dim);"><span class="spinner"></span> Loading tasks...</div>';
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/tasks?select=*&order=created_at.desc&limit=100', {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+    });
+    if (!r.ok) {
+      const errData = await r.json().catch(function() { return {}; });
+      if (r.status === 404 || (errData.message && errData.message.includes('relation'))) {
+        container.innerHTML = '<div class="card" style="text-align:center;padding:40px;">' +
+          '<p style="color:var(--red);font-size:14px;">Table "tasks" not found</p>' +
+          '<p style="color:var(--text-dim);font-size:13px;margin-top:12px;">Create it in Supabase SQL Editor:</p>' +
+          '<pre style="text-align:left;background:var(--surface2);padding:16px;border-radius:8px;margin-top:12px;font-size:11px;color:var(--text);overflow-x:auto;white-space:pre-wrap;">' +
+          'CREATE TABLE tasks (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  created_at timestamptz DEFAULT now(),\n  lead_name text,\n  lead_email text,\n  lead_phone text,\n  task_type text NOT NULL,\n  description text,\n  status text DEFAULT \'pending\',\n  resolved_at timestamptz\n);</pre></div>';
+        return;
+      }
+      throw new Error('HTTP ' + r.status);
+    }
+    const tasks = await r.json();
+    const now = Date.now();
+    const oneDayMs = 86400000;
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const pending = tasks.filter(t => t.status !== 'resolved');
+    const urgent = pending.filter(t => (now - new Date(t.created_at).getTime()) > oneDayMs);
+    const resolvedToday = tasks.filter(t => t.status === 'resolved' && t.resolved_at && new Date(t.resolved_at) >= todayStart);
+
+    document.getElementById('tasks-pending').textContent = pending.length;
+    document.getElementById('tasks-urgent').textContent = urgent.length;
+    document.getElementById('tasks-urgent').style.color = urgent.length > 0 ? 'var(--red)' : 'var(--green)';
+    document.getElementById('tasks-resolved').textContent = resolvedToday.length;
+
+    // Update badge
+    const badge = document.getElementById('tasks-badge');
+    if (pending.length > 0) { badge.textContent = pending.length; badge.style.display = 'inline'; }
+    else { badge.style.display = 'none'; }
+
+    if (pending.length === 0 && resolvedToday.length === 0 && tasks.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:60px 0;"><div style="font-size:40px;margin-bottom:16px;opacity:0.3;">&#9989;</div><p style="color:var(--text-dim);font-size:15px;">No tasks yet</p></div>';
+      return;
+    }
+
+    var typeColors = { floor_plan_request: 'badge-blue', pricing_request: 'badge-gold', unit_request: 'badge-purple', opt_out: 'badge-red' };
+    var typeLabels = { floor_plan_request: 'Floor Plan', pricing_request: 'Pricing', unit_request: 'Unit Request', opt_out: 'Opt-Out' };
+
+    var html = '';
+    // Show pending first, then resolved
+    var sorted = pending.concat(tasks.filter(t => t.status === 'resolved'));
+    sorted.forEach(function(t) {
+      var isResolved = t.status === 'resolved';
+      var age = now - new Date(t.created_at).getTime();
+      var isUrgent = !isResolved && age > oneDayMs;
+      var badgeClass = typeColors[t.task_type] || 'badge-gold';
+      var label = typeLabels[t.task_type] || t.task_type;
+      var timeAgo = monTimeAgo(t.created_at);
+
+      html += '<div class="card" style="padding:18px;margin-bottom:10px;opacity:' + (isResolved ? '0.5' : '1') + ';">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">';
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">';
+      html += '<span class="badge ' + badgeClass + '">' + escapeHtml(label) + '</span>';
+      if (isUrgent) html += '<span class="badge badge-red">Urgent</span>';
+      if (isResolved) html += '<span class="badge badge-green">Resolved</span>';
+      html += '</div>';
+      html += '<div style="font-size:14px;color:var(--text);font-weight:500;">' + escapeHtml(t.lead_name || 'Unknown') + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">' + escapeHtml(t.lead_email || '') + (t.lead_phone ? ' | ' + escapeHtml(t.lead_phone) : '') + '</div>';
+      html += '<div style="font-size:13px;color:var(--text-muted);margin-top:8px;line-height:1.5;">' + escapeHtml((t.description || '').slice(0, 300)) + '</div>';
+      html += '</div>';
+      html += '<div style="text-align:right;flex-shrink:0;">';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">' + timeAgo + '</div>';
+      if (!isResolved) {
+        html += '<button class="btn btn-outline btn-sm" onclick="resolveTask(\'' + t.id + '\')">Mark Resolved</button>';
+      }
+      html += '</div>';
+      html += '</div></div>';
+    });
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = '<div class="card" style="text-align:center;padding:40px;"><p style="color:var(--red);font-size:14px;">Failed to load tasks</p><p style="color:var(--text-dim);font-size:13px;margin-top:8px;">' + escapeHtml(e.message) + '</p></div>';
+  }
+}
+
+async function resolveTask(id) {
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/tasks?id=eq.' + id, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'resolved', resolved_at: new Date().toISOString() })
+    });
+    toast('Task resolved');
+    loadTasks();
+  } catch (e) {
+    toast('Failed to resolve task');
   }
 }
 </script>
