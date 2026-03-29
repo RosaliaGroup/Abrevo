@@ -1,180 +1,211 @@
 const nodemailer = require('nodemailer');
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://fhkgpepkwibxbxsepetd.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const VAPI_KEY = process.env.VAPI_KEY;
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
+const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
+const VAPI_KEY = process.env.VAPI_KEY || '064f441d-a388-4404-8b6c-05e91e90f1ff';
+const TEXTBELT_KEY_1 = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
+const TEXTBELT_KEY_2 = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
-const GMAIL_PASS = process.env.GMAIL_PASS || 'yynglhtlkmoakini';
+const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
+const ALERT_EMAIL = 'ana@rosaliagroup.com';
+const ALERT_PHONE = '+12014970225';
+const BASE_URL = 'https://abrevo.co/.netlify/functions';
 
-// Thresholds for alerts
-const VAPI_CREDITS_MIN = 10;
-const ANTHROPIC_CREDITS_MIN = 5;
-const TEXTBELT_CREDITS_MIN = 100;
+// ---- Test helpers ----
 
-async function checkVapi() {
+async function testEndpoint(name, url) {
   try {
-    const res = await fetch('https://api.vapi.ai/account', {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    // 4xx is OK (means function is alive, just rejected bad input), 5xx is failure
+    return { name, ok: r.status < 500, status: r.status };
+  } catch (e) {
+    return { name, ok: false, status: 0, error: e.message };
+  }
+}
+
+async function testTextbelt(key, label) {
+  try {
+    const r = await fetch(`https://textbelt.com/quota/${key}`);
+    const data = await r.json();
+    return { label, credits: data.quotaRemaining ?? 0 };
+  } catch (e) {
+    return { label, credits: -1, error: e.message };
+  }
+}
+
+async function testVapi() {
+  try {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const r = await fetch(`https://api.vapi.ai/call?createdAtGe=${todayStart}&limit=100`, {
       headers: { Authorization: `Bearer ${VAPI_KEY}` }
     });
-    const data = await res.json();
-    const credits = data.billingLimit - (data.billingUsage || 0);
-    return { service: 'Vapi', status: credits > VAPI_CREDITS_MIN ? 'ok' : 'low', value: `$${credits?.toFixed(2)} remaining`, alert: credits <= VAPI_CREDITS_MIN };
+    const calls = await r.json();
+    const list = Array.isArray(calls) ? calls : [];
+    const total = list.length;
+    const voicemail = list.filter(c => c.endedReason === 'voicemail').length;
+    const hangup = list.filter(c => c.endedReason === 'customer-ended-call').length;
+    return {
+      calls_today: total,
+      voicemail_pct: total ? Math.round((voicemail / total) * 100) : 0,
+      hangup_pct: total ? Math.round((hangup / total) * 100) : 0
+    };
   } catch (e) {
-    return { service: 'Vapi', status: 'error', value: e.message, alert: true };
+    return { calls_today: 0, voicemail_pct: 0, hangup_pct: 0, error: e.message };
   }
 }
 
-async function checkTextbelt() {
-  try {
-    const res = await fetch(`https://textbelt.com/quota/${TEXTBELT_KEY}`);
-    const data = await res.json();
-    const quota = data.quotaRemaining;
-    return { service: 'Textbelt SMS', status: quota > TEXTBELT_CREDITS_MIN ? 'ok' : 'low', value: `${quota} credits remaining`, alert: quota <= TEXTBELT_CREDITS_MIN };
-  } catch (e) {
-    return { service: 'Textbelt SMS', status: 'error', value: e.message, alert: true };
-  }
-}
+// ---- Save & Alert ----
 
-async function checkSupabase() {
+async function saveToSupabase(record) {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/leads?limit=1`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-    });
-    return { service: 'Supabase', status: res.ok ? 'ok' : 'error', value: res.ok ? 'Connected' : `HTTP ${res.status}`, alert: !res.ok };
-  } catch (e) {
-    return { service: 'Supabase', status: 'error', value: e.message, alert: true };
-  }
-}
-
-async function checkAnthropicBalance() {
-  try {
-    // Check by making a minimal API call
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    await fetch(`${SUPABASE_URL}/rest/v1/system_health`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] })
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`
+      },
+      body: JSON.stringify(record)
     });
-    const data = await res.json();
-    if (data.error?.type === 'billing_error') {
-      return { service: 'Anthropic API', status: 'error', value: 'Billing error -- out of credits!', alert: true };
-    }
-    return { service: 'Anthropic API', status: 'ok', value: 'Working', alert: false };
+    console.log('Health record saved to Supabase');
   } catch (e) {
-    return { service: 'Anthropic API', status: 'error', value: e.message, alert: true };
+    console.error('Failed to save health check:', e.message);
   }
 }
 
-async function checkRecentLeads() {
+async function sendAlertEmail(issues, record) {
+  if (!GMAIL_PASS) { console.log('No GMAIL_PASS — skipping email alert'); return; }
   try {
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?created_at=gte.${since}&select=count`,
-      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Prefer: 'count=exact' } }
-    );
-    const count = res.headers.get('content-range')?.split('/')[1] || '0';
-    return { service: 'New leads (24h)', status: 'ok', value: `${count} new leads today`, alert: false };
+    const transport = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: GMAIL_USER, pass: GMAIL_PASS }
+    });
+    const timeStr = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+    const body = `Abrevo System Health Alert
+Time: ${timeStr} ET
+
+Issues Found:
+${issues.map(i => '  - ' + i).join('\n')}
+
+Full Report:
+  Book.js: ${record.book_ok ? 'OK' : 'FAIL'}
+  Readmail: ${record.readmail_ok ? 'OK' : 'FAIL'}
+  Autocall: ${record.autocall_ok ? 'OK' : 'FAIL'}
+  Inventory: ${record.inventory_ok ? 'OK' : 'FAIL'}
+  SMS Key 1 (book.js): ${record.sms_key1_credits} credits
+  SMS Key 2 (readmail/outreach): ${record.sms_key2_credits} credits
+  Vapi Calls Today: ${record.vapi_calls_today}
+  Voicemail %: ${record.vapi_voicemail_pct}%
+  Hangup %: ${record.vapi_hangup_pct}%
+
+ACTION REQUIRED: Investigate the issues listed above.`;
+
+    await transport.sendMail({
+      from: `"Abrevo Health Monitor" <${GMAIL_USER}>`,
+      to: ALERT_EMAIL,
+      subject: '\uD83D\uDEA8 Abrevo System Alert',
+      text: body
+    });
+    console.log('Alert email sent to', ALERT_EMAIL);
   } catch (e) {
-    return { service: 'New leads (24h)', status: 'error', value: e.message, alert: false };
+    console.error('Alert email failed:', e.message);
   }
 }
 
-async function sendAlertEmail(checks) {
-  const alerts = checks.filter(c => c.alert);
-  const hasAlerts = alerts.length > 0;
-
-  const subject = hasAlerts
-    ? `[!] ALERT: ${alerts.length} issue(s) detected -- Rosalia AI System`
-    : `[OK] System Health OK -- Rosalia AI`;
-
-  const body = `ROSALIA GROUP -- SYSTEM HEALTH REPORT
-${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} ET
-
-${hasAlerts ? '[!] ALERTS DETECTED:\n' + alerts.map(a => '* ' + a.service + ': ' + a.value).join('\n') + '\n\n' : ''}ALL SERVICES STATUS:
-${checks.map(c => (c.status === 'ok' ? '[OK]' : c.status === 'low' ? '[!]' : '[X]') + ' ' + c.service + ': ' + c.value).join('\n')}
-
-${hasAlerts ? 'ACTION REQUIRED: Please top up the services listed above.' : 'All systems running normally.'}`;
-
-  const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
-  await transporter.sendMail({
-    from: `"Rosalia AI Monitor" <${GMAIL_USER}>`,
-    to: GMAIL_USER,
-    subject,
-    text: body,
-  });
-}
-
-async function checkAutocallActivity() {
+async function sendAlertSMS(issues) {
   try {
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-    const now = new Date();
-    const etHour = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' })).getHours();
-    const etDay = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' })).getDay();
-
-    // Check if we are in business hours
-    let inHours = false;
-    if (etDay >= 1 && etDay <= 5) inHours = etHour >= 9 && etHour < 18;
-    else if (etDay === 6) inHours = etHour >= 10 && etHour < 17;
-    else if (etDay === 0) inHours = etHour >= 11 && etHour < 17;
-
-    if (!inHours) return { service: 'Autocall', status: 'ok', value: 'Outside business hours', alert: false };
-
-    // Check uncalled leads with phones
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?phone=not.is.null&called_at=is.null&status=neq.contacted&limit=1`,
-      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer \${SUPABASE_KEY}` } }
-    );
-    const uncalled = await res.json();
-
-    // Check last call made
-    const res2 = await fetch(
-      `\${SUPABASE_URL}/rest/v1/leads?called_at=gt.\${twoHoursAgo}&limit=1&select=called_at`,
-      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer \${SUPABASE_KEY}` } }
-    );
-    const recentCalls = await res2.json();
-
-    if (Array.isArray(uncalled) && uncalled.length > 0 && (!Array.isArray(recentCalls) || recentCalls.length === 0)) {
-      return { service: 'Autocall', status: 'error', value: 'Leads waiting but NO calls made in 2+ hours during business hours!', alert: true };
-    }
-
-    return { service: 'Autocall', status: 'ok', value: Array.isArray(recentCalls) && recentCalls.length > 0 ? 'Calls being made' : 'No uncalled leads', alert: false };
+    const summary = issues.slice(0, 3).join('; ');
+    const extra = issues.length > 3 ? ` (+${issues.length - 3} more)` : '';
+    const msg = `Abrevo Alert: ${summary}${extra}`;
+    await fetch('https://textbelt.com/text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: ALERT_PHONE, message: msg, key: TEXTBELT_KEY_1 })
+    });
+    console.log('Alert SMS sent to', ALERT_PHONE);
   } catch (e) {
-    return { service: 'Autocall', status: 'error', value: e.message, alert: true };
+    console.error('Alert SMS failed:', e.message);
   }
 }
+
+// ---- Main handler ----
 
 exports.handler = async (event) => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
 
-  try {
-    console.log('Running health checks...');
+  console.log('Health check starting...');
+  const errors = [];
 
-    const checks = await Promise.all([
-      checkVapi(),
-      checkTextbelt(),
-      checkSupabase(),
-      checkAnthropicBalance(),
-      checkRecentLeads(),
-      checkAutocallActivity(),
+  // Test function endpoints in parallel
+  const [bookTest, readmailTest, autocallTest, inventoryTest] = await Promise.all([
+    testEndpoint('book', `${BASE_URL}/book`),
+    testEndpoint('readmail', `${BASE_URL}/readmail`),
+    testEndpoint('autocall', `${BASE_URL}/autocall`),
+    testEndpoint('inventory', `${BASE_URL}/inventory`)
+  ]);
+
+  if (!bookTest.ok) errors.push(`Book.js DOWN (${bookTest.error || 'HTTP ' + bookTest.status})`);
+  if (!readmailTest.ok) errors.push(`Readmail DOWN (${readmailTest.error || 'HTTP ' + readmailTest.status})`);
+  if (!autocallTest.ok) errors.push(`Autocall DOWN (${autocallTest.error || 'HTTP ' + autocallTest.status})`);
+  if (!inventoryTest.ok) errors.push(`Inventory DOWN (${inventoryTest.error || 'HTTP ' + inventoryTest.status})`);
+
+  // Test SMS credits
+  const [sms1, sms2] = await Promise.all([
+    testTextbelt(TEXTBELT_KEY_1, 'Key 1 (book.js)'),
+    testTextbelt(TEXTBELT_KEY_2, 'Key 2 (readmail)')
+  ]);
+
+  if (sms1.credits >= 0 && sms1.credits < 500) errors.push(`SMS Key 1 low: ${sms1.credits} credits`);
+  if (sms2.credits >= 0 && sms2.credits < 200) errors.push(`SMS Key 2 low: ${sms2.credits} credits`);
+  if (sms1.credits < 0) errors.push('SMS Key 1 check failed');
+  if (sms2.credits < 0) errors.push('SMS Key 2 check failed');
+
+  // Test Vapi call quality
+  const vapi = await testVapi();
+  if (vapi.error) errors.push(`Vapi API error: ${vapi.error}`);
+  if (vapi.hangup_pct > 50) errors.push(`Vapi hangup rate high: ${vapi.hangup_pct}%`);
+
+  const record = {
+    tested_at: new Date().toISOString(),
+    book_ok: bookTest.ok,
+    readmail_ok: readmailTest.ok,
+    autocall_ok: autocallTest.ok,
+    inventory_ok: inventoryTest.ok,
+    sms_key1_credits: Math.max(sms1.credits, 0),
+    sms_key2_credits: Math.max(sms2.credits, 0),
+    vapi_calls_today: vapi.calls_today,
+    vapi_voicemail_pct: vapi.voicemail_pct,
+    vapi_hangup_pct: vapi.hangup_pct,
+    errors: errors.length > 0 ? errors : null
+  };
+
+  // Save to Supabase
+  await saveToSupabase(record);
+
+  // Send alerts if issues found
+  if (errors.length > 0) {
+    console.log('Issues found:', errors);
+    await Promise.all([
+      sendAlertEmail(errors, record),
+      sendAlertSMS(errors)
     ]);
-
-    const hasAlerts = checks.some(c => c.alert);
-    console.log('Health check results:', JSON.stringify(checks));
-
-    // Only email if there are alerts OR if it's a manual trigger
-    if (hasAlerts || event.httpMethod === 'GET') {
-      await sendAlertEmail(checks);
-      console.log('Alert email sent');
-    }
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ success: true, alerts: hasAlerts, checks }),
-    };
-  } catch (err) {
-    console.error('Healthcheck error:', err.message);
-    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+  } else {
+    console.log('All systems healthy');
   }
+
+  return {
+    statusCode: 200,
+    headers,
+    body: JSON.stringify({ status: errors.length > 0 ? 'issues' : 'healthy', ...record })
+  };
 };

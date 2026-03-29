@@ -20,7 +20,7 @@
   schedule = "* * * * *"
   node_bundler = "nft"
 [functions."healthcheck"]
-  schedule = "*/30 * * * *"
+  schedule = "0 * * * *"
   node_bundler = "nft"
 [functions."sendsurvey"]
   schedule = "0 22 * * *"
