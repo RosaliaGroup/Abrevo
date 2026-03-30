@@ -94,6 +94,7 @@ async function updateLeadFollowUp(leadId, count) {
     body: JSON.stringify({
       follow_up_count: count,
       last_follow_up_at: new Date().toISOString(),
+      sent_followup_at: new Date().toISOString(),
     }),
   });
 }
@@ -126,7 +127,7 @@ exports.handler = async (event) => {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?status=eq.new&phone=not.is.null&follow_up_count=lt.2&created_at=lt.${cutoff}&select=*`,
+      `${SUPABASE_URL}/rest/v1/leads?status=eq.new&status=neq.dnc&status=neq.needs_specialist&phone=not.is.null&follow_up_count=lt.2&created_at=lt.${cutoff}&select=*`,
       {
         headers: {
           'apikey': SUPABASE_KEY,
@@ -146,8 +147,17 @@ exports.handler = async (event) => {
       };
     }
 
-    // Filter: last_follow_up_at must be null OR 24+ hours ago
+    // Filter: skip DNC, skip if sent_followup_at within last 20 hours, skip if last_follow_up_at within 24 hours
     const eligible = leads.filter(lead => {
+      if (lead.status === 'dnc' || lead.status === 'needs_specialist') return false;
+      // Prevent duplicate emails: skip if sent_followup_at is within the last 20 hours
+      if (lead.sent_followup_at) {
+        const sentAt = new Date(lead.sent_followup_at);
+        if (Date.now() - sentAt.getTime() < 20 * 60 * 60 * 1000) {
+          console.log(`Skipping ${lead.email} — follow-up already sent ${((Date.now() - sentAt.getTime()) / 3600000).toFixed(1)}h ago`);
+          return false;
+        }
+      }
       if (!lead.last_follow_up_at) return true;
       const lastFollowUp = new Date(lead.last_follow_up_at);
       return Date.now() - lastFollowUp.getTime() >= 24 * 60 * 60 * 1000;
