@@ -127,7 +127,7 @@ exports.handler = async (event) => {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?status=eq.new&status=neq.dnc&status=neq.needs_specialist&phone=not.is.null&follow_up_count=lt.2&created_at=lt.${cutoff}&select=*`,
+      `${SUPABASE_URL}/rest/v1/leads?status=eq.new&status=neq.dnc&status=neq.needs_specialist&status=neq.toured&status=neq.rented&phone=not.is.null&follow_up_count=lt.2&created_at=lt.${cutoff}&select=*`,
       {
         headers: {
           'apikey': SUPABASE_KEY,
@@ -170,6 +170,21 @@ exports.handler = async (event) => {
     for (const lead of eligible) {
       const phone = normalizePhone(lead.phone);
       if (!phone) continue;
+
+      // Skip leads who already have a booking
+      try {
+        const bq = [];
+        if (lead.phone) bq.push(`phone.eq.${encodeURIComponent(lead.phone)}`);
+        if (lead.email) bq.push(`email.eq.${encodeURIComponent(lead.email)}`);
+        if (bq.length > 0) {
+          const bookingCheck = await fetch(`${SUPABASE_URL}/rest/v1/bookings?or=(${bq.join(',')})&preferred_date=not.is.null&limit=1`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } });
+          const bookings = await bookingCheck.json();
+          if (Array.isArray(bookings) && bookings.length > 0) {
+            console.log(`Skipping follow-up for ${lead.name} — has existing booking`);
+            continue;
+          }
+        }
+      } catch (e) { console.error('Booking check failed:', e.message); }
 
       const followUpNumber = (lead.follow_up_count || 0) + 1;
       const bookingLink = `${BOOKING_FORM_URL}?phone=${encodeURIComponent(phone)}`;

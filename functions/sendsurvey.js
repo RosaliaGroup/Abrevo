@@ -96,6 +96,19 @@ exports.handler = async (event) => {
 
     for (const lead of leads) {
       try {
+        // Skip leads who already have a booking
+        const bq = [];
+        if (lead.phone) bq.push(`phone.eq.${encodeURIComponent(lead.phone)}`);
+        if (lead.email) bq.push(`email.eq.${encodeURIComponent(lead.email)}`);
+        if (bq.length > 0) {
+          const bookingCheck = await fetch(`${SUPABASE_URL}/rest/v1/bookings?or=(${bq.join(',')})&preferred_date=not.is.null&limit=1`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } });
+          const bookings = await bookingCheck.json();
+          if (Array.isArray(bookings) && bookings.length > 0) {
+            console.log(`Skipping survey for ${lead.name} — has existing booking`);
+            continue;
+          }
+        }
+
         await sendSurveyEmail(lead);
         if (lead.phone) await sendSurveySMS(lead);
         await markSurveySent(lead.id);
