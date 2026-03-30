@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM — Rosalia Group</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0A0A0A; --surface: #111111; --surface2: #1A1A1A; --surface3: #222222;
+      --gold: #C9A84C; --gold-dim: #8B7535; --gold-light: #E8D48B;
+      --text: #E8E8E8; --text-dim: #999999; --text-muted: #666666;
+      --border: #2A2A2A; --border-light: #333333;
+      --red: #E74C3C; --green: #2ECC71; --blue: #3498DB; --purple: #9B59B6; --orange: #F39C12;
+      --radius: 8px;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    h1,h2,h3 { font-family: 'Syne', sans-serif; font-weight: 600; }
+    .crm-header { padding: 24px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .crm-header h1 { font-size: 24px; color: var(--text); }
+    .crm-header h1 span { color: var(--gold); }
+    .crm-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; border: none; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    .btn-gold { background: var(--gold); color: #0A0A0A; }
+    .btn-gold:hover { background: var(--gold-light); }
+    .btn-outline { background: transparent; color: var(--gold); border: 1px solid var(--gold-dim); }
+    .btn-outline:hover { background: rgba(201,168,76,0.1); }
+    .btn-ghost { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--border-light); }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+    .btn-red { background: var(--red); color: #fff; border: none; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    input, select, textarea { width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; outline: none; }
+    input:focus, select:focus, textarea:focus { border-color: var(--gold-dim); }
+    textarea { resize: vertical; min-height: 80px; }
+    label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+    .badge-gold { background: rgba(201,168,76,0.15); color: var(--gold); }
+    .badge-green { background: rgba(46,204,113,0.15); color: var(--green); }
+    .badge-blue { background: rgba(52,152,219,0.15); color: var(--blue); }
+    .badge-red { background: rgba(231,76,60,0.15); color: var(--red); }
+    .badge-purple { background: rgba(155,89,182,0.15); color: var(--purple); }
+    .badge-orange { background: rgba(243,156,18,0.15); color: var(--orange); }
+    .badge-gray { background: rgba(153,153,153,0.15); color: var(--text-dim); }
+    .search-bar { max-width: 300px; }
+    .search-bar input { padding-left: 32px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%23666' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8' stroke='%23666' fill='none' stroke-width='2'/%3E%3Cpath d='M21 21l-4.35-4.35' stroke='%23666' stroke-width='2'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: 10px center; }
+    .view-toggle { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+    .view-toggle button { padding: 7px 14px; background: var(--surface); border: none; color: var(--text-dim); font-size: 12px; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .view-toggle button.active { background: var(--gold-dim); color: #0A0A0A; }
+
+    /* Pipeline / Kanban */
+    .pipeline { display: flex; gap: 12px; padding: 24px 32px; overflow-x: auto; min-height: calc(100vh - 140px); }
+    .pipeline-col { min-width: 260px; max-width: 280px; flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; max-height: calc(100vh - 160px); }
+    .pipeline-col-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .pipeline-col-title { font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+    .pipeline-col-count { font-size: 11px; background: var(--surface2); color: var(--text-dim); padding: 2px 8px; border-radius: 10px; }
+    .pipeline-cards { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .lead-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 12px; cursor: pointer; transition: border-color 0.2s; }
+    .lead-card:hover { border-color: var(--gold-dim); }
+    .lead-card-name { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+    .lead-card-phone { font-size: 12px; color: var(--text-dim); }
+    .lead-card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
+    .lead-card-time { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+    /* List view */
+    .list-view { padding: 24px 32px; display: none; }
+    .list-view.active { display: block; }
+    .pipeline.active { display: flex; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 10px 14px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); cursor: pointer; }
+    th:hover { color: var(--gold); }
+    td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-dim); }
+    tr:hover td { background: var(--surface2); }
+    tr { cursor: pointer; }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: flex-start; padding: 40px 20px; overflow-y: auto; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h2 { font-size: 18px; }
+    .modal-close { background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; padding: 4px 8px; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 24px; }
+    .modal-section { margin-bottom: 20px; }
+    .modal-section-title { font-size: 11px; color: var(--gold); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .info-item label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .info-item .val { font-size: 14px; color: var(--text); }
+    .timeline-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .timeline-item:last-child { border-bottom: none; }
+    .timeline-icon { flex-shrink: 0; font-size: 14px; }
+    .timeline-time { color: var(--text-muted); font-size: 11px; margin-left: auto; white-space: nowrap; }
+    .action-bar { display: flex; gap: 8px; flex-wrap: wrap; padding: 16px 24px; border-top: 1px solid var(--border); }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; background: var(--surface); border: 1px solid var(--gold-dim); border-radius: 6px; color: var(--text); font-size: 13px; z-index: 9999; transform: translateY(80px); opacity: 0; transition: all 0.3s; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    @media (max-width: 768px) {
+      .pipeline { padding: 16px; }
+      .pipeline-col { min-width: 220px; }
+      .modal { max-width: 100%; border-radius: 0; max-height: 100vh; }
+      .modal-overlay { padding: 0; align-items: stretch; }
+      .info-grid { grid-template-columns: 1fr; }
+      .crm-header { padding: 16px; }
+      .list-view { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="crm-header">
+  <h1><span>Rosalia</span> CRM</h1>
+  <div class="crm-controls">
+    <div class="search-bar"><input type="text" id="crm-search" placeholder="Search name, email, phone..." oninput="crmFilter()"></div>
+    <select id="crm-filter-source" onchange="crmFilter()" style="width:130px;"><option value="">All Sources</option><option value="email">Email</option><option value="zillow">Zillow</option><option value="avail">Avail</option><option value="webflow">Webflow</option><option value="fub">FUB</option><option value="phone">Phone</option></select>
+    <select id="crm-filter-property" onchange="crmFilter()" style="width:160px;"><option value="">All Properties</option></select>
+    <div class="view-toggle">
+      <button class="active" onclick="crmSetView('pipeline')">Pipeline</button>
+      <button onclick="crmSetView('list')">List</button>
+    </div>
+    <button class="btn btn-gold" onclick="crmLoad()">Refresh</button>
+  </div>
+</div>
+
+<!-- Pipeline View -->
+<div class="pipeline active" id="crm-pipeline"></div>
+
+<!-- List View -->
+<div class="list-view" id="crm-list">
+  <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="crmSort('name')">Name</th>
+          <th onclick="crmSort('phone')">Phone</th>
+          <th onclick="crmSort('email')">Email</th>
+          <th onclick="crmSort('source')">Source</th>
+          <th onclick="crmSort('status')">Status</th>
+          <th onclick="crmSort('created_at')">Created</th>
+          <th>Calls</th>
+          <th>Booking</th>
+        </tr>
+      </thead>
+      <tbody id="crm-list-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Lead Modal -->
+<div class="modal-overlay" id="lead-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-lead-name">Lead Profile</h2>
+      <button class="modal-close" onclick="closeLeadModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <div class="modal-section-title">Contact Info</div>
+        <div class="info-grid" id="modal-info"></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Details</div>
+        <div class="info-grid" id="modal-details"></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Activity Timeline</div>
+        <div id="modal-timeline" style="max-height:200px;overflow-y:auto;"></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Notes</div>
+        <textarea id="modal-notes" placeholder="Add notes..." rows="3"></textarea>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="saveNotes()">Save Notes</button>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Assign Agent</div>
+        <select id="modal-agent" onchange="saveAgent()">
+          <option value="">Unassigned</option>
+          <option value="Ana Haynes">Ana Haynes</option>
+          <option value="Leasing Team">Leasing Team</option>
+        </select>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Update Status</div>
+        <select id="modal-status" onchange="updateStatus()">
+          <option value="new">New</option>
+          <option value="contacted">Contacted</option>
+          <option value="toured">Toured</option>
+          <option value="applied">Applied</option>
+          <option value="rented">Rented</option>
+          <option value="lost">Lost</option>
+          <option value="dnc">DNC</option>
+          <option value="needs_specialist">Specialist</option>
+        </select>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Schedule Follow-up</div>
+        <div style="display:flex;gap:8px;">
+          <input type="datetime-local" id="modal-followup-date" style="flex:1;">
+          <button class="btn btn-outline btn-sm" onclick="scheduleFollowup()">Schedule</button>
+        </div>
+      </div>
+    </div>
+    <div class="action-bar">
+      <button class="btn btn-outline btn-sm" onclick="crmSendEmail()">Send Email</button>
+      <button class="btn btn-outline btn-sm" onclick="crmTriggerCall()">Trigger Call</button>
+      <button class="btn btn-outline btn-sm" onclick="crmSendSMS()">Send SMS</button>
+      <button class="btn btn-outline btn-sm" onclick="crmCopyCancelLink()">Copy Cancel Link</button>
+    </div>
+  </div>
+</div>
+
+<!-- SMS Modal -->
+<div class="modal-overlay" id="sms-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header"><h2>Send SMS</h2><button class="modal-close" onclick="document.getElementById('sms-modal').classList.remove('open')">&times;</button></div>
+    <div class="modal-body">
+      <label>To</label><input type="text" id="sms-to" readonly style="margin-bottom:12px;">
+      <label>Message</label><textarea id="sms-msg" rows="4"></textarea>
+      <button class="btn btn-gold" style="margin-top:12px;width:100%;" onclick="crmSendSMSConfirm()">Send SMS</button>
+    </div>
+  </div>
+</div>
+
+<!-- Email Modal -->
+<div class="modal-overlay" id="email-modal">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-header"><h2>Send Email</h2><button class="modal-close" onclick="document.getElementById('email-modal').classList.remove('open')">&times;</button></div>
+    <div class="modal-body">
+      <label>To</label><input type="text" id="email-to" readonly style="margin-bottom:12px;">
+      <label>Subject</label><input type="text" id="email-subject" style="margin-bottom:12px;">
+      <label>Body</label><textarea id="email-body" rows="6"></textarea>
+      <button class="btn btn-gold" style="margin-top:12px;width:100%;" onclick="crmSendEmailConfirm()">Send Email</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
+const VAPI_KEY = '064f441d-a388-4404-8b6c-05e91e90f1ff';
+const TEXTBELT_KEY = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
+const VAPI_ASSISTANT_ID = '1cae5323-6b83-4434-8461-6330472da140';
+const VAPI_PHONE_ID = '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
+
+let crmLeads = [];
+let crmBookings = [];
+let crmTasks = [];
+let currentLead = null;
+let crmSortField = 'created_at';
+let crmSortDir = -1;
+
+const STAGES = [
+  { key: 'new', label: 'New', color: 'var(--blue)' },
+  { key: 'contacted', label: 'Contacted', color: 'var(--gold)' },
+  { key: 'toured', label: 'Toured', color: 'var(--purple)' },
+  { key: 'applied', label: 'Applied', color: 'var(--orange)' },
+  { key: 'rented', label: 'Rented', color: 'var(--green)' },
+  { key: 'lost', label: 'Lost', color: 'var(--text-muted)' },
+  { key: 'dnc', label: 'DNC', color: 'var(--red)' }
+];
+
+const SOURCE_BADGE = { email: 'badge-blue', zillow: 'badge-purple', avail: 'badge-green', webflow: 'badge-gold', fub: 'badge-orange', phone: 'badge-gray' };
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
+function timeAgo(d) { if (!d) return '--'; const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000); if (s < 60) return s + 's'; if (s < 3600) return Math.floor(s/60) + 'm'; if (s < 86400) return Math.floor(s/3600) + 'h'; return Math.floor(s/86400) + 'd ago'; }
+
+async function sbFetch(table, query) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } });
+  return r.ok ? r.json() : [];
+}
+
+async function sbPatch(table, filter, data) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
+    method: 'PATCH',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+}
+
+async function crmLoad() {
+  const [leads, bookings, tasks] = await Promise.all([
+    sbFetch('leads', 'select=*&order=created_at.desc&limit=500'),
+    sbFetch('bookings', 'select=*&order=created_at.desc&limit=200'),
+    sbFetch('tasks', 'select=*&order=created_at.desc&limit=200')
+  ]);
+  crmLeads = Array.isArray(leads) ? leads : [];
+  crmBookings = Array.isArray(bookings) ? bookings : [];
+  crmTasks = Array.isArray(tasks) ? tasks : [];
+
+  // Populate property filter
+  const props = new Set();
+  crmLeads.forEach(l => { if (l.property) props.add(l.property); });
+  const propSel = document.getElementById('crm-filter-property');
+  const currentProp = propSel.value;
+  propSel.innerHTML = '<option value="">All Properties</option>';
+  [...props].sort().forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; propSel.appendChild(o); });
+  propSel.value = currentProp;
+
+  crmFilter();
+}
+
+function getFiltered() {
+  const search = (document.getElementById('crm-search').value || '').toLowerCase();
+  const source = document.getElementById('crm-filter-source').value;
+  const prop = document.getElementById('crm-filter-property').value;
+  return crmLeads.filter(l => {
+    if (search) {
+      const hay = ((l.name||'') + ' ' + (l.email||'') + ' ' + (l.phone||'')).toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    if (source && (l.source||'').toLowerCase() !== source) return false;
+    if (prop && (l.property||'') !== prop) return false;
+    return true;
+  });
+}
+
+function crmFilter() {
+  const filtered = getFiltered();
+  renderPipeline(filtered);
+  renderList(filtered);
+}
+
+function crmSetView(v) {
+  document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+  if (v === 'pipeline') {
+    document.getElementById('crm-pipeline').style.display = 'flex';
+    document.getElementById('crm-list').style.display = 'none';
+    document.querySelector('.view-toggle button:first-child').classList.add('active');
+  } else {
+    document.getElementById('crm-pipeline').style.display = 'none';
+    document.getElementById('crm-list').style.display = 'block';
+    document.querySelector('.view-toggle button:last-child').classList.add('active');
+  }
+}
+
+function renderPipeline(leads) {
+  const el = document.getElementById('crm-pipeline');
+  let html = '';
+  STAGES.forEach(stage => {
+    const stageLeads = leads.filter(l => (l.status || 'new') === stage.key);
+    html += `<div class="pipeline-col">
+      <div class="pipeline-col-header">
+        <span class="pipeline-col-title" style="color:${stage.color}">${stage.label}</span>
+        <span class="pipeline-col-count">${stageLeads.length}</span>
+      </div>
+      <div class="pipeline-cards">`;
+    stageLeads.forEach(l => {
+      const srcBadge = SOURCE_BADGE[(l.source||'').toLowerCase()] || 'badge-gray';
+      html += `<div class="lead-card" onclick="openLeadModal('${l.id}')">
+        <div class="lead-card-name">${esc(l.name || 'Unknown')}</div>
+        <div class="lead-card-phone">${esc(l.phone || l.email || '--')}</div>
+        <div class="lead-card-meta">
+          <span class="badge ${srcBadge}">${esc(l.source || 'unknown')}</span>
+          ${l.property ? '<span class="badge badge-gold" style="font-size:10px;">' + esc(l.property.split(',')[0].split('-')[0].trim()) + '</span>' : ''}
+        </div>
+        <div class="lead-card-time">${timeAgo(l.created_at)}</div>
+      </div>`;
+    });
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function renderList(leads) {
+  const sorted = [...leads].sort((a, b) => {
+    const av = a[crmSortField] || '';
+    const bv = b[crmSortField] || '';
+    return av < bv ? -crmSortDir : av > bv ? crmSortDir : 0;
+  });
+  const body = document.getElementById('crm-list-body');
+  let html = '';
+  sorted.forEach(l => {
+    const booking = crmBookings.find(b => b.phone === l.phone || b.email === l.email);
+    const statusBadge = { new: 'badge-blue', contacted: 'badge-gold', toured: 'badge-purple', applied: 'badge-orange', rented: 'badge-green', lost: 'badge-gray', dnc: 'badge-red', needs_specialist: 'badge-red' };
+    html += `<tr onclick="openLeadModal('${l.id}')">
+      <td style="color:var(--text);font-weight:500;">${esc(l.name || 'Unknown')}</td>
+      <td>${esc(l.phone || '--')}</td>
+      <td>${esc(l.email || '--')}</td>
+      <td><span class="badge ${SOURCE_BADGE[(l.source||'').toLowerCase()] || 'badge-gray'}">${esc(l.source || '--')}</span></td>
+      <td><span class="badge ${statusBadge[l.status] || 'badge-gray'}">${esc(l.status || 'new')}</span></td>
+      <td>${timeAgo(l.created_at)}</td>
+      <td>${l.call_attempts || 0}</td>
+      <td>${booking ? '<span class="badge badge-green">Booked</span>' : '--'}</td>
+    </tr>`;
+  });
+  body.innerHTML = html;
+}
+
+function crmSort(field) {
+  if (crmSortField === field) crmSortDir *= -1;
+  else { crmSortField = field; crmSortDir = 1; }
+  crmFilter();
+}
+
+function openLeadModal(id) {
+  currentLead = crmLeads.find(l => l.id === id);
+  if (!currentLead) return;
+  const l = currentLead;
+  document.getElementById('modal-lead-name').textContent = l.name || 'Unknown';
+  document.getElementById('modal-info').innerHTML = `
+    <div class="info-item"><label>Email</label><div class="val">${esc(l.email || '--')}</div></div>
+    <div class="info-item"><label>Phone</label><div class="val">${esc(l.phone || '--')}</div></div>
+    <div class="info-item"><label>Source</label><div class="val">${esc(l.source || '--')}</div></div>
+    <div class="info-item"><label>Created</label><div class="val">${l.created_at ? new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '--'}</div></div>`;
+  document.getElementById('modal-details').innerHTML = `
+    <div class="info-item"><label>Property</label><div class="val">${esc(l.property || '--')}</div></div>
+    <div class="info-item"><label>Budget</label><div class="val">${esc(l.budget || '--')}</div></div>
+    <div class="info-item"><label>Apartment Size</label><div class="val">${esc(l.apartment_size || '--')}</div></div>
+    <div class="info-item"><label>Move-in Date</label><div class="val">${esc(l.move_in_date || '--')}</div></div>
+    <div class="info-item"><label>Call Attempts</label><div class="val">${l.call_attempts || 0}</div></div>
+    <div class="info-item"><label>Follow-ups</label><div class="val">${l.follow_up_count || 0}</div></div>`;
+
+  // Timeline
+  const timeline = [];
+  if (l.replied_at) timeline.push({ icon: '\u2709\uFE0F', text: 'Email reply sent', time: l.replied_at });
+  if (l.called_at) timeline.push({ icon: '\uD83D\uDCDE', text: 'Call made', time: l.called_at });
+  if (l.last_follow_up_at) timeline.push({ icon: '\uD83D\uDD04', text: 'Follow-up sent', time: l.last_follow_up_at });
+  const booking = crmBookings.find(b => b.phone === l.phone || b.email === l.email);
+  if (booking) timeline.push({ icon: '\uD83D\uDCC5', text: 'Booking: ' + (booking.preferred_date || '') + ' ' + (booking.preferred_time || ''), time: booking.created_at });
+  const leadTasks = crmTasks.filter(t => t.lead_email === l.email);
+  leadTasks.forEach(t => timeline.push({ icon: '\u2705', text: (t.task_type || 'task') + ': ' + (t.description || '').slice(0, 80), time: t.created_at }));
+  timeline.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+  const tEl = document.getElementById('modal-timeline');
+  if (timeline.length === 0) { tEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px 0;">No activity yet</div>'; }
+  else { tEl.innerHTML = timeline.map(t => `<div class="timeline-item"><span class="timeline-icon">${t.icon}</span><span style="color:var(--text-dim);">${esc(t.text)}</span><span class="timeline-time">${timeAgo(t.time)}</span></div>`).join(''); }
+
+  document.getElementById('modal-notes').value = l.notes || '';
+  document.getElementById('modal-status').value = l.status || 'new';
+  document.getElementById('modal-agent').value = l.assigned_to || '';
+  document.getElementById('lead-modal').classList.add('open');
+}
+
+function closeLeadModal() { document.getElementById('lead-modal').classList.remove('open'); currentLead = null; }
+
+async function saveNotes() {
+  if (!currentLead) return;
+  const notes = document.getElementById('modal-notes').value;
+  try {
+    await sbPatch('leads', `id=eq.${currentLead.id}`, { notes });
+    currentLead.notes = notes;
+    toast('Notes saved');
+  } catch (e) { toast('Failed to save notes'); }
+}
+
+async function saveAgent() {
+  if (!currentLead) return;
+  const agent = document.getElementById('modal-agent').value;
+  await sbPatch('leads', `id=eq.${currentLead.id}`, { assigned_to: agent });
+  currentLead.assigned_to = agent;
+  toast('Agent updated');
+}
+
+async function updateStatus() {
+  if (!currentLead) return;
+  const status = document.getElementById('modal-status').value;
+  await sbPatch('leads', `id=eq.${currentLead.id}`, { status });
+  currentLead.status = status;
+  crmFilter();
+  toast('Status updated to ' + status);
+}
+
+async function scheduleFollowup() {
+  if (!currentLead) return;
+  const dt = document.getElementById('modal-followup-date').value;
+  if (!dt) { toast('Pick a date/time'); return; }
+  await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({ lead_name: currentLead.name, lead_email: currentLead.email, lead_phone: currentLead.phone, task_type: 'follow_up_reminder', description: `Scheduled follow-up for ${new Date(dt).toLocaleString()}`, status: 'pending' })
+  });
+  toast('Follow-up scheduled');
+}
+
+function crmSendEmail() {
+  if (!currentLead || !currentLead.email) { toast('No email address'); return; }
+  document.getElementById('email-to').value = currentLead.email;
+  document.getElementById('email-subject').value = `Your Apartment Tour — Rosalia Group`;
+  const first = (currentLead.name || '').split(' ')[0] || 'there';
+  document.getElementById('email-body').value = `Hi ${first},\n\nThank you for your interest! We'd love to schedule a private tour for you.\n\nBook here: https://book.rosaliagroup.com/book\n\nRosalia Group | Inquiries Team | (862) 419-1763`;
+  document.getElementById('email-modal').classList.add('open');
+}
+
+async function crmSendEmailConfirm() {
+  const to = document.getElementById('email-to').value;
+  const subject = document.getElementById('email-subject').value;
+  const body = document.getElementById('email-body').value;
+  try {
+    await fetch('/.netlify/functions/sendemail', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, body })
+    });
+    document.getElementById('email-modal').classList.remove('open');
+    toast('Email sent to ' + to);
+  } catch (e) { toast('Email failed'); }
+}
+
+function crmSendSMS() {
+  if (!currentLead || !currentLead.phone) { toast('No phone number'); return; }
+  document.getElementById('sms-to').value = currentLead.phone;
+  const first = (currentLead.name || '').split(' ')[0] || 'there';
+  document.getElementById('sms-msg').value = `Hi ${first}, this is Rosalia Group following up on your apartment inquiry! Book your tour here: https://book.rosaliagroup.com/book or call (862) 419-1763`;
+  document.getElementById('sms-modal').classList.add('open');
+}
+
+async function crmSendSMSConfirm() {
+  const phone = document.getElementById('sms-to').value;
+  const msg = document.getElementById('sms-msg').value;
+  try {
+    let p = phone.replace(/\D/g, '');
+    if (p.length === 10) p = '+1' + p;
+    else if (p.length === 11) p = '+' + p;
+    const r = await fetch('https://textbelt.com/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: p, message: msg, key: TEXTBELT_KEY }) });
+    const data = await r.json();
+    document.getElementById('sms-modal').classList.remove('open');
+    toast(data.success ? 'SMS sent!' : 'SMS failed: ' + (data.error || 'unknown'));
+  } catch (e) { toast('SMS failed'); }
+}
+
+async function crmTriggerCall() {
+  if (!currentLead || !currentLead.phone) { toast('No phone number'); return; }
+  try {
+    let p = currentLead.phone.replace(/\D/g, '');
+    if (p.length === 10) p = '+1' + p;
+    else if (p.length === 11) p = '+' + p;
+    else p = '+' + p;
+    const r = await fetch('https://api.vapi.ai/call/phone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${VAPI_KEY}` },
+      body: JSON.stringify({ phoneNumberId: VAPI_PHONE_ID, assistantId: VAPI_ASSISTANT_ID, customer: { number: p, name: currentLead.name || undefined } })
+    });
+    const data = await r.json();
+    toast(data.id ? 'Call triggered!' : 'Call failed: ' + (data.message || 'unknown'));
+  } catch (e) { toast('Call failed: ' + e.message); }
+}
+
+function crmCopyCancelLink() {
+  if (!currentLead) return;
+  const l = currentLead;
+  const booking = crmBookings.find(b => b.phone === l.phone || b.email === l.email);
+  const url = `https://book.rosaliagroup.com/cancel?name=${encodeURIComponent(l.name||'')}&date=${encodeURIComponent(booking?.preferred_date||'')}&time=${encodeURIComponent(booking?.preferred_time||'')}&property=${encodeURIComponent(l.property||'')}&phone=${encodeURIComponent(l.phone||'')}`;
+  navigator.clipboard.writeText(url).then(() => toast('Cancel link copied!'));
+}
+
+// Init
+crmLoad();
+</script>
+</body>
+</html>
