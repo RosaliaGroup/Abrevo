@@ -49,6 +49,33 @@ async function sendSMS(phone, message) {
   return result;
 }
 
+// Check if a property string refers to Iron 65 / 65 McWhorter
+function isIron65(property) {
+  if (!property) return false;
+  const p = property.toLowerCase();
+  return p.includes('iron 65') || p.includes('mcwhorter') || p.includes('65 mcwhorter');
+}
+
+// Check Supabase for existing Iron 65 bookings at the same date+time
+async function isIron65SlotTaken(date, time) {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/bookings?preferred_date=eq.${encodeURIComponent(date)}&preferred_time=eq.${encodeURIComponent(time)}&select=type`,
+      {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+        },
+      }
+    );
+    const bookings = await res.json();
+    return bookings.some(b => isIron65(b.type));
+  } catch (err) {
+    console.error('Availability check error:', err.message);
+    return false; // fail open — don't block if check fails
+  }
+}
+
 async function createCalendarEvent(client, data) {
   if (data.preferred_date == null) {
     throw new Error('No preferred_date provided - skipping calendar');
@@ -220,6 +247,19 @@ exports.handler = async (event) => {
     const displaySize = data.apartment_size || 'N/A';
     const displayBudget = data.budget || 'N/A';
     const displayMoveIn = formatDate(data.move_in_date);
+
+    // Iron 65 double-booking check (web bookings only — Vapi bypasses)
+    const source = data.source || 'web';
+    if (source !== 'vapi' && isIron65(propertyAddress) && data.preferred_date && data.preferred_time) {
+      const taken = await isIron65SlotTaken(data.preferred_date, data.preferred_time);
+      if (taken) {
+        return {
+          statusCode: 409,
+          headers,
+          body: JSON.stringify({ error: 'That time slot is already booked for Iron 65. Please choose a different time.' }),
+        };
+      }
+    }
 
     // 1. Create Google Calendar event (skip for specialist forms or missing date)
     let calendarEvent = null;

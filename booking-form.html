@@ -74,6 +74,7 @@
     .field select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
     .field input[type="date"] { cursor: pointer; color-scheme: dark; }
     .field select option { background: var(--dark2); }
+    .field select option:disabled { color: #555; }
     .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.08); }
     .field input::placeholder, .field textarea::placeholder { color: rgba(255,255,255,0.2); }
     .field textarea { resize: vertical; min-height: 80px; }
@@ -356,6 +357,53 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
   document.getElementById('move_in_date').min = today;
   document.getElementById('sp_move_in_date').min = tomorrow;
 
+  // Availability data for Iron 65 (fetched once, used to gray out taken slots)
+  var iron65Availability = {}; // { "April 3, 2026": ["10:00 AM", "2:00 PM"] }
+
+  (async function loadAvailability() {
+    try {
+      var res = await fetch('/.netlify/functions/get-availability');
+      var data = await res.json();
+      iron65Availability = data.bookedByDate || {};
+    } catch(e) {
+      console.error('Could not load availability:', e);
+    }
+  })();
+
+  var preferredDateEl = document.getElementById('preferred_date');
+  var preferredTimeEl = document.getElementById('preferred_time');
+  var ALL_TIME_SLOTS = ['10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM'];
+
+  function updateTimeSlots() {
+    var rawDate = preferredDateEl.value;
+    if (!rawDate) return;
+
+    // Convert ISO date to text format matching Supabase (e.g. "April 3, 2026")
+    var d = new Date(rawDate + 'T12:00:00');
+    var dateStr = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+    var takenSlots = iron65Availability[dateStr] || [];
+    var currentVal = preferredTimeEl.value;
+
+    preferredTimeEl.innerHTML = '<option value="">Select time</option>';
+    for (var i = 0; i < ALL_TIME_SLOTS.length; i++) {
+      var slot = ALL_TIME_SLOTS[i];
+      var opt = document.createElement('option');
+      opt.value = slot;
+      var taken = takenSlots.indexOf(slot) !== -1;
+      if (taken) {
+        opt.textContent = slot + ' — booked';
+        opt.disabled = true;
+      } else {
+        opt.textContent = slot;
+      }
+      if (slot === currentVal && !taken) opt.selected = true;
+      preferredTimeEl.appendChild(opt);
+    }
+  }
+
+  preferredDateEl.addEventListener('change', updateTimeSlots);
+
   // Iron 65 qualification rules:
   // Credit 650+ = qualifies, 600-649 = cosigner, below 600 or Unsure = disqualified
   // Budget options with max rent for 3x rule
@@ -560,11 +608,27 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
           additional_notes: additional_notes,
           property_address: 'Iron 65 - 65 Mcwhorter St, Newark NJ',
           type: 'Iron 65 - 65 Mcwhorter St, Newark NJ',
+          source: 'web',
           client: 'rosalia'
         })
       });
 
       var data = await res.json();
+
+      if (res.status === 409) {
+        errorEl.textContent = data.error || 'That time slot is already booked. Please choose a different time.';
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Reserve My Tour \u2192';
+        // Refresh availability and update slots
+        try {
+          var avRes = await fetch('/.netlify/functions/get-availability');
+          var avData = await avRes.json();
+          iron65Availability = avData.bookedByDate || {};
+          updateTimeSlots();
+        } catch(e) {}
+        return;
+      }
 
       if (data.success || res.ok) {
         document.getElementById('bookingSection').style.display = 'none';
