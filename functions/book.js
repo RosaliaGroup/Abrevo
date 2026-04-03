@@ -249,8 +249,8 @@ exports.handler = async (event) => {
     const displayMoveIn = formatDate(data.move_in_date);
 
     // Iron 65 double-booking check (web bookings only — Vapi bypasses)
-    const source = data.source || 'web';
-    if (source !== 'vapi' && isIron65(propertyAddress) && data.preferred_date && data.preferred_time) {
+    const source = data.source || 'vapi';
+    if (source === 'web' && isIron65(propertyAddress) && data.preferred_date && data.preferred_time) {
       const taken = await isIron65SlotTaken(data.preferred_date, data.preferred_time);
       if (taken) {
         return {
