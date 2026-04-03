@@ -140,14 +140,12 @@ Notes:
 ${data.additional_notes || 'N/A'}
   `.trim();
 
-  // 18-hour advance notice check
-  const nowCheck = new Date();
-  const apptDate = new Date(year, monthNum, day, hours, minutes);
-  const hoursUntil = (apptDate - nowCheck) / (1000 * 60 * 60);
-  if (hoursUntil < 2) {
-    const earliest = new Date(nowCheck.getTime() + 2 * 60 * 60 * 1000);
-    const earliestStr = earliest.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-    return { statusCode: 400, headers, body: JSON.stringify({ error: `Bookings require 2 hours advance notice. Earliest available: ${earliestStr}`, earliest: earliestStr }) };
+  // Block same-day bookings
+  const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const todayStr = `${nowET.getFullYear()}-${String(nowET.getMonth() + 1).padStart(2, '0')}-${String(nowET.getDate()).padStart(2, '0')}`;
+  const apptStr = `${year}-${String(monthNum + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  if (apptStr <= todayStr) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Same-day bookings are not available. Please select a date starting tomorrow.' }) };
   }
 
   const event = await calendar.events.insert({
