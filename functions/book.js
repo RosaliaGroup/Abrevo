@@ -120,8 +120,8 @@ async function createCalendarEvent(client, data) {
 
   const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
 
-  // Get property address - use property_address field if available, fallback to type
-  const propertyAddress = data.property_address || data.type || 'Appointment';
+  // Get property address - Vapi sends "property", forms send "property_address" or "type"
+  const propertyAddress = data.property_address || data.property || data.type || 'Appointment';
   
   // Format: Caller Name - Building Address
   const summary = `${data.full_name || 'Guest'} - ${propertyAddress}`;
@@ -144,10 +144,10 @@ ${data.additional_notes || 'N/A'}
   const nowCheck = new Date();
   const apptDate = new Date(year, monthNum, day, hours, minutes);
   const hoursUntil = (apptDate - nowCheck) / (1000 * 60 * 60);
-  if (hoursUntil < 18) {
-    const earliest = new Date(nowCheck.getTime() + 18 * 60 * 60 * 1000);
+  if (hoursUntil < 2) {
+    const earliest = new Date(nowCheck.getTime() + 2 * 60 * 60 * 1000);
     const earliestStr = earliest.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-    return { statusCode: 400, headers, body: JSON.stringify({ error: `Bookings require 18 hours advance notice. Earliest available: ${earliestStr}`, earliest: earliestStr }) };
+    return { statusCode: 400, headers, body: JSON.stringify({ error: `Bookings require 2 hours advance notice. Earliest available: ${earliestStr}`, earliest: earliestStr }) };
   }
 
   const event = await calendar.events.insert({
@@ -197,8 +197,13 @@ exports.handler = async (event) => {
       data.phone = normalizedPhone;
     }
 
+    // Normalize property field — Vapi sends "property", forms send "property_address" or "type"
+    if (!data.type && (data.property || data.property_address)) {
+      data.type = data.property || data.property_address;
+    }
+
     // Get property address for notifications
-    const propertyAddress = data.property_address || data.type || 'Iron 65 — 65 Mcwhorter St, Newark NJ';
+    const propertyAddress = data.property_address || data.property || data.type || 'Iron 65 — 65 Mcwhorter St, Newark NJ';
 
     // Format date nicely — handles ISO (2026-05-23), long form (May 23 2026), or raw
     function formatDate(raw) {
