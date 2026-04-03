@@ -164,26 +164,28 @@ async function createCalendarEvent(calendar, booking, newDate, newTime) {
     if (period === 'PM' && hours !== 12) hours += 12;
     if (period === 'AM' && hours === 12) hours = 0;
     
-    // Build ISO string manually for America/New_York
-    // Use Date.UTC then offset for EDT (-4 hours) or EST (-5 hours)
-    // For April, we're in EDT (UTC-4)
     const monthMap = {
       'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
       'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
     };
-    
+
     const monthNum = monthMap[month];
     if (monthNum === undefined) throw new Error('Invalid month');
-    
-    // Create date in EDT (add 4 hours to get UTC)
-    startDateTime = new Date(Date.UTC(year, monthNum, day, hours + 4, minutes, 0));
-    
+
+    // Build local ET datetime string — Google Calendar handles timezone via timeZone field
+    const pad = n => String(n).padStart(2, '0');
+    startDateTime = `${year}-${pad(monthNum + 1)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`;
+
   } catch (e) {
     console.error('Date parsing error:', e.message);
     throw new Error('Invalid date or time format');
   }
-  
-  const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
+
+  // End time = 30 min after start
+  const startDate = new Date(startDateTime);
+  const endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
+  const endPad = n => String(n).padStart(2, '0');
+  const endDateTime = `${endDate.getFullYear()}-${endPad(endDate.getMonth() + 1)}-${endPad(endDate.getDate())}T${endPad(endDate.getHours())}:${endPad(endDate.getMinutes())}:00`;
 
   const description = `
 RESCHEDULED APPOINTMENT
@@ -206,8 +208,8 @@ ${booking.additional_notes || 'None'}
     resource: {
       summary: `${booking.full_name || 'Guest'} - ${booking.type || 'Appointment'}`,
       description,
-      start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
-      end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
+      start: { dateTime: startDateTime, timeZone: 'America/New_York' },
+      end: { dateTime: endDateTime, timeZone: 'America/New_York' },
     },
   });
 

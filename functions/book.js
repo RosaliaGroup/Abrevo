@@ -121,31 +121,37 @@ async function createCalendarEvent(client, data) {
     if (period === 'PM' && hours !== 12) hours += 12;
     if (period === 'AM' && hours === 12) hours = 0;
     
-    // monthNum and day already set above
-    
-    // Create date in Eastern Time (UTC-4 EDT)
-    startDateTime = new Date(Date.UTC(year, monthNum, day, hours + 4, minutes, 0));
-    console.log('Booking date/time:', year, monthNum+1, day, hours, minutes, '-> UTC:', startDateTime.toISOString());
+    // Build local ET datetime string — Google Calendar handles timezone via timeZone field
+    const pad = n => String(n).padStart(2, '0');
+    const localIso = `${year}-${pad(monthNum + 1)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`;
+    startDateTime = localIso;
+    console.log('Booking date/time (ET):', localIso);
 
     // Reject bookings in the past
     const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    if (startDateTime < nowET) {
+    const apptDateTime = new Date(startDateTime);
+    if (apptDateTime < nowET) {
       return {
         statusCode: 400,
         headers,
         body: JSON.stringify({ error: 'Cannot book appointments in the past. Please select a future date and time.' }),
       };
     }
-    
+
   } catch(e) {
     console.error('Date parsing error:', e.message);
     // Fallback to tomorrow at noon
-    startDateTime = new Date();
-    startDateTime.setDate(startDateTime.getDate() + 1);
-    startDateTime.setHours(12, 0, 0, 0);
+    const pad = n => String(n).padStart(2, '0');
+    const fb = new Date();
+    fb.setDate(fb.getDate() + 1);
+    startDateTime = `${fb.getFullYear()}-${pad(fb.getMonth() + 1)}-${pad(fb.getDate())}T12:00:00`;
   }
 
-  const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
+  // End time = 30 min after start
+  const startDate = new Date(startDateTime);
+  const endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
+  const endPad = n => String(n).padStart(2, '0');
+  const endDateTime = `${endDate.getFullYear()}-${endPad(endDate.getMonth() + 1)}-${endPad(endDate.getDate())}T${endPad(endDate.getHours())}:${endPad(endDate.getMinutes())}:00`;
 
   // Get property address - Vapi sends "property", forms send "property_address" or "type"
   const propertyAddress = data.property_address || data.property || data.type || 'Appointment';
@@ -180,8 +186,8 @@ ${data.additional_notes || 'N/A'}
     resource: {
       summary,
       description,
-      start: { dateTime: startDateTime.toISOString(), timeZone: 'America/New_York' },
-      end: { dateTime: endDateTime.toISOString(), timeZone: 'America/New_York' },
+      start: { dateTime: startDateTime, timeZone: 'America/New_York' },
+      end: { dateTime: endDateTime, timeZone: 'America/New_York' },
     },
   });
 
