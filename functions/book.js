@@ -219,6 +219,14 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing required fields: full_name and phone' }) };
     }
 
+    // Require preferred_date and preferred_time unless specialist review
+    if (data.status !== 'needs_specialist') {
+      if (!data.preferred_date || !data.preferred_time) {
+        console.error('Missing date/time:', { preferred_date: data.preferred_date, preferred_time: data.preferred_time, full_name: data.full_name });
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Please select a preferred date and time for your appointment.' }) };
+      }
+    }
+
     // Normalize phone number
     if (data.phone) {
       let normalizedPhone = data.phone.toString().replace(/\D/g, '');
@@ -267,16 +275,28 @@ exports.handler = async (event) => {
       }
     }
 
-    // 1. Create Google Calendar event (skip for specialist forms or missing date)
+    // 1. Create Google Calendar event (skip for specialist forms)
     let calendarEvent = null;
-    if (data.status === 'needs_specialist' || !data.preferred_date) {
-      console.log('Skipping calendar creation — status:', data.status, 'preferred_date:', data.preferred_date);
+    if (data.status === 'needs_specialist') {
+      console.log('Skipping calendar creation — specialist review');
     } else {
       try {
-        calendarEvent = await createCalendarEvent(client, data);
+        const result = await createCalendarEvent(client, data);
+        // createCalendarEvent may return a response object (statusCode) on validation errors instead of throwing
+        if (result && result.statusCode) {
+          throw new Error(`Calendar validation rejected: ${JSON.parse(result.body).error}`);
+        }
+        calendarEvent = result;
         console.log('Calendar event created:', calendarEvent?.id);
       } catch (err) {
-        console.error('Calendar error:', err.message);
+        console.error('CALENDAR CREATION FAILED:', err.message, '| Name:', data.full_name, '| Date:', data.preferred_date, '| Time:', data.preferred_time);
+        // SMS alert to Ana about failed calendar event
+        try {
+          await sendSMS('+12014970225', `⚠️ Calendar event failed for ${data.full_name || 'Unknown'} - ${data.preferred_date || 'no date'} at ${data.preferred_time || 'no time'}. Error: ${err.message}. Check Netlify logs.`);
+          console.log('Calendar failure alert SMS sent');
+        } catch (smsErr) {
+          console.error('Failed to send calendar alert SMS:', smsErr.message);
+        }
       }
     }
 
