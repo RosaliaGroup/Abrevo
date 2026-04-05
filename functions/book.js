@@ -92,6 +92,15 @@ async function createCalendarEvent(client, data) {
   let startDateTime;
   let year, monthNum, day, hours, minutes;
   try {
+    // Resolve "tomorrow" to actual YYYY-MM-DD before parsing
+    if (data.preferred_date.toLowerCase().trim() === 'tomorrow') {
+      const tomorrow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const pad = n => String(n).padStart(2, '0');
+      data.preferred_date = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}`;
+      console.log('Resolved "tomorrow" to:', data.preferred_date);
+    }
+
     // Parse date - handles both YYYY-MM-DD (form) and "March 20 2026" (Vapi)
     const isoMatch = data.preferred_date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     const textMatch = data.preferred_date.match(/(\w+)\s+(\d+)[,\s]+(\d{4})/);
