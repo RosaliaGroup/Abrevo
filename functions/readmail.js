@@ -374,9 +374,12 @@ function parseAvailEmail(body) {
 
 function parseWebflowEmail(body) {
   const lead = {};
-  const nameMatch = body.match(/Full Name:\s*(.+)/i);
-  const emailMatch = body.match(/Email Address:\s*([^\s\n]+@[^\s\n]+)/i) || body.match(/Email:\s*([^\s\n]+@[^\s\n]+)/i);
-  const phoneMatch = body.match(/Cell Phone:\s*([\d\s\(\)\-\.]+)/i) || body.match(/Phone:\s*([\d\s\(\)\-\.]+)/i);
+
+  // Resipointe uses numbered fields: "Name 3:", "Email 3:", "Phone 2:"
+  // Also handle original format: "Full Name:", "Email Address:", "Cell Phone:"
+  const nameMatch = body.match(/(?:Full Name|(?<!\w\s)Name\s*\d*):\s*(.+)/i);
+  const emailMatch = body.match(/(?:Email Address|Email\s*\d*):\s*([^\s\n]+@[^\s\n]+)/i);
+  const phoneMatch = body.match(/(?:Cell Phone|Phone\s*\d*):\s*([\d\s\(\)\-\.]+)/i);
   const buildingMatch = body.match(/Building:\s*(.+)/i);
   const bedroomsMatch = body.match(/Bedrooms:\s*(.+)/i);
   if (nameMatch) lead.name = nameMatch[1].trim();
@@ -392,16 +395,16 @@ function parseWebflowEmail(body) {
 
   // Handle single-line format: "Full Name: X Email Address: Y Cell Phone: Z"
   if (!lead.email) {
-    const inlineEmail = body.match(/Email Address:\s*([^\s]+@[^\s]+)/i);
+    const inlineEmail = body.match(/(?:Email Address|Email\s*\d*):\s*([^\s]+@[^\s]+)/i);
     if (inlineEmail) lead.email = inlineEmail[1].trim();
   }
   if (!lead.name || !lead.phone) {
     if (!lead.name) {
-      const inlineName = body.match(/Full Name:\s*([^E]+?)(?=Email|$)/i);
+      const inlineName = body.match(/(?:Full Name|(?<!\w\s)Name\s*\d*):\s*([^E]+?)(?=Email|$)/i);
       if (inlineName) lead.name = inlineName[1].trim();
     }
     if (!lead.phone) {
-      const inlinePhone = body.match(/Cell Phone:\s*([\d\s\(\)\-\.]+?)(?=Current|Building|Bedrooms|$)/i);
+      const inlinePhone = body.match(/(?:Cell Phone|Phone\s*\d*):\s*([\d\s\(\)\-\.]+?)(?=Current|Building|Bedrooms|Company|$)/i);
       if (inlinePhone) {
         let p = inlinePhone[1].replace(/\D/g, '');
         if (p.length === 10) p = '+1' + p;
