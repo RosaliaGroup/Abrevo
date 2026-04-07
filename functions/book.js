@@ -182,12 +182,13 @@ Notes:
 ${data.additional_notes || 'N/A'}
   `.trim();
 
-  // Block same-day bookings
-  const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  const todayStr = `${nowET.getFullYear()}-${String(nowET.getMonth() + 1).padStart(2, '0')}-${String(nowET.getDate()).padStart(2, '0')}`;
-  const apptStr = `${year}-${String(monthNum + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  if (apptStr <= todayStr) {
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Same-day bookings are not available. Please select a date starting tomorrow.' }) };
+  // Block same-day bookings unless 3+ hours ahead in ET
+  const nowET2 = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const apptLocal = new Date(year, monthNum, day, hours, minutes);
+  const diffMs = apptLocal.getTime() - nowET2.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+  if (diffHours < 3) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Bookings must be at least 3 hours from now. Please select a later time or a future date.' }) };
   }
 
   const event = await calendar.events.insert({
