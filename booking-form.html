@@ -641,7 +641,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
         throw new Error(data.error || 'Booking failed');
       }
     } catch(err) {
-      errorEl.textContent = 'Something went wrong. Please try again or email us at inquiries@rosaliagroup.com.';
+      errorEl.textContent = err.message || 'Something went wrong. Please try again or email us at inquiries@rosaliagroup.com.';
       errorEl.style.display = 'block';
       btn.disabled = false;
       btn.textContent = 'Reserve My Tour \u2192';
@@ -708,7 +708,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
         throw new Error(data.error || 'Submission failed');
       }
     } catch(err) {
-      errorEl.textContent = 'Something went wrong. Please try again or email us at inquiries@rosaliagroup.com.';
+      errorEl.textContent = err.message || 'Something went wrong. Please try again or email us at inquiries@rosaliagroup.com.';
       errorEl.style.display = 'block';
       btn.disabled = false;
       btn.textContent = 'Connect Me with a Specialist \u2192';
