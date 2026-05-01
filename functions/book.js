@@ -145,7 +145,7 @@ async function createCalendarEvent(client, data) {
 
   // Parse date and time
   let startDateTime;
-  let year, monthNum, day;
+  let year, monthNum, day, hours, minutes;
   try {
     // Handler already normalizes to ISO, but resolveDate handles all formats defensively
     const resolved = resolveDate(data.preferred_date);
@@ -158,8 +158,8 @@ async function createCalendarEvent(client, data) {
     // Parse time
     const timeParts = data.preferred_time.match(/(\d+):?(\d*)?\s*(AM|PM)/i);
     if (!timeParts) throw new Error('Invalid time format');
-    let hours = parseInt(timeParts[1]);
-    const minutes = parseInt(timeParts[2] || '0');
+    hours = parseInt(timeParts[1]);
+    minutes = parseInt(timeParts[2] || '0');
     const period = timeParts[3].toUpperCase();
 
     // Convert to 24-hour format
@@ -193,6 +193,8 @@ async function createCalendarEvent(client, data) {
     year = fb.getFullYear();
     monthNum = fb.getMonth();
     day = fb.getDate();
+    hours = 12;
+    minutes = 0;
   }
 
   // End time = 30 min after start
