@@ -1,6 +1,61 @@
 ﻿const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 
+function resolveDate(raw) {
+  if (!raw || !raw.trim()) return { date: null, display: 'TBD' };
+
+  const trimmed = raw.trim();
+  const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+
+  const monthMap = {};
+  ['January','February','March','April','May','June','July','August','September','October','November','December']
+    .forEach((m, i) => { monthMap[m] = i; monthMap[m.slice(0, 3)] = i; });
+
+  let d;
+
+  // ISO: 2026-05-23
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const [y, m, day] = trimmed.split('-').map(Number);
+    d = new Date(y, m - 1, day);
+  }
+  // Long form with year: "May 23 2026" or "May 23, 2026"
+  else if (/^[A-Za-z]+\s+\d+[,\s]+\d{4}$/.test(trimmed)) {
+    const m = trimmed.match(/^([A-Za-z]+)\s+(\d+)[,\s]+(\d{4})$/);
+    const mo = monthMap[m[1]];
+    if (mo === undefined) return { date: null, display: raw };
+    d = new Date(parseInt(m[3]), mo, parseInt(m[2]));
+  }
+  // "tomorrow"
+  else if (/^tomorrow$/i.test(trimmed)) {
+    d = new Date(nowET);
+    d.setDate(d.getDate() + 1);
+  }
+  // Weekday only: "Friday"
+  else if (/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i.test(trimmed)) {
+    const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+    const target = days.indexOf(trimmed.toLowerCase());
+    d = new Date(nowET);
+    let diff = (target - d.getDay() + 7) % 7;
+    if (diff === 0) diff = 7; // "Friday" on a Friday means next Friday
+    d.setDate(d.getDate() + diff);
+  }
+  // Missing year: "May 2" or "May 2nd" — next occurrence from today
+  else if (/^[A-Za-z]+\s+\d+\s*\w{0,2}$/.test(trimmed)) {
+    const m = trimmed.match(/^([A-Za-z]+)\s+(\d+)/);
+    const mo = monthMap[m[1]];
+    if (mo === undefined) return { date: null, display: raw };
+    d = new Date(nowET.getFullYear(), mo, parseInt(m[2]));
+    // If the date is today or in the past, roll forward to next year
+    if (d <= nowET) d.setFullYear(d.getFullYear() + 1);
+  }
+  else {
+    return { date: null, display: raw };
+  }
+
+  const display = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  return { date: d, display };
+}
+
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
@@ -88,48 +143,29 @@ async function createCalendarEvent(client, data) {
 
   const calendar = google.calendar({ version: 'v3', auth });
 
-  // Parse date and time with proper timezone handling
+  // Parse date and time
   let startDateTime;
-  let year, monthNum, day, hours, minutes;
+  let year, monthNum, day;
   try {
-    // Resolve "tomorrow" to actual YYYY-MM-DD before parsing
-    if (data.preferred_date.toLowerCase().trim() === 'tomorrow') {
-      const tomorrow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const pad = n => String(n).padStart(2, '0');
-      data.preferred_date = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}`;
-      console.log('Resolved "tomorrow" to:', data.preferred_date);
-    }
+    // Handler already normalizes to ISO, but resolveDate handles all formats defensively
+    const resolved = resolveDate(data.preferred_date);
+    if (!resolved.date) throw new Error('Unrecognized date format: ' + data.preferred_date);
+    year = resolved.date.getFullYear();
+    monthNum = resolved.date.getMonth();
+    day = resolved.date.getDate();
+    console.log('Parsed date parts:', year, monthNum + 1, day);
 
-    // Parse date - handles both YYYY-MM-DD (form) and "March 20 2026" (Vapi)
-    const isoMatch = data.preferred_date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    const textMatch = data.preferred_date.match(/(\w+)\s+(\d+)[,\s]+(\d{4})/);
-    if (isoMatch) {
-      year = parseInt(isoMatch[1]);
-      monthNum = parseInt(isoMatch[2]) - 1;
-      day = parseInt(isoMatch[3]);
-    } else if (textMatch) {
-      const monthMap = {'January':0,'February':1,'March':2,'April':3,'May':4,'June':5,'July':6,'August':7,'September':8,'October':9,'November':10,'December':11,'Jan':0,'Feb':1,'Mar':2,'Apr':3,'Jun':5,'Jul':6,'Aug':7,'Sep':8,'Oct':9,'Nov':10,'Dec':11};
-      monthNum = monthMap[textMatch[1]];
-      day = parseInt(textMatch[2]);
-      year = parseInt(textMatch[3]);
-      if (monthNum === undefined) throw new Error('Invalid month: ' + textMatch[1]);
-    } else {
-      throw new Error('Unrecognized date format: ' + data.preferred_date);
-    }
-    console.log('Parsed date parts:', year, monthNum+1, day);
-    
     // Parse time
     const timeParts = data.preferred_time.match(/(\d+):?(\d*)?\s*(AM|PM)/i);
     if (!timeParts) throw new Error('Invalid time format');
-    hours = parseInt(timeParts[1]);
-    minutes = parseInt(timeParts[2] || '0');
+    let hours = parseInt(timeParts[1]);
+    const minutes = parseInt(timeParts[2] || '0');
     const period = timeParts[3].toUpperCase();
-    
+
     // Convert to 24-hour format
     if (period === 'PM' && hours !== 12) hours += 12;
     if (period === 'AM' && hours === 12) hours = 0;
-    
+
     // Build local ET datetime string — Google Calendar handles timezone via timeZone field
     const pad = n => String(n).padStart(2, '0');
     const localIso = `${year}-${pad(monthNum + 1)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`;
@@ -154,6 +190,9 @@ async function createCalendarEvent(client, data) {
     const fb = new Date();
     fb.setDate(fb.getDate() + 1);
     startDateTime = `${fb.getFullYear()}-${pad(fb.getMonth() + 1)}-${pad(fb.getDate())}T12:00:00`;
+    year = fb.getFullYear();
+    monthNum = fb.getMonth();
+    day = fb.getDate();
   }
 
   // End time = 30 min after start
@@ -254,23 +293,18 @@ exports.handler = async (event) => {
     // Get property address for notifications
     const propertyAddress = data.property_address || data.property || data.type || 'Iron 65 — 65 Mcwhorter St, Newark NJ';
 
-    // Format date nicely — handles ISO (2026-05-23), long form (May 23 2026), or raw
-    function formatDate(raw) {
-      if (!raw) return 'TBD';
-      // ISO format: 2026-05-23
-      const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (iso) {
-        const d = new Date(`${raw}T12:00:00`);
-        return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-      }
-      return raw; // already human-readable
+    // Normalize preferred_date to ISO early — before calendar, display, and Supabase paths
+    const resolvedDate = resolveDate(data.preferred_date);
+    if (resolvedDate.date) {
+      const pad = n => String(n).padStart(2, '0');
+      data.preferred_date = `${resolvedDate.date.getFullYear()}-${pad(resolvedDate.date.getMonth() + 1)}-${pad(resolvedDate.date.getDate())}`;
     }
 
-    const displayDate = formatDate(data.preferred_date);
+    const displayDate = resolvedDate.display;
     const displayTime = data.preferred_time || 'TBD';
     const displaySize = data.apartment_size || 'N/A';
     const displayBudget = data.budget || 'N/A';
-    const displayMoveIn = formatDate(data.move_in_date);
+    const displayMoveIn = resolveDate(data.move_in_date).display;
 
     // Iron 65 double-booking check (web bookings only — Vapi bypasses)
     const source = data.source || 'vapi';
@@ -434,7 +468,7 @@ exports.handler = async (event) => {
             <p style="color:#999;font-size:13px;line-height:1.7;margin:0 0 30px 0;">${emailFooterNote}</p>
             <!-- CTA -->
             <div style="text-align:center;margin-bottom:30px;">
-              <a href="https://book.rosaliagroup.com/iron65-reschedule" style="display:inline-block;background:#C9A84C;color:#0A0A0A;font-size:12px;letter-spacing:3px;text-transform:uppercase;padding:14px 32px;text-decoration:none;font-weight:bold;border-radius:2px;">Manage Appointment</a>
+              <a href="${isIron65(propertyAddress) ? 'https://book.rosaliagroup.com/iron65-reschedule' : 'https://book.rosaliagroup.com/reschedule'}" style="display:inline-block;background:#C9A84C;color:#0A0A0A;font-size:12px;letter-spacing:3px;text-transform:uppercase;padding:14px 32px;text-decoration:none;font-weight:bold;border-radius:2px;">Manage Appointment</a>
             </div>
           </td>
         </tr>

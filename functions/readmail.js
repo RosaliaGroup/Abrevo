@@ -770,22 +770,34 @@ REPLY FORMAT RULES (follow strictly):
 Write ONLY the email body.`;
 
   console.log('Calling Claude API...');
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
+  if (!ANTHROPIC_KEY) {
+    console.error('ANTHROPIC_API_KEY is not set — cannot generate reply');
+    return '';
+  }
+
+  let res;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+  } catch (fetchErr) {
+    console.error('Claude API fetch failed:', fetchErr.message);
+    return '';
+  }
+
   const data = await res.json();
-  if (data.type === 'error') {
-    console.error('Claude error:', data.error?.message);
+  if (!res.ok || data.type === 'error') {
+    console.error('Claude API error:', res.status, data.error?.message || JSON.stringify(data));
     return '';
   }
   return data.content?.[0]?.text || '';
@@ -1132,7 +1144,11 @@ exports.handler = async (event) => {
         if (leadContext) console.log('Lead context found:', leadContext.status);
 
         const replyText = await generateReply(from, subject, body, previousReply, leadContext, calendarAppt, realName, leadClient);
-        if (!replyText) { results.skipped++; continue; }
+        if (!replyText) {
+          console.error('generateReply returned empty for:', fromEmail, '| subject:', subject);
+          results.errors++;
+          continue;
+        }
 
         const effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : replyTo;
         // For Avail leads: reply to relay so it appears in Avail platform, CC real email
