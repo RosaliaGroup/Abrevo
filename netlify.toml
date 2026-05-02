@@ -28,6 +28,9 @@
 [functions."followup"]
   schedule = "0 10 * * *"
   node_bundler = "nft"
+[functions."appointment-reminder"]
+  schedule = "0 14 * * *"
+  node_bundler = "nft"
 [[redirects]]
   from = "/social.html"
   to = "/social.html"
