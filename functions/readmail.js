@@ -280,7 +280,7 @@ const SKIP_SUBJECTS = [
 
 function isZillowLead(from) {
   const f = from.toLowerCase();
-  return f.includes('convo.zillow.com') || f.includes('comet.zillow.com');
+  return f.includes('convo.zillow.com') || f.includes('comet.zillow.com') || f.includes('rentalclientservices@zillowrentals');
 }
 function isAvailDigest(subject) {
   const s = (subject || '').toLowerCase();
@@ -520,10 +520,20 @@ function extractPhone(text) {
 // Parse Zillow lead email for structured data
 function parseZillowEmail(body) {
   const lead = {};
-  // Zillow sends name in subject like "Alondra is requesting..."
-  // Phone is NOT in Zillow relay emails - don't try to extract
-  const emailMatch = body.match(/Reply to ([^\s\n]+@[^\s\n]+)/i);
+  // Name from "New Contact ... says:" (Zillow Group Rentals format)
+  const nameMatch = body.match(/New Contact\s+(.+?)\s+says:/i);
+  if (nameMatch) lead.name = nameMatch[1].trim();
+  // Email — fallback: first non-Zillow/non-system email in body
+  const emailMatch = body.match(/([a-zA-Z0-9._%+\-]+@(?!zillowrentals|zillow\.com|amazonses\.com|hotpads\.com|rosaliagroup\.com)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
   if (emailMatch) lead.email = emailMatch[1].trim();
+  // Phone — Zillow Group Rentals includes phone, relay emails don't
+  const phoneMatch = body.match(/(\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4})/);
+  if (phoneMatch) {
+    let p = phoneMatch[1].replace(/\D/g, '');
+    if (p.length === 10) p = '+1' + p;
+    else if (p.length === 11) p = '+' + p;
+    lead.phone = p;
+  }
   return lead;
 }
 
@@ -1057,11 +1067,16 @@ exports.handler = async (event) => {
           if (p.name) realName = p.name;
           console.log('Resipointe realEmail:', realEmail, 'phone:', phone, 'name:', realName);
         } else if (isZillowLead(from)) {
-          // Zillow relay emails don't contain phone numbers
           const p = parseZillowEmail(body);
-          if (p.email) realEmail = p.email;
-          phone = null; // Zillow relay never has phone
-          console.log('Zillow lead - no phone in relay email');
+          // Zillow Group Rentals sets Reply-To to lead's real email — most reliable source
+          if (replyTo && replyTo !== from && !replyTo.includes('zillowrentals') && !replyTo.includes('zillow.com')) {
+            realEmail = replyTo;
+          } else if (p.email) {
+            realEmail = p.email;
+          }
+          if (p.name) realName = p.name;
+          if (p.phone) phone = p.phone;
+          console.log('Zillow lead - Name:', realName, 'Email:', realEmail, 'Phone:', phone || 'none');
         } else {
           // Strip emails from text before extracting phone
           phone = extractPhone(body + ' ' + subject);
@@ -1077,7 +1092,7 @@ exports.handler = async (event) => {
 
         console.log('Lead detected! Phone:', phone || 'none found');
 
-        const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : fromEmail;
+        const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject) || isZillowLead(from)) ? realEmail : fromEmail;
         const skipRecentCheck = isAvailLead(from) || from.includes('reply.avail.co') || from.includes('@avail.co') || isFUBLead(from, subject);
 
         // Thread replies (Re:) always get a response — no throttle. New emails get 4h throttle.
