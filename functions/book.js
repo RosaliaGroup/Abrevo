@@ -104,6 +104,14 @@ async function sendSMS(phone, message) {
   return result;
 }
 
+function formatPhone(raw) {
+  if (!raw) return '';
+  const digits = raw.toString().replace(/\D/g, '');
+  const d = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+  if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+  return raw;
+}
+
 // Check if a property string refers to Iron 65 / 65 McWhorter
 function isIron65(property) {
   if (!property) return false;
@@ -426,7 +434,8 @@ exports.handler = async (event) => {
         ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;border:1px solid #333;border-radius:4px;margin-bottom:30px;">
               <tr><td style="padding:24px 28px;">
                 <div style="color:#C9A84C;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">Your Inquiry</div>
-                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📍 <strong style="color:#C9A84C;">${propertyAddress}</strong></div>
+                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📍 <strong style="color:#C9A84C;">${propertyAddress}</strong></div>${data.phone ? `
+                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📞 ${formatPhone(data.phone)}</div>` : ''}
                 <div style="color:#E8E8E8;font-size:14px;margin-bottom:6px;color:#999;">Size: ${displaySize}</div>
                 <div style="color:#999;font-size:14px;">Move-In: ${displayMoveIn}</div>
               </td></tr>
@@ -435,7 +444,8 @@ exports.handler = async (event) => {
               <tr><td style="padding:24px 28px;">
                 <div style="color:#C9A84C;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">Tour Details</div>
                 <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📍 <strong style="color:#C9A84C;">${propertyAddress}</strong></div>
-                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📅 ${displayDate} at ${displayTime}</div>
+                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📅 ${displayDate} at ${displayTime}</div>${data.phone ? `
+                <div style="color:#E8E8E8;font-size:15px;margin-bottom:10px;">📞 ${formatPhone(data.phone)}</div>` : ''}
                 <div style="color:#E8E8E8;font-size:14px;margin-bottom:6px;color:#999;">Size: ${displaySize} &nbsp;|&nbsp; Budget: ${displayBudget}/mo</div>
                 <div style="color:#999;font-size:14px;">Move-In: ${displayMoveIn}</div>
               </td></tr>
