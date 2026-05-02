@@ -178,10 +178,8 @@ async function main() {
   const rawEmails = await fetchLeadEmails();
   console.log(`Fetched ${rawEmails.length} emails\n`);
 
-  // Step 2: Parse and deduplicate
-  const leads = [];
-  const seenEmails = new Set();
-
+  // Step 2: Parse all emails
+  const allParsed = [];
   for (const raw of rawEmails) {
     try {
       const parsed = await simpleParser(raw.raw);
@@ -194,30 +192,30 @@ async function main() {
       const date = parsed.date || new Date();
       const source = getSourceLabel(from, subject);
 
-      // Skip non-lead sources (system notifications that slipped through)
       if (source === 'other') continue;
-      // Skip system notification emails
       if (from.includes('rosaliagroup.com') || from.includes('mechanicalenterprise.com')) continue;
 
       const info = extractLeadInfo(from, subject, body, replyTo);
-      if (!info.realEmail) continue; // Can't process without an email
+      if (!info.realEmail) continue;
 
-      // Deduplicate: keep only the most recent email per lead email
-      const emailKey = info.realEmail.toLowerCase();
-      if (seenEmails.has(emailKey)) continue;
-      seenEmails.add(emailKey);
-
-      leads.push({
-        from, subject, body, replyTo, date, source,
-        ...info,
-      });
+      allParsed.push({ from, subject, body, replyTo, date, source, ...info });
     } catch (e) {
       // Skip unparseable emails
     }
   }
 
-  // Sort by date descending (most recent first)
-  leads.sort((a, b) => new Date(b.date) - new Date(a.date));
+  // Sort by date descending BEFORE dedup — so dedup keeps the most recent email per lead
+  allParsed.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // Deduplicate: keep only the most recent email per lead email
+  const leads = [];
+  const seenEmails = new Set();
+  for (const entry of allParsed) {
+    const emailKey = entry.realEmail.toLowerCase();
+    if (seenEmails.has(emailKey)) continue;
+    seenEmails.add(emailKey);
+    leads.push(entry);
+  }
 
   // Step 3: Check Supabase for each lead
   console.log('Checking Supabase for existing leads...\n');
