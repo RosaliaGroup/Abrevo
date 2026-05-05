@@ -518,21 +518,35 @@ function extractPhone(text) {
 }
 
 // Parse Zillow lead email for structured data
-function parseZillowEmail(body) {
+function parseZillowEmail(body, from) {
   const lead = {};
-  // Name from "New Contact ... says:" (Zillow Group Rentals format)
-  const nameMatch = body.match(/New Contact\s+(.+?)\s+says:/i);
-  if (nameMatch) lead.name = nameMatch[1].trim();
+  // For RELAY emails (convo.zillow.com), phone is NEVER in body — don't extract
+  const isRelay = from && (from.includes('convo.zillow.com') || from.includes('comet.zillow.com'));
+
+  // Name from "New Contact ... says:" (Zillow Group Rentals format only)
+  if (!isRelay) {
+    const nameMatch = body.match(/New Contact\s+(.+?)\s+says:/i);
+    if (nameMatch) lead.name = nameMatch[1].trim();
+  }
+  // For relay: name from "X says:" pattern
+  if (isRelay) {
+    const relayName = body.match(/^([^\n]{2,60})\s+says:/m);
+    if (relayName) lead.name = relayName[1].trim();
+  }
   // Email — fallback: first non-Zillow/non-system email in body
   const emailMatch = body.match(/([a-zA-Z0-9._%+\-]+@(?!zillowrentals|zillow\.com|amazonses\.com|hotpads\.com|rosaliagroup\.com)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
   if (emailMatch) lead.email = emailMatch[1].trim();
-  // Phone — Zillow Group Rentals includes phone, relay emails don't
-  const phoneMatch = body.match(/(\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4})/);
-  if (phoneMatch) {
-    let p = phoneMatch[1].replace(/\D/g, '');
-    if (p.length === 10) p = '+1' + p;
-    else if (p.length === 11) p = '+' + p;
-    lead.phone = p;
+  // Phone — ONLY for Zillow Group Rentals format, NEVER for relay
+  // Strip URLs first to avoid matching tracking IDs
+  if (!isRelay) {
+    const bodyNoUrls = body.replace(/https?:\/\/\S+/g, ' ').replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, ' ');
+    const phoneMatch = bodyNoUrls.match(/(\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4})/);
+    if (phoneMatch) {
+      let p = phoneMatch[1].replace(/\D/g, '');
+      if (p.length === 10) p = '+1' + p;
+      else if (p.length === 11) p = '+' + p;
+      lead.phone = p;
+    }
   }
   return lead;
 }
@@ -1067,7 +1081,7 @@ exports.handler = async (event) => {
           if (p.name) realName = p.name;
           console.log('Resipointe realEmail:', realEmail, 'phone:', phone, 'name:', realName);
         } else if (isZillowLead(from)) {
-          const p = parseZillowEmail(body);
+          const p = parseZillowEmail(body, from);
           // Zillow Group Rentals sets Reply-To to lead's real email — most reliable source
           if (replyTo && replyTo !== from && !replyTo.includes('zillowrentals') && !replyTo.includes('zillow.com')) {
             realEmail = replyTo;
@@ -1076,6 +1090,10 @@ exports.handler = async (event) => {
           }
           if (p.name) realName = p.name;
           if (p.phone) phone = p.phone;
+          // Defensive: relay emails NEVER have phone, regardless of what parser returned
+          if (from.includes('convo.zillow.com') || from.includes('comet.zillow.com')) {
+            phone = null;
+          }
           console.log('Zillow lead - Name:', realName, 'Email:', realEmail, 'Phone:', phone || 'none');
         } else {
           // Strip emails from text before extracting phone
