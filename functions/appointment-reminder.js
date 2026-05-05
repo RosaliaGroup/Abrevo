@@ -77,6 +77,11 @@ exports.handler = async () => {
 
     for (const booking of bookings) {
       try {
+        if (!booking.email || !booking.email.includes('@')) {
+          console.log('Skipping booking — invalid email:', booking.id, booking.full_name);
+          continue;
+        }
+
         const firstName = (booking.full_name || '').split(' ')[0] || 'there';
         const propertyAddress = booking.type || 'your appointment';
         const propertyShort = isIron65(propertyAddress) ? 'Iron 65' : propertyAddress.split(',')[0].trim();
