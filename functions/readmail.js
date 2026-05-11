@@ -347,8 +347,13 @@ function isAvailLead(from) {
 function isWebflowLead(from, subject) {
   const f = (from || '').toLowerCase();
   const s = (subject || '').toLowerCase();
-  return (f.includes('webflow.com') || f.includes('resipointe')) &&
-         (s.includes('submission') || s.includes('application') || s.includes('new form') || s.includes('new lead'));
+  // Original Webflow/Resipointe detection
+  if ((f.includes('webflow.com') || f.includes('resipointe')) &&
+      (s.includes('submission') || s.includes('application') || s.includes('new form') || s.includes('new lead'))) return true;
+  // Brevo/Iron65 form emails
+  if ((f.includes('brevo') || f.includes('liveiron65') || f.includes('sendinblue')) &&
+      (s.includes('tour') || s.includes('lead') || s.includes('inquiry') || s.includes('request') || s.includes('interested'))) return true;
+  return false;
 }
 
 function parseAvailEmail(body) {
@@ -386,9 +391,12 @@ function parseWebflowEmail(body) {
 
   // Resipointe uses numbered fields: "Name 3:", "Email 3:", "Phone 2:"
   // Also handle original format: "Full Name:", "Email Address:", "Cell Phone:"
-  const nameMatch = body.match(/(?:Full Name|(?<!\w\s)Name\s*\d*):\s*(.+)/i);
-  const emailMatch = body.match(/(?:Email Address|Email\s*\d*):\s*([^\s\n]+@[^\s\n]+)/i);
-  const phoneMatch = body.match(/(?:Cell Phone|Phone\s*\d*):\s*([\d\s\(\)\-\.]+)/i);
+  const nameMatch = body.match(/(?:Full Name|(?<!\w\s)Name\s*\d*):\s*(.+)/i)
+    || body.match(/\bName\b\s*\n([^\n]+)/i);
+  const emailMatch = body.match(/(?:Email Address|Email\s*\d*):\s*([^\s\n]+@[^\s\n]+)/i)
+    || body.match(/\bEmail\b\s*\n([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
+  const phoneMatch = body.match(/(?:Cell Phone|Phone\s*\d*):\s*([\d\s\(\)\-\.]+)/i)
+    || body.match(/\bPhone\b\s*\n([\d\s\(\)\-\.]+)/i);
   const buildingMatch = body.match(/Building:\s*(.+)/i);
   const bedroomsMatch = body.match(/Bedrooms:\s*(.+)/i);
   if (nameMatch) lead.name = nameMatch[1].trim();
