@@ -932,7 +932,7 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone, cl
         notes: mergedNotes,
         replied_at: new Date().toISOString(),
         email_reply: replyText,
-        phone: phone || existing[0].phone || null,  // prefer newly provided phone over old
+        phone: existing[0].phone || phone || null,  // keep existing phone; only fill if missing
       }),
     });
     return existing[0];
@@ -1097,7 +1097,11 @@ exports.handler = async (event) => {
           console.log('Zillow lead - Name:', realName, 'Email:', realEmail, 'Phone:', phone || 'none');
         } else {
           // Strip emails from text before extracting phone
-          phone = extractPhone(body + ' ' + subject);
+          // Only extract phone from generic body for non-Webflow sources
+          // Webflow/Resipointe replies come from lead's Gmail — signature contains office numbers
+          if (!isWebflowLead(from, subject)) {
+            phone = extractPhone(body + ' ' + subject);
+          }
         }
         // For reply threads: always try to extract phone from body regardless of source
         if (!phone && isReply) {
