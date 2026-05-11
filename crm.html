@@ -168,6 +168,10 @@ tr:hover td{background:rgba(201,168,76,0.03)}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Follow-ups
     </div>
+    <div class="nav-item" onclick="showPage('social')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Social
+    </div>
   </div>
 </nav>
 
@@ -189,9 +193,9 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
     Tasks
   </div>
-  <div class="mobile-nav-item" onclick="showPage('agents')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    Agents
+  <div class="mobile-nav-item" onclick="showPage('social')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    Social
   </div>
 </div>
 
@@ -294,6 +298,23 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 <div class="page-section" id="page-sequences">
   <div class="main-header"><h1>Follow-up Sequences</h1></div>
   <div class="seq-grid" id="seq-grid"></div>
+</div>
+
+<!-- SOCIAL -->
+<div class="page-section" id="page-social">
+  <div class="main-header"><h1>Social Leads</h1></div>
+  <div class="filters" style="margin-bottom:16px">
+    <select id="social-filter-agent" onchange="renderSocialLeads()"><option value="">All Agents</option></select>
+    <select id="social-filter-platform" onchange="renderSocialLeads()">
+      <option value="">All Platforms</option>
+      <option value="facebook">Facebook</option>
+      <option value="instagram">Instagram</option>
+      <option value="iron65-brevo">Iron 65 Form</option>
+    </select>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>Name</th><th>Platform</th><th>Contact</th><th>Property</th><th>Status</th><th>Assigned</th><th>Received</th><th>Actions</th></tr></thead><tbody id="social-leads-tbody"></tbody></table></div>
+  <h2 style="margin-top:28px;margin-bottom:16px">Activity by Agent</h2>
+  <div class="agent-grid" id="social-agent-activity"></div>
 </div>
 
 </div><!-- /main -->
@@ -434,6 +455,7 @@ function showPage(page) {
   if (page === 'agents') loadAgents();
   if (page === 'commissions') loadCommissions();
   if (page === 'sequences') loadSequences();
+  if (page === 'social') { renderSocialLeads(); populateAgentDropdowns(); }
 }
 
 // ── MODAL ──
@@ -475,7 +497,7 @@ async function loadDashboard() {
 }
 
 function populateAgentDropdowns() {
-  const selects = ['al-agent','ad-agent','at-agent','lead-filter-agent'];
+  const selects = ['al-agent','ad-agent','at-agent','lead-filter-agent','social-filter-agent'];
   selects.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -646,6 +668,56 @@ async function loadSequences() {
     const steps = Array.isArray(seq.steps) ? seq.steps : [];
     return '<div class="seq-card"><h3>'+esc(seq.name)+'</h3><div class="desc">'+esc(seq.description||'')+'</div>'+steps.map((st,i) => '<div class="seq-step"><span class="day">Day '+st.day+'</span><span class="type">'+esc(st.type||'email')+'</span><span>'+esc(st.label||st.template||'Step '+(i+1))+'</span></div>').join('')+'</div>';
   }).join('');
+}
+
+// ── SOCIAL ──
+function timeAgo(d) {
+  if (!d) return '-';
+  const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  if (s < 604800) return Math.floor(s/86400) + 'd ago';
+  return fmtDate(d);
+}
+
+function sourceBadge(src) {
+  const s = (src||'').toLowerCase();
+  if (s.includes('facebook')) return '<span class="badge" style="background:rgba(24,119,242,0.15);color:#1877F2">Facebook</span>';
+  if (s.includes('instagram')) return '<span class="badge" style="background:rgba(228,64,95,0.15);color:#E4405F">Instagram</span>';
+  if (s.includes('iron65') || s.includes('brevo')) return '<span class="badge" style="background:rgba(243,156,18,0.15);color:var(--orange)">Iron 65 Form</span>';
+  if (s.includes('fub')) return '<span class="badge" style="background:rgba(201,168,76,0.15);color:var(--gold)">FUB</span>';
+  return '<span class="badge badge-new">'+esc(src||'unknown')+'</span>';
+}
+
+function renderSocialLeads() {
+  const agentId = document.getElementById('social-filter-agent').value;
+  const platform = document.getElementById('social-filter-platform').value;
+  const socialSources = ['facebook','instagram','iron65-brevo','fub'];
+  let filtered = allLeads.filter(l => socialSources.some(s => (l.source||'').toLowerCase().includes(s)));
+  if (platform) filtered = filtered.filter(l => (l.source||'').toLowerCase().includes(platform));
+  if (agentId) filtered = filtered.filter(l => l.assigned_to === agentId);
+
+  document.getElementById('social-leads-tbody').innerHTML = filtered.length ? filtered.map(l =>
+    '<tr onclick="openLeadDetail(\''+l.id+'\')" style="cursor:pointer"><td><b>'+esc(l.name||'Unknown')+'</b></td><td>'+sourceBadge(l.source)+'</td><td style="font-size:12px;color:var(--text-muted)">'+esc(l.email||'')+'<br>'+fmtPhone(l.phone)+'</td><td style="font-size:12px">'+esc(l.property||'-')+'</td><td>'+statusBadge(l.status)+'</td><td style="font-size:12px">'+agentName(l.assigned_to)+'</td><td style="font-size:12px;color:var(--text-muted)">'+timeAgo(l.created_at)+'</td><td onclick="event.stopPropagation()">'+(l.phone?'<a class="action-btn" href="tel:'+esc(l.phone)+'">Call</a> <a class="action-btn" href="sms:'+esc(l.phone)+'">Text</a>':'')+'</td></tr>'
+  ).join('') : '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">No social leads match your filters</td></tr>';
+
+  // Agent activity breakdown
+  var agentBreakdown = {};
+  filtered.forEach(function(l) {
+    var id = l.assigned_to || 'unassigned';
+    if (!agentBreakdown[id]) agentBreakdown[id] = {facebook:0,instagram:0,'iron65-brevo':0,fub:0,total:0};
+    var src = (l.source||'').toLowerCase();
+    if (src.includes('facebook')) agentBreakdown[id].facebook++;
+    else if (src.includes('instagram')) agentBreakdown[id].instagram++;
+    else if (src.includes('iron65') || src.includes('brevo')) agentBreakdown[id]['iron65-brevo']++;
+    else if (src.includes('fub')) agentBreakdown[id].fub++;
+    agentBreakdown[id].total++;
+  });
+  document.getElementById('social-agent-activity').innerHTML = Object.entries(agentBreakdown).map(function(entry) {
+    var id = entry[0], counts = entry[1];
+    return '<div class="agent-card"><h3>'+(id==='unassigned'?'Unassigned':agentName(id))+'</h3><div class="agent-stats" style="margin-top:12px"><div class="agent-stat"><div class="num" style="color:#1877F2">'+counts.facebook+'</div><div class="lbl">Facebook</div></div><div class="agent-stat"><div class="num" style="color:#E4405F">'+counts.instagram+'</div><div class="lbl">Instagram</div></div><div class="agent-stat"><div class="num" style="color:var(--orange)">'+counts['iron65-brevo']+'</div><div class="lbl">Iron 65</div></div><div class="agent-stat"><div class="num" style="color:var(--gold)">'+counts.total+'</div><div class="lbl">Total</div></div></div></div>';
+  }).join('') || '<p style="color:var(--text-muted)">No social leads yet</p>';
 }
 
 // ── SAVE FUNCTIONS ──
