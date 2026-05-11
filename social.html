@@ -618,6 +618,11 @@
       </div>
 
       <div class="card">
+        <div class="card-title">Connected Platforms</div>
+        <div id="connected-platforms"><p style="color:var(--text-muted);font-size:13px">Loading...</p></div>
+      </div>
+
+      <div class="card">
         <div class="card-title">Social Accounts</div>
         <div class="connect-card">
           <div class="cc-left">
@@ -1161,7 +1166,34 @@ function renderScheduleTable() {
 
 // ---- Connect Platforms ----
 function connectPlatform(platform) {
-  toast(`${platform.charAt(0).toUpperCase() + platform.slice(1)} OAuth setup coming soon. Configure your app credentials first.`);
+  const agentSel = document.getElementById('enrich-agent-filter');
+  const agentId = agentSel ? agentSel.value : '';
+  window.location.href = `/.netlify/functions/social-auth?action=login&platform=${platform}&agent_id=${agentId}`;
+}
+
+async function loadConnectedPlatforms() {
+  try {
+    const r = await fetch('/.netlify/functions/social-auth?action=status');
+    const d = await r.json();
+    const connections = d.connections || [];
+    const container = document.getElementById('connected-platforms');
+    if (!container) return;
+    if (!connections.length) { container.innerHTML = '<p style="color:#666;font-size:13px">No platforms connected yet.</p>'; return; }
+    container.innerHTML = connections.map(c => {
+      const plats = typeof c.platforms === 'string' ? JSON.parse(c.platforms) : (c.platforms||[]);
+      return plats.map(pl => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">${pl.type==='instagram'?'📸':'📘'}</span>
+            <div>
+              <div style="font-size:13px;font-weight:500;color:#e8e8e8">${pl.name}</div>
+              <div style="font-size:11px;color:#666">${pl.type==='instagram'?'Instagram':'Facebook Page'}</div>
+            </div>
+          </div>
+          <span style="font-size:11px;color:#2ECC71">● Connected</span>
+        </div>`).join('');
+    }).join('');
+  } catch(e) { console.error('loadConnectedPlatforms error:', e); }
 }
 
 // ---- Init ----
@@ -1798,6 +1830,18 @@ async function monitorRefreshAll() {
 }
 
 loadAgentFilter();
+loadConnectedPlatforms();
+
+// Handle OAuth return
+const urlp = new URLSearchParams(window.location.search);
+if (urlp.get('auth') === 'success') {
+  toast(`Connected! Found ${urlp.get('platforms')} platform(s) for ${urlp.get('name')}`);
+  loadConnectedPlatforms();
+  window.history.replaceState({}, '', '/social.html');
+} else if (urlp.get('auth') === 'error') {
+  toast('Connection failed: ' + urlp.get('msg'), 'error');
+  window.history.replaceState({}, '', '/social.html');
+}
 </script>
 </body>
 </html>
