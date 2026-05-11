@@ -480,7 +480,10 @@ exports.handler = async (event) => {
             <p style="color:#999;font-size:13px;line-height:1.7;margin:0 0 30px 0;">${emailFooterNote}</p>
             <!-- CTA -->
             <div style="text-align:center;margin-bottom:30px;">
-              <a href="${isIron65(propertyAddress) ? 'https://book.rosaliagroup.com/iron65-reschedule' : 'https://book.rosaliagroup.com/reschedule'}" style="display:inline-block;background:#C9A84C;color:#0A0A0A;font-size:12px;letter-spacing:3px;text-transform:uppercase;padding:14px 32px;text-decoration:none;font-weight:bold;border-radius:2px;">Manage Appointment</a>
+              <a href="${isIron65(propertyAddress) ? 'https://book.rosaliagroup.com/iron65-reschedule' : 'https://book.rosaliagroup.com/reschedule'}" style="display:inline-block;background:#C9A84C;color:#0A0A0A;font-size:12px;letter-spacing:3px;text-transform:uppercase;padding:14px 32px;text-decoration:none;font-weight:bold;border-radius:2px;">Reschedule Appointment</a>
+            </div>
+            <div style="text-align:center;margin-bottom:30px;">
+              <a href="https://book.rosaliagroup.com/cancel-reschedule?name=${encodeURIComponent(data.full_name || '')}&property=${encodeURIComponent(propertyAddress)}&date=${encodeURIComponent(displayDate)}&time=${encodeURIComponent(displayTime)}&phone=${encodeURIComponent(data.phone || '')}" style="display:inline-block;background:transparent;color:#999;font-size:12px;letter-spacing:3px;text-transform:uppercase;padding:14px 32px;text-decoration:none;border:1px solid rgba(255,255,255,0.15);border-radius:2px;">Cancel Appointment</a>
             </div>
           </td>
         </tr>
