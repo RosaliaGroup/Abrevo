@@ -78,8 +78,8 @@ PROPERTY KNOWLEDGE BASE:
 
 ## CREDIT & QUALIFICATION POLICY
 - Anyone can schedule a tour regardless of credit score  no minimum to tour
-- Standard application requirement: 650+ credit score and income ~3x rent
-- Below 650 or lower income: still welcome to tour and apply  management reviews all applications individually
+- Standard application requirement: 625+ credit score and income ~3x rent
+- Below 625 or lower income: still welcome to tour and apply  management reviews all applications individually
 - TheGuarantors.com and co-signers accepted  best to discuss with leasing agent at tour
 - Self-employed: 2 years tax returns + bank statements accepted
 
@@ -207,7 +207,7 @@ Q: Are utilities included?
 A: Depends on the building. Water and trash are included at River Pointe, 502 Market, Iron Pointe, and 556 Market. All other buildings tenants pay their own electric, water, and trash. There is no gas in any building  all electric.
 
 Q: What credit score do I need?
-A: Anyone can schedule a tour regardless of credit score. Our standard application requirement is 650+ but management reviews every application individually. TheGuarantors.com and co-signers are accepted options  best to discuss with the leasing agent at your tour.
+A: Anyone can schedule a tour regardless of credit score. Our standard application requirement is 625+ but management reviews every application individually. TheGuarantors.com and co-signers are accepted options  best to discuss with the leasing agent at your tour.
 
 Q: Do you allow pets?
 A: Yes at most properties. Fees vary by building  typically $50-75/month plus a security deposit.
