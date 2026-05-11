@@ -37,37 +37,31 @@ async function sendSMS(phone, message) {
 // Helper: Check if two property strings match
 function propertiesMatch(prop1, prop2) {
   if (!prop1 || !prop2) return false;
-  
-  // Normalize both strings: lowercase, remove extra spaces
-  const normalize = (str) => str.toLowerCase().trim().replace(/\s+/g, ' ');
-  
-  const p1 = normalize(prop1);
-  const p2 = normalize(prop2);
-  
-  // Direct match
-  if (p1 === p2) return true;
-  
-  // Check if one contains the other (for partial matches like "473 Main" vs "473 Main Street, Orange NJ")
-  if (p1.includes(p2) || p2.includes(p1)) return true;
-  
-  // Extract street numbers and compare (e.g., "473" from "473 Main Street")
-  const extractNumber = (str) => {
-    const match = str.match(/^\d+/);
-    return match ? match[0] : null;
+
+  const normalize = (str) => str.toLowerCase().trim()
+    .replace(/[,\.—\-]/g, ' ').replace(/\s+/g, ' ');
+
+  // Strip "Name - " prefix from calendar summaries (format: "John Smith - 473 Main St")
+  const stripName = (str) => {
+    const idx = str.indexOf(' - ');
+    return idx > 0 ? str.slice(idx + 3).trim() : str;
   };
-  
-  const num1 = extractNumber(p1);
-  const num2 = extractNumber(p2);
-  
-  // If both have street numbers and they match, and both contain similar street names
+
+  const p1 = normalize(stripName(prop1));
+  const p2 = normalize(stripName(prop2));
+
+  if (p1 === p2) return true;
+  if (p1.includes(p2) || p2.includes(p1)) return true;
+
+  // Street number + shared keyword match
+  const num1 = (p1.match(/^\d+/) || [])[0];
+  const num2 = (p2.match(/^\d+/) || [])[0];
   if (num1 && num2 && num1 === num2) {
-    // Check if street names overlap (e.g., "main" appears in both)
-    const words1 = p1.split(' ');
-    const words2 = p2.split(' ');
-    const commonWords = words1.filter(w => w.length > 3 && words2.includes(w));
-    if (commonWords.length > 0) return true;
+    const w1 = p1.split(' ');
+    const w2 = p2.split(' ');
+    if (w1.some(w => w.length > 3 && w2.includes(w))) return true;
   }
-  
+
   return false;
 }
 
