@@ -114,7 +114,7 @@
   <h1><span>Rosalia</span> CRM</h1>
   <div class="crm-controls">
     <div class="search-bar"><input type="text" id="crm-search" placeholder="Search name, email, phone..." oninput="crmFilter()"></div>
-    <select id="crm-filter-source" onchange="crmFilter()" style="width:130px;"><option value="">All Sources</option><option value="email">Email</option><option value="zillow">Zillow</option><option value="avail">Avail</option><option value="webflow">Webflow</option><option value="fub">FUB</option><option value="phone">Phone</option></select>
+    <select id="crm-filter-source" onchange="crmFilter()" style="width:130px;"><option value="">All Sources</option><option value="email">Email</option><option value="zillow">Zillow</option><option value="avail">Avail</option><option value="webflow">Webflow</option><option value="fub">FUB</option><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="phone">Phone</option></select>
     <select id="crm-filter-property" onchange="crmFilter()" style="width:160px;"><option value="">All Properties</option></select>
     <div class="view-toggle">
       <button class="active" onclick="crmSetView('pipeline')">Pipeline</button>
@@ -313,7 +313,7 @@ function getFiltered() {
       const hay = ((l.name||'') + ' ' + (l.email||'') + ' ' + (l.phone||'')).toLowerCase();
       if (!hay.includes(search)) return false;
     }
-    if (source && (l.source||'').toLowerCase() !== source) return false;
+    if (source && !(l.source||'').toLowerCase().includes(source.toLowerCase())) return false;
     if (prop && (l.property||'') !== prop) return false;
     return true;
   });
