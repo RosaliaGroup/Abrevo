@@ -1,555 +1,737 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CRM — Rosalia Group</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0A0A0A; --surface: #111111; --surface2: #1A1A1A; --surface3: #222222;
-      --gold: #C9A84C; --gold-dim: #8B7535; --gold-light: #E8D48B;
-      --text: #E8E8E8; --text-dim: #999999; --text-muted: #666666;
-      --border: #2A2A2A; --border-light: #333333;
-      --red: #E74C3C; --green: #2ECC71; --blue: #3498DB; --purple: #9B59B6; --orange: #F39C12;
-      --radius: 8px;
-    }
-    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-    h1,h2,h3 { font-family: 'Syne', sans-serif; font-weight: 600; }
-    .crm-header { padding: 24px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-    .crm-header h1 { font-size: 24px; color: var(--text); }
-    .crm-header h1 span { color: var(--gold); }
-    .crm-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; border: none; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-    .btn-gold { background: var(--gold); color: #0A0A0A; }
-    .btn-gold:hover { background: var(--gold-light); }
-    .btn-outline { background: transparent; color: var(--gold); border: 1px solid var(--gold-dim); }
-    .btn-outline:hover { background: rgba(201,168,76,0.1); }
-    .btn-ghost { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
-    .btn-ghost:hover { color: var(--text); border-color: var(--border-light); }
-    .btn-sm { padding: 5px 12px; font-size: 12px; }
-    .btn-red { background: var(--red); color: #fff; border: none; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    input, select, textarea { width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; outline: none; }
-    input:focus, select:focus, textarea:focus { border-color: var(--gold-dim); }
-    textarea { resize: vertical; min-height: 80px; }
-    label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
-    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
-    .badge-gold { background: rgba(201,168,76,0.15); color: var(--gold); }
-    .badge-green { background: rgba(46,204,113,0.15); color: var(--green); }
-    .badge-blue { background: rgba(52,152,219,0.15); color: var(--blue); }
-    .badge-red { background: rgba(231,76,60,0.15); color: var(--red); }
-    .badge-purple { background: rgba(155,89,182,0.15); color: var(--purple); }
-    .badge-orange { background: rgba(243,156,18,0.15); color: var(--orange); }
-    .badge-gray { background: rgba(153,153,153,0.15); color: var(--text-dim); }
-    .search-bar { max-width: 300px; }
-    .search-bar input { padding-left: 32px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%23666' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8' stroke='%23666' fill='none' stroke-width='2'/%3E%3Cpath d='M21 21l-4.35-4.35' stroke='%23666' stroke-width='2'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: 10px center; }
-    .view-toggle { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-    .view-toggle button { padding: 7px 14px; background: var(--surface); border: none; color: var(--text-dim); font-size: 12px; cursor: pointer; font-family: 'Inter', sans-serif; }
-    .view-toggle button.active { background: var(--gold-dim); color: #0A0A0A; }
-
-    /* Pipeline / Kanban */
-    .pipeline { display: flex; gap: 12px; padding: 24px 32px; overflow-x: auto; min-height: calc(100vh - 140px); }
-    .pipeline-col { min-width: 260px; max-width: 280px; flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; max-height: calc(100vh - 160px); }
-    .pipeline-col-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    .pipeline-col-title { font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
-    .pipeline-col-count { font-size: 11px; background: var(--surface2); color: var(--text-dim); padding: 2px 8px; border-radius: 10px; }
-    .pipeline-cards { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-    .lead-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 12px; cursor: pointer; transition: border-color 0.2s; }
-    .lead-card:hover { border-color: var(--gold-dim); }
-    .lead-card-name { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
-    .lead-card-phone { font-size: 12px; color: var(--text-dim); }
-    .lead-card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
-    .lead-card-time { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
-
-    /* List view */
-    .list-view { padding: 24px 32px; display: none; }
-    .list-view.active { display: block; }
-    .pipeline.active { display: flex; }
-    table { width: 100%; border-collapse: collapse; }
-    th { text-align: left; padding: 10px 14px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); cursor: pointer; }
-    th:hover { color: var(--gold); }
-    td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-dim); }
-    tr:hover td { background: var(--surface2); }
-    tr { cursor: pointer; }
-
-    /* Modal */
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: flex-start; padding: 40px 20px; overflow-y: auto; }
-    .modal-overlay.open { display: flex; }
-    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
-    .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    .modal-header h2 { font-size: 18px; }
-    .modal-close { background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; padding: 4px 8px; }
-    .modal-close:hover { color: var(--text); }
-    .modal-body { padding: 24px; }
-    .modal-section { margin-bottom: 20px; }
-    .modal-section-title { font-size: 11px; color: var(--gold); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .info-item label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
-    .info-item .val { font-size: 14px; color: var(--text); }
-    .timeline-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-    .timeline-item:last-child { border-bottom: none; }
-    .timeline-icon { flex-shrink: 0; font-size: 14px; }
-    .timeline-time { color: var(--text-muted); font-size: 11px; margin-left: auto; white-space: nowrap; }
-    .action-bar { display: flex; gap: 8px; flex-wrap: wrap; padding: 16px 24px; border-top: 1px solid var(--border); }
-    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; background: var(--surface); border: 1px solid var(--gold-dim); border-radius: 6px; color: var(--text); font-size: 13px; z-index: 9999; transform: translateY(80px); opacity: 0; transition: all 0.3s; }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    @media (max-width: 768px) {
-      .pipeline { padding: 16px; }
-      .pipeline-col { min-width: 220px; }
-      .modal { max-width: 100%; border-radius: 0; max-height: 100vh; }
-      .modal-overlay { padding: 0; align-items: stretch; }
-      .info-grid { grid-template-columns: 1fr; }
-      .crm-header { padding: 16px; }
-      .list-view { padding: 16px; }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rosalia CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--gold:#C9A84C;--gold-light:#E8D49A;--gold-dim:rgba(201,168,76,0.15);--bg:#0A0A0A;--bg2:#111;--bg3:#1A1A1A;--bg4:#222;--text:#E8E8E8;--text-muted:#888;--border:rgba(201,168,76,0.2);--red:#E74C3C;--green:#2ECC71;--blue:#3498DB;--orange:#F39C12;--radius:6px;--sidebar-w:220px}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:300}
+h1,h2,h3,h4{font-family:'Cormorant Garamond',serif;font-weight:400}
+a{color:var(--gold);text-decoration:none}
+button{cursor:pointer;font-family:inherit;border:none;outline:none}
+input,select,textarea{font-family:inherit;font-size:14px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+/* Layout */
+.app{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);padding:24px 0;position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column}
+.sidebar-logo{padding:0 20px 24px;text-align:center;border-bottom:1px solid var(--border);margin-bottom:16px}
+.sidebar-logo h2{font-size:18px;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase}
+.sidebar-logo small{font-size:11px;color:var(--text-muted);letter-spacing:0.05em}
+.nav-items{flex:1;padding:0 8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:var(--radius);color:var(--text-muted);font-size:13px;font-weight:400;cursor:pointer;transition:all 0.15s;margin-bottom:2px}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--gold-dim);color:var(--gold)}
+.nav-item svg{width:18px;height:18px;flex-shrink:0}
+.main{flex:1;margin-left:var(--sidebar-w);padding:28px 32px 100px}
+.main-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.main-header h1{font-size:28px;color:#fff}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:var(--radius);font-size:12px;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;transition:all 0.15s}
+.btn-gold{background:var(--gold);color:var(--bg)}
+.btn-gold:hover{background:var(--gold-light)}
+.btn-outline{background:transparent;color:var(--gold);border:1px solid var(--border)}
+.btn-outline:hover{border-color:var(--gold)}
+.btn-sm{padding:6px 12px;font-size:11px}
+.btn-red{background:var(--red);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+/* Cards */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px}
+.stat-card .label{font-size:11px;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px}
+.stat-card .value{font-family:'Cormorant Garamond',serif;font-size:32px;color:var(--gold)}
+.stat-card .sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+/* Table */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:12px 16px;font-size:11px;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;border-bottom:1px solid var(--border);font-weight:500;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;white-space:nowrap}
+tr:hover td{background:rgba(201,168,76,0.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;letter-spacing:0.03em}
+.badge-new{background:rgba(52,152,219,0.15);color:var(--blue)}
+.badge-contacted{background:rgba(243,156,18,0.15);color:var(--orange)}
+.badge-touring{background:rgba(201,168,76,0.15);color:var(--gold)}
+.badge-applied{background:rgba(46,204,113,0.15);color:var(--green)}
+.badge-closed{background:rgba(46,204,113,0.25);color:var(--green)}
+.badge-lost{background:rgba(231,76,60,0.15);color:var(--red)}
+/* Kanban */
+.kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:16px}
+.kanban-col{min-width:220px;max-width:260px;flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;max-height:calc(100vh - 200px)}
+.kanban-col-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.kanban-col-header h4{font-size:13px;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase}
+.kanban-col-header .count{background:var(--bg3);color:var(--gold);font-size:11px;padding:2px 8px;border-radius:10px}
+.kanban-cards{flex:1;overflow-y:auto;padding:10px}
+.kanban-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s}
+.kanban-card:hover{border-color:var(--gold)}
+.kanban-card .name{font-weight:500;color:var(--text);margin-bottom:4px}
+.kanban-card .prop{font-size:12px;color:var(--text-muted)}
+.kanban-card .amount{font-size:12px;color:var(--gold);margin-top:6px}
+/* Agent cards */
+.agent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.agent-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.agent-card h3{font-size:20px;color:#fff;margin-bottom:4px}
+.agent-card .role{font-size:12px;color:var(--text-muted);margin-bottom:16px}
+.agent-stats{display:flex;gap:16px}
+.agent-stat{text-align:center}
+.agent-stat .num{font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--gold)}
+.agent-stat .lbl{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em}
+/* Commissions */
+.comm-tabs{display:flex;gap:4px;margin-bottom:20px}
+.comm-tab{padding:8px 20px;border-radius:var(--radius);font-size:13px;color:var(--text-muted);cursor:pointer;background:transparent;border:1px solid transparent}
+.comm-tab.active{background:var(--gold-dim);color:var(--gold);border-color:var(--border)}
+.comm-tab:hover{color:var(--text)}
+/* Sequence cards */
+.seq-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.seq-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.seq-card h3{font-size:18px;color:#fff;margin-bottom:4px}
+.seq-card .desc{font-size:12px;color:var(--text-muted);margin-bottom:16px}
+.seq-step{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.04);font-size:13px}
+.seq-step .day{color:var(--gold);font-weight:500;min-width:50px}
+.seq-step .type{color:var(--text-muted)}
+/* Filters */
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+.filters select,.filters input{width:auto;min-width:140px}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:8px;width:90%;max-width:560px;max-height:85vh;overflow-y:auto;padding:32px}
+.modal h2{font-size:24px;color:var(--gold);margin-bottom:20px}
+.modal-close{position:absolute;top:16px;right:20px;background:none;color:var(--text-muted);font-size:24px;cursor:pointer}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;letter-spacing:0.04em}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* Lead detail tabs */
+.detail-tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0}
+.detail-tab{padding:8px 16px;font-size:13px;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.detail-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.detail-panel{display:none}
+.detail-panel.active{display:block}
+/* Action btns */
+.action-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:4px;font-size:11px;background:var(--bg3);color:var(--text-muted);border:1px solid var(--border);text-decoration:none;transition:all 0.15s}
+.action-btn:hover{border-color:var(--gold);color:var(--gold)}
+/* Section hide/show */
+.page-section{display:none}
+.page-section.active{display:block}
+/* Mobile */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:200;justify-content:space-around}
+.mobile-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--text-muted);cursor:pointer;padding:4px 8px}
+.mobile-nav-item.active{color:var(--gold)}
+.mobile-nav-item svg{width:20px;height:20px}
+@media(max-width:768px){
+  .sidebar{display:none}
+  .main{margin-left:0;padding:20px 16px 100px}
+  .mobile-nav{display:flex}
+  .stats{grid-template-columns:1fr 1fr}
+  .kanban{flex-direction:column}
+  .kanban-col{min-width:100%;max-width:100%;max-height:none}
+  .form-row{grid-template-columns:1fr}
+  .main-header{flex-direction:column;gap:12px;align-items:flex-start}
+}
+</style>
 </head>
 <body>
-
-<div class="crm-header">
-  <h1><span>Rosalia</span> CRM</h1>
-  <div class="crm-controls">
-    <div class="search-bar"><input type="text" id="crm-search" placeholder="Search name, email, phone..." oninput="crmFilter()"></div>
-    <select id="crm-filter-source" onchange="crmFilter()" style="width:130px;"><option value="">All Sources</option><option value="email">Email</option><option value="zillow">Zillow</option><option value="avail">Avail</option><option value="webflow">Webflow</option><option value="fub">FUB</option><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="phone">Phone</option></select>
-    <select id="crm-filter-property" onchange="crmFilter()" style="width:160px;"><option value="">All Properties</option></select>
-    <div class="view-toggle">
-      <button class="active" onclick="crmSetView('pipeline')">Pipeline</button>
-      <button onclick="crmSetView('list')">List</button>
+<div class="app">
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h2>Rosalia</h2>
+    <small>CRM</small>
+  </div>
+  <div class="nav-items">
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
     </div>
-    <button class="btn btn-gold" onclick="crmLoad()">Refresh</button>
+    <div class="nav-item" onclick="showPage('leads')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Leads
+    </div>
+    <div class="nav-item" onclick="showPage('pipeline')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      Deal Pipeline
+    </div>
+    <div class="nav-item" onclick="showPage('tasks')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Tasks
+    </div>
+    <div class="nav-item" onclick="showPage('agents')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Agents
+    </div>
+    <div class="nav-item" onclick="showPage('commissions')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Commissions
+    </div>
+    <div class="nav-item" onclick="showPage('sequences')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Follow-ups
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile Bottom Nav -->
+<div class="mobile-nav">
+  <div class="mobile-nav-item active" onclick="showPage('dashboard')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Home
+  </div>
+  <div class="mobile-nav-item" onclick="showPage('leads')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    Leads
+  </div>
+  <div class="mobile-nav-item" onclick="showPage('pipeline')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg>
+    Deals
+  </div>
+  <div class="mobile-nav-item" onclick="showPage('tasks')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Tasks
+  </div>
+  <div class="mobile-nav-item" onclick="showPage('agents')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Agents
   </div>
 </div>
 
-<!-- Pipeline View -->
-<div class="pipeline active" id="crm-pipeline"></div>
+<!-- Main Content -->
+<div class="main">
 
-<!-- List View -->
-<div class="list-view" id="crm-list">
-  <div style="overflow-x:auto;">
-    <table>
-      <thead>
-        <tr>
-          <th onclick="crmSort('name')">Name</th>
-          <th onclick="crmSort('phone')">Phone</th>
-          <th onclick="crmSort('email')">Email</th>
-          <th onclick="crmSort('source')">Source</th>
-          <th onclick="crmSort('status')">Status</th>
-          <th onclick="crmSort('created_at')">Created</th>
-          <th>Calls</th>
-          <th>Booking</th>
-        </tr>
-      </thead>
-      <tbody id="crm-list-body"></tbody>
-    </table>
+<!-- DASHBOARD -->
+<div class="page-section active" id="page-dashboard">
+  <div class="main-header"><h1>Dashboard</h1></div>
+  <div class="stats">
+    <div class="stat-card"><div class="label">New Leads Today</div><div class="value" id="stat-new-leads">-</div></div>
+    <div class="stat-card"><div class="label">Active Deals</div><div class="value" id="stat-active-deals">-</div></div>
+    <div class="stat-card"><div class="label">Tours This Week</div><div class="value" id="stat-tours-week">-</div></div>
+    <div class="stat-card"><div class="label">Commission Pending</div><div class="value" id="stat-commission">-</div></div>
   </div>
+  <h2 style="margin-bottom:16px">Recent Leads</h2>
+  <div class="table-wrap"><table><thead><tr><th>Name</th><th>Source</th><th>Property</th><th>Status</th><th>Date</th></tr></thead><tbody id="dash-leads-body"></tbody></table></div>
 </div>
 
-<!-- Lead Modal -->
-<div class="modal-overlay" id="lead-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 id="modal-lead-name">Lead Profile</h2>
-      <button class="modal-close" onclick="closeLeadModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-section">
-        <div class="modal-section-title">Contact Info</div>
-        <div class="info-grid" id="modal-info"></div>
-      </div>
-      <div class="modal-section">
-        <div class="modal-section-title">Details</div>
-        <div class="info-grid" id="modal-details"></div>
-      </div>
-      <div class="modal-section">
-        <div class="modal-section-title">Activity Timeline</div>
-        <div id="modal-timeline" style="max-height:200px;overflow-y:auto;"></div>
-      </div>
-      <div class="modal-section">
-        <div class="modal-section-title">Notes</div>
-        <textarea id="modal-notes" placeholder="Add notes..." rows="3"></textarea>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="saveNotes()">Save Notes</button>
-      </div>
-      <div class="modal-section">
-        <div class="modal-section-title">Assign Agent</div>
-        <select id="modal-agent" onchange="saveAgent()">
-          <option value="">Unassigned</option>
-          <option value="Ana Haynes">Ana Haynes</option>
-          <option value="Leasing Team">Leasing Team</option>
-        </select>
-      </div>
-      <div class="modal-section">
-        <div class="modal-section-title">Update Status</div>
-        <select id="modal-status" onchange="updateStatus()">
-          <option value="new">New</option>
-          <option value="contacted">Contacted</option>
-          <option value="toured">Toured</option>
-          <option value="applied">Applied</option>
-          <option value="rented">Rented</option>
-          <option value="lost">Lost</option>
-          <option value="dnc">DNC</option>
-          <option value="needs_specialist">Specialist</option>
-        </select>
-      </div>
-      <div class="modal-section">
-        <div class="modal-section-title">Schedule Follow-up</div>
-        <div style="display:flex;gap:8px;">
-          <input type="datetime-local" id="modal-followup-date" style="flex:1;">
-          <button class="btn btn-outline btn-sm" onclick="scheduleFollowup()">Schedule</button>
-        </div>
-      </div>
-    </div>
-    <div class="action-bar">
-      <button class="btn btn-outline btn-sm" onclick="crmSendEmail()">Send Email</button>
-      <button class="btn btn-outline btn-sm" onclick="crmTriggerCall()">Trigger Call</button>
-      <button class="btn btn-outline btn-sm" onclick="crmSendSMS()">Send SMS</button>
-      <button class="btn btn-outline btn-sm" onclick="crmCopyCancelLink()">Copy Cancel Link</button>
-    </div>
+<!-- LEADS -->
+<div class="page-section" id="page-leads">
+  <div class="main-header">
+    <h1>Leads</h1>
+    <button class="btn btn-gold" onclick="openModal('add-lead-modal')">+ Add Lead</button>
   </div>
+  <div class="filters">
+    <select id="lead-filter-status" onchange="loadLeads()"><option value="">All Status</option><option value="new">New</option><option value="contacted">Contacted</option><option value="touring">Touring</option><option value="applied">Applied</option><option value="closed">Closed</option><option value="lost">Lost</option></select>
+    <select id="lead-filter-source" onchange="loadLeads()"><option value="">All Sources</option><option value="email">Email</option><option value="zillow">Zillow</option><option value="avail">Avail</option><option value="webflow">Webflow</option><option value="fub">FUB</option><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="phone">Phone</option></select>
+    <select id="lead-filter-agent" onchange="loadLeads()"><option value="">All Agents</option></select>
+    <input type="text" id="lead-search" placeholder="Search name or email..." oninput="loadLeads()" style="min-width:200px">
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Source</th><th>Property</th><th>Status</th><th>Assigned</th><th>Last Contact</th><th>Actions</th></tr></thead><tbody id="leads-body"></tbody></table></div>
 </div>
 
-<!-- SMS Modal -->
-<div class="modal-overlay" id="sms-modal">
-  <div class="modal" style="max-width:480px;">
-    <div class="modal-header"><h2>Send SMS</h2><button class="modal-close" onclick="document.getElementById('sms-modal').classList.remove('open')">&times;</button></div>
-    <div class="modal-body">
-      <label>To</label><input type="text" id="sms-to" readonly style="margin-bottom:12px;">
-      <label>Message</label><textarea id="sms-msg" rows="4"></textarea>
-      <button class="btn btn-gold" style="margin-top:12px;width:100%;" onclick="crmSendSMSConfirm()">Send SMS</button>
+<!-- DEAL PIPELINE -->
+<div class="page-section" id="page-pipeline">
+  <div class="main-header">
+    <h1>Deal Pipeline</h1>
+    <button class="btn btn-gold" onclick="openModal('add-deal-modal')">+ Add Deal</button>
+  </div>
+  <div class="kanban" id="kanban-board"></div>
+</div>
+
+<!-- TASKS -->
+<div class="page-section" id="page-tasks">
+  <div class="main-header">
+    <h1>Tasks</h1>
+    <button class="btn btn-gold" onclick="openModal('add-task-modal')">+ Add Task</button>
+  </div>
+  <div class="filters">
+    <select id="task-filter-status" onchange="loadTasks()"><option value="">All</option><option value="pending">Pending</option><option value="completed">Completed</option><option value="overdue">Overdue</option></select>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>Task</th><th>Lead</th><th>Assigned</th><th>Due Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="tasks-body"></tbody></table></div>
+</div>
+
+<!-- AGENTS -->
+<div class="page-section" id="page-agents">
+  <div class="main-header">
+    <h1>Agents</h1>
+    <button class="btn btn-gold" onclick="openModal('add-agent-modal')">+ Add Agent</button>
+  </div>
+  <div class="agent-grid" id="agents-grid"></div>
+</div>
+
+<!-- COMMISSIONS -->
+<div class="page-section" id="page-commissions">
+  <div class="main-header"><h1>Commissions</h1></div>
+  <div class="comm-tabs">
+    <div class="comm-tab active" onclick="showCommTab('overview')">Overview</div>
+    <div class="comm-tab" onclick="showCommTab('pending')">Pending</div>
+    <div class="comm-tab" onclick="showCommTab('paid')">Paid</div>
+    <div class="comm-tab" onclick="showCommTab('structure')">Structure</div>
+  </div>
+  <div id="comm-overview" class="comm-panel">
+    <div class="stats">
+      <div class="stat-card"><div class="label">Total Earned (MTD)</div><div class="value" id="comm-mtd">$0</div></div>
+      <div class="stat-card"><div class="label">Pending Payout</div><div class="value" id="comm-pending">$0</div></div>
+      <div class="stat-card"><div class="label">Paid YTD</div><div class="value" id="comm-ytd">$0</div></div>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Deal</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody id="comm-body"></tbody></table></div>
+  </div>
+  <div id="comm-pending-panel" class="comm-panel" style="display:none">
+    <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Deal</th><th>Amount</th><th>Due Date</th><th>Actions</th></tr></thead><tbody id="comm-pending-body"></tbody></table></div>
+  </div>
+  <div id="comm-paid-panel" class="comm-panel" style="display:none">
+    <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Deal</th><th>Amount</th><th>Paid Date</th></tr></thead><tbody id="comm-paid-body"></tbody></table></div>
+  </div>
+  <div id="comm-structure-panel" class="comm-panel" style="display:none">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:500px">
+      <h3 style="color:var(--gold);margin-bottom:16px">Commission Structure</h3>
+      <div style="margin-bottom:12px"><strong>Lease Signed:</strong> <span style="color:var(--gold)">$500</span> per unit</div>
+      <div style="margin-bottom:12px"><strong>Move-In Bonus:</strong> <span style="color:var(--gold)">$250</span> per unit</div>
+      <div style="margin-bottom:12px"><strong>Renewal:</strong> <span style="color:var(--gold)">$200</span> per renewal</div>
+      <div><strong>Referral:</strong> <span style="color:var(--gold)">$100</span> per qualified referral</div>
     </div>
   </div>
 </div>
 
-<!-- Email Modal -->
-<div class="modal-overlay" id="email-modal">
-  <div class="modal" style="max-width:540px;">
-    <div class="modal-header"><h2>Send Email</h2><button class="modal-close" onclick="document.getElementById('email-modal').classList.remove('open')">&times;</button></div>
-    <div class="modal-body">
-      <label>To</label><input type="text" id="email-to" readonly style="margin-bottom:12px;">
-      <label>Subject</label><input type="text" id="email-subject" style="margin-bottom:12px;">
-      <label>Body</label><textarea id="email-body" rows="6"></textarea>
-      <button class="btn btn-gold" style="margin-top:12px;width:100%;" onclick="crmSendEmailConfirm()">Send Email</button>
-    </div>
-  </div>
+<!-- FOLLOW-UP SEQUENCES -->
+<div class="page-section" id="page-sequences">
+  <div class="main-header"><h1>Follow-up Sequences</h1></div>
+  <div class="seq-grid" id="seq-grid"></div>
 </div>
 
-<div class="toast" id="toast"></div>
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ADD LEAD MODAL -->
+<div class="modal-overlay" id="add-lead-modal" onclick="if(event.target===this)closeModal(this.id)">
+<div class="modal">
+  <h2>Add Lead</h2>
+  <div class="form-row">
+    <div class="form-group"><label>Full Name</label><input id="al-name"></div>
+    <div class="form-group"><label>Phone</label><input id="al-phone"></div>
+  </div>
+  <div class="form-group"><label>Email</label><input id="al-email" type="email"></div>
+  <div class="form-row">
+    <div class="form-group"><label>Source</label><select id="al-source"><option value="email">Email</option><option value="phone">Phone</option><option value="zillow">Zillow</option><option value="webflow">Webflow</option><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="fub">FUB</option><option value="walk-in">Walk-in</option></select></div>
+    <div class="form-group"><label>Property</label><input id="al-property" placeholder="e.g. 473 Main St"></div>
+  </div>
+  <div class="form-group"><label>Assign To</label><select id="al-agent"><option value="">Unassigned</option></select></div>
+  <div class="form-group"><label>Notes</label><textarea id="al-notes" rows="3"></textarea></div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+    <button class="btn btn-outline" onclick="closeModal('add-lead-modal')">Cancel</button>
+    <button class="btn btn-gold" onclick="saveLead()">Save Lead</button>
+  </div>
+</div>
+</div>
+
+<!-- ADD DEAL MODAL -->
+<div class="modal-overlay" id="add-deal-modal" onclick="if(event.target===this)closeModal(this.id)">
+<div class="modal">
+  <h2>Add Deal</h2>
+  <div class="form-group"><label>Lead</label><select id="ad-lead"></select></div>
+  <div class="form-row">
+    <div class="form-group"><label>Property</label><input id="ad-property"></div>
+    <div class="form-group"><label>Monthly Rent</label><input id="ad-rent" type="number" placeholder="2500"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Stage</label><select id="ad-stage"><option>inquiry</option><option>toured</option><option>applied</option><option>approved</option><option>lease_sent</option><option>signed</option><option>moved_in</option><option>lost</option></select></div>
+    <div class="form-group"><label>Assigned Agent</label><select id="ad-agent"><option value="">Unassigned</option></select></div>
+  </div>
+  <div class="form-group"><label>Notes</label><textarea id="ad-notes" rows="2"></textarea></div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+    <button class="btn btn-outline" onclick="closeModal('add-deal-modal')">Cancel</button>
+    <button class="btn btn-gold" onclick="saveDeal()">Save Deal</button>
+  </div>
+</div>
+</div>
+
+<!-- ADD TASK MODAL -->
+<div class="modal-overlay" id="add-task-modal" onclick="if(event.target===this)closeModal(this.id)">
+<div class="modal">
+  <h2>Add Task</h2>
+  <div class="form-group"><label>Task Title</label><input id="at-title"></div>
+  <div class="form-row">
+    <div class="form-group"><label>Lead</label><select id="at-lead"><option value="">None</option></select></div>
+    <div class="form-group"><label>Assigned To</label><select id="at-agent"><option value="">Unassigned</option></select></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Due Date</label><input id="at-due" type="date"></div>
+    <div class="form-group"><label>Priority</label><select id="at-priority"><option>normal</option><option>high</option><option>low</option></select></div>
+  </div>
+  <div class="form-group"><label>Description</label><textarea id="at-desc" rows="2"></textarea></div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+    <button class="btn btn-outline" onclick="closeModal('add-task-modal')">Cancel</button>
+    <button class="btn btn-gold" onclick="saveTask()">Save Task</button>
+  </div>
+</div>
+</div>
+
+<!-- ADD AGENT MODAL -->
+<div class="modal-overlay" id="add-agent-modal" onclick="if(event.target===this)closeModal(this.id)">
+<div class="modal">
+  <h2>Add Agent</h2>
+  <div class="form-row">
+    <div class="form-group"><label>Full Name</label><input id="aa-name"></div>
+    <div class="form-group"><label>Email</label><input id="aa-email" type="email"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Phone</label><input id="aa-phone"></div>
+    <div class="form-group"><label>Role</label><select id="aa-role"><option>leasing_agent</option><option>manager</option><option>admin</option></select></div>
+  </div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+    <button class="btn btn-outline" onclick="closeModal('add-agent-modal')">Cancel</button>
+    <button class="btn btn-gold" onclick="saveAgent()">Save Agent</button>
+  </div>
+</div>
+</div>
+
+<!-- LEAD DETAIL MODAL -->
+<div class="modal-overlay" id="lead-detail-modal" onclick="if(event.target===this)closeModal(this.id)">
+<div class="modal" style="max-width:640px">
+  <h2 id="ld-name" style="margin-bottom:4px">Lead</h2>
+  <div id="ld-contact" style="color:var(--text-muted);font-size:13px;margin-bottom:20px"></div>
+  <div class="detail-tabs">
+    <div class="detail-tab active" onclick="showDetailTab('info')">Info</div>
+    <div class="detail-tab" onclick="showDetailTab('activity')">Activity</div>
+    <div class="detail-tab" onclick="showDetailTab('tasks')">Tasks</div>
+  </div>
+  <div class="detail-panel active" id="detail-info">
+    <div id="ld-info-content" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"></div>
+  </div>
+  <div class="detail-panel" id="detail-activity">
+    <div id="ld-activity-list" style="max-height:300px;overflow-y:auto"></div>
+  </div>
+  <div class="detail-panel" id="detail-tasks">
+    <div id="ld-tasks-list"></div>
+  </div>
+</div>
+</div>
 
 <script>
-const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
-const VAPI_KEY = '064f441d-a388-4404-8b6c-05e91e90f1ff';
-const TEXTBELT_KEY = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
-const VAPI_ASSISTANT_ID = '1cae5323-6b83-4434-8461-6330472da140';
-const VAPI_PHONE_ID = '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
+// ── SUPABASE CONFIG ──
+const SB_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
+const SB_HEADERS = { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' };
 
-let crmLeads = [];
-let crmBookings = [];
-let crmTasks = [];
-let currentLead = null;
-let crmSortField = 'created_at';
-let crmSortDir = -1;
-
-const STAGES = [
-  { key: 'new', label: 'New', color: 'var(--blue)' },
-  { key: 'contacted', label: 'Contacted', color: 'var(--gold)' },
-  { key: 'toured', label: 'Toured', color: 'var(--purple)' },
-  { key: 'applied', label: 'Applied', color: 'var(--orange)' },
-  { key: 'rented', label: 'Rented', color: 'var(--green)' },
-  { key: 'lost', label: 'Lost', color: 'var(--text-muted)' },
-  { key: 'dnc', label: 'DNC', color: 'var(--red)' }
-];
-
-const SOURCE_BADGE = { email: 'badge-blue', zillow: 'badge-purple', avail: 'badge-green', webflow: 'badge-gold', fub: 'badge-orange', phone: 'badge-gray' };
-
-function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
-function timeAgo(d) { if (!d) return '--'; const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000); if (s < 60) return s + 's'; if (s < 3600) return Math.floor(s/60) + 'm'; if (s < 86400) return Math.floor(s/3600) + 'h'; return Math.floor(s/86400) + 'd ago'; }
-
-async function sbFetch(table, query) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } });
-  return r.ok ? r.json() : [];
+async function sb(path, opts) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, { headers: SB_HEADERS, ...opts });
+  if (opts && opts.method === 'DELETE') return null;
+  const text = await res.text();
+  try { return JSON.parse(text); } catch(e) { return null; }
 }
 
-async function sbPatch(table, filter, data) {
-  await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
-    method: 'PATCH',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+// ── STATE ──
+let allLeads = [], allDeals = [], allAgents = [], allTasks = [], allCommissions = [], allSequences = [];
+
+// ── NAVIGATION ──
+function showPage(page) {
+  document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.mobile-nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => { if (n.textContent.trim().toLowerCase().replace(/[\-\s]/g,'').includes(page)) n.classList.add('active'); });
+  document.querySelectorAll('.mobile-nav-item').forEach(n => { const t = n.textContent.trim().toLowerCase(); if ((page==='dashboard' && t==='home') || t===page || (page==='pipeline' && t==='deals')) n.classList.add('active'); });
+  if (page === 'leads') loadLeads();
+  if (page === 'pipeline') loadPipeline();
+  if (page === 'tasks') loadTasks();
+  if (page === 'agents') loadAgents();
+  if (page === 'commissions') loadCommissions();
+  if (page === 'sequences') loadSequences();
+}
+
+// ── MODAL ──
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── HELPERS ──
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function fmtDate(d) { if (!d) return '-'; return new Date(d).toLocaleDateString(); }
+function fmtPhone(p) { if (!p) return '-'; const d = p.replace(/\D/g,''); if (d.length===11 && d[0]==='1') return '('+d.slice(1,4)+') '+d.slice(4,7)+'-'+d.slice(7); if (d.length===10) return '('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6); return p; }
+function statusBadge(s) { const cls = {'new':'badge-new','contacted':'badge-contacted','touring':'badge-touring','applied':'badge-applied','closed':'badge-closed','lost':'badge-lost'}; return '<span class="badge '+(cls[s]||'badge-new')+'">'+esc(s||'new')+'</span>'; }
+function agentName(id) { const a = allAgents.find(a => a.id === id); return a ? a.name : 'Unassigned'; }
+
+// ── DASHBOARD ──
+async function loadDashboard() {
+  const today = new Date().toISOString().split('T')[0];
+  const weekAgo = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
+
+  allLeads = await sb('leads?order=created_at.desc&limit=500') || [];
+  allAgents = await sb('agents?order=name.asc') || [];
+  allDeals = await sb('deals?order=created_at.desc') || [];
+  allCommissions = await sb('commissions?order=created_at.desc') || [];
+
+  // Populate agent dropdowns
+  populateAgentDropdowns();
+
+  const newToday = allLeads.filter(l => l.created_at && l.created_at.startsWith(today)).length;
+  const activeDeals = allDeals.filter(d => !['moved_in','lost'].includes(d.stage)).length;
+  const bookings = await sb('bookings?preferred_date=gte.' + weekAgo + '&preferred_date=lte.' + new Date(Date.now()+7*86400000).toISOString().split('T')[0] + '&limit=100') || [];
+  const pendingComm = allCommissions.filter(c => c.status === 'pending').reduce((s,c) => s + (c.amount||0), 0);
+
+  document.getElementById('stat-new-leads').textContent = newToday;
+  document.getElementById('stat-active-deals').textContent = activeDeals;
+  document.getElementById('stat-tours-week').textContent = bookings.length;
+  document.getElementById('stat-commission').textContent = '$' + pendingComm.toLocaleString();
+
+  const tbody = document.getElementById('dash-leads-body');
+  tbody.innerHTML = allLeads.slice(0,10).map(l => '<tr onclick="openLeadDetail(\''+l.id+'\')"><td>'+esc(l.name)+'</td><td>'+esc(l.source)+'</td><td>'+esc(l.property||'-')+'</td><td>'+statusBadge(l.status)+'</td><td>'+fmtDate(l.created_at)+'</td></tr>').join('');
+}
+
+function populateAgentDropdowns() {
+  const selects = ['al-agent','ad-agent','at-agent','lead-filter-agent'];
+  selects.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const val = el.value;
+    const first = el.options[0].outerHTML;
+    el.innerHTML = first + allAgents.map(a => '<option value="'+a.id+'">'+esc(a.name)+'</option>').join('');
+    el.value = val;
   });
 }
 
-async function crmLoad() {
-  const [leads, bookings, tasks] = await Promise.all([
-    sbFetch('leads', 'select=*&order=created_at.desc&limit=500'),
-    sbFetch('bookings', 'select=*&order=created_at.desc&limit=200'),
-    sbFetch('tasks', 'select=*&order=created_at.desc&limit=200')
-  ]);
-  crmLeads = Array.isArray(leads) ? leads : [];
-  crmBookings = Array.isArray(bookings) ? bookings : [];
-  crmTasks = Array.isArray(tasks) ? tasks : [];
+// ── LEADS ──
+async function loadLeads() {
+  const status = document.getElementById('lead-filter-status').value;
+  const source = document.getElementById('lead-filter-source').value;
+  const agent = document.getElementById('lead-filter-agent').value;
+  const search = (document.getElementById('lead-search').value||'').toLowerCase();
 
-  // Populate property filter
-  const props = new Set();
-  crmLeads.forEach(l => { if (l.property) props.add(l.property); });
-  const propSel = document.getElementById('crm-filter-property');
-  const currentProp = propSel.value;
-  propSel.innerHTML = '<option value="">All Properties</option>';
-  [...props].sort().forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; propSel.appendChild(o); });
-  propSel.value = currentProp;
+  let filtered = allLeads;
+  if (status) filtered = filtered.filter(l => (l.status||'').toLowerCase() === status);
+  if (source) filtered = filtered.filter(l => (l.source||'').toLowerCase().includes(source));
+  if (agent) filtered = filtered.filter(l => l.assigned_to === agent);
+  if (search) filtered = filtered.filter(l => ((l.name||'')+(l.email||'')).toLowerCase().includes(search));
 
-  crmFilter();
+  const tbody = document.getElementById('leads-body');
+  tbody.innerHTML = filtered.map(l => {
+    const ph = l.phone ? fmtPhone(l.phone) : '-';
+    const actions = (l.phone ? '<a class="action-btn" href="tel:'+esc(l.phone)+'">Call</a> <a class="action-btn" href="sms:'+esc(l.phone)+'">Text</a> ' : '') + '<a class="action-btn" href="mailto:'+esc(l.email||'')+'">Email</a>';
+    return '<tr onclick="openLeadDetail(\''+l.id+'\')"><td>'+esc(l.name||'Unknown')+'</td><td>'+esc(l.email||'-')+'<br><small style="color:var(--text-muted)">'+ph+'</small></td><td>'+esc(l.source||'-')+'</td><td>'+esc(l.property||'-')+'</td><td>'+statusBadge(l.status)+'</td><td>'+agentName(l.assigned_to)+'</td><td>'+fmtDate(l.last_contact_at||l.replied_at||l.created_at)+'</td><td onclick="event.stopPropagation()">'+actions+'</td></tr>';
+  }).join('');
 }
 
-function getFiltered() {
-  const search = (document.getElementById('crm-search').value || '').toLowerCase();
-  const source = document.getElementById('crm-filter-source').value;
-  const prop = document.getElementById('crm-filter-property').value;
-  return crmLeads.filter(l => {
-    if (search) {
-      const hay = ((l.name||'') + ' ' + (l.email||'') + ' ' + (l.phone||'')).toLowerCase();
-      if (!hay.includes(search)) return false;
-    }
-    if (source && !(l.source||'').toLowerCase().includes(source.toLowerCase())) return false;
-    if (prop && (l.property||'') !== prop) return false;
-    return true;
-  });
+// ── LEAD DETAIL ──
+async function openLeadDetail(id) {
+  const lead = allLeads.find(l => l.id === id);
+  if (!lead) return;
+  document.getElementById('ld-name').textContent = lead.name || 'Unknown';
+  document.getElementById('ld-contact').innerHTML = esc(lead.email||'') + (lead.phone ? ' &middot; ' + fmtPhone(lead.phone) : '') + (lead.phone ? ' &middot; <a href="tel:'+esc(lead.phone)+'">Call</a> &middot; <a href="sms:'+esc(lead.phone)+'">Text</a>' : '');
+
+  const info = document.getElementById('ld-info-content');
+  info.innerHTML = [
+    ['Status', statusBadge(lead.status)],
+    ['Source', esc(lead.source)],
+    ['Property', esc(lead.property||'-')],
+    ['Assigned', agentName(lead.assigned_to)],
+    ['Created', fmtDate(lead.created_at)],
+    ['Last Reply', fmtDate(lead.replied_at)],
+    ['Follow-ups', lead.follow_up_count||0],
+    ['Called', fmtDate(lead.called_at)],
+  ].map(([k,v]) => '<div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">'+k+'</div><div>'+v+'</div></div>').join('');
+  if (lead.notes) info.innerHTML += '<div style="grid-column:span 2;margin-top:8px;padding-top:12px;border-top:1px solid var(--border)"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Notes</div><div style="white-space:pre-wrap;font-size:13px">'+esc(lead.notes)+'</div></div>';
+
+  // Activity
+  const activities = await sb('activities?lead_id=eq.'+id+'&order=created_at.desc&limit=20') || [];
+  document.getElementById('ld-activity-list').innerHTML = activities.length ? activities.map(a => '<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><div style="font-size:12px;color:var(--text-muted)">'+fmtDate(a.created_at)+' &middot; '+esc(a.type||'note')+'</div><div style="font-size:13px;margin-top:4px">'+esc(a.description)+'</div></div>').join('') : '<p style="color:var(--text-muted)">No activity recorded</p>';
+
+  // Tasks
+  const tasks = allTasks.filter(t => t.lead_id === id);
+  document.getElementById('ld-tasks-list').innerHTML = tasks.length ? tasks.map(t => '<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;justify-content:space-between"><div><div style="font-size:13px">'+esc(t.title)+'</div><div style="font-size:12px;color:var(--text-muted)">Due: '+fmtDate(t.due_date)+'</div></div><div>'+statusBadge(t.status)+'</div></div>').join('') : '<p style="color:var(--text-muted)">No tasks</p>';
+
+  showDetailTab('info');
+  openModal('lead-detail-modal');
 }
 
-function crmFilter() {
-  const filtered = getFiltered();
-  renderPipeline(filtered);
-  renderList(filtered);
+function showDetailTab(tab) {
+  document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.detail-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('.detail-tab:nth-child('+(tab==='info'?1:tab==='activity'?2:3)+')').classList.add('active');
+  document.getElementById('detail-'+tab).classList.add('active');
 }
 
-function crmSetView(v) {
-  document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
-  if (v === 'pipeline') {
-    document.getElementById('crm-pipeline').style.display = 'flex';
-    document.getElementById('crm-list').style.display = 'none';
-    document.querySelector('.view-toggle button:first-child').classList.add('active');
-  } else {
-    document.getElementById('crm-pipeline').style.display = 'none';
-    document.getElementById('crm-list').style.display = 'block';
-    document.querySelector('.view-toggle button:last-child').classList.add('active');
+// ── PIPELINE ──
+const STAGES = ['inquiry','toured','applied','approved','lease_sent','signed','moved_in','lost'];
+const STAGE_LABELS = {inquiry:'Inquiry',toured:'Toured',applied:'Applied',approved:'Approved',lease_sent:'Lease Sent',signed:'Signed',moved_in:'Moved In',lost:'Lost'};
+
+async function loadPipeline() {
+  if (!allDeals.length) allDeals = await sb('deals?order=created_at.desc') || [];
+  const board = document.getElementById('kanban-board');
+  board.innerHTML = STAGES.map(stage => {
+    const deals = allDeals.filter(d => d.stage === stage);
+    return '<div class="kanban-col"><div class="kanban-col-header"><h4>'+STAGE_LABELS[stage]+'</h4><span class="count">'+deals.length+'</span></div><div class="kanban-cards">'+deals.map(d => {
+      const lead = allLeads.find(l => l.id === d.lead_id);
+      return '<div class="kanban-card" onclick="openDealDetail(\''+d.id+'\')"><div class="name">'+esc(lead?.name||d.lead_name||'Unknown')+'</div><div class="prop">'+esc(d.property||'-')+'</div>'+(d.monthly_rent?'<div class="amount">$'+Number(d.monthly_rent).toLocaleString()+'/mo</div>':'')+'</div>';
+    }).join('')+'</div></div>';
+  }).join('');
+}
+
+function openDealDetail(id) {
+  // For now, just log — can expand later
+  const deal = allDeals.find(d => d.id === id);
+  if (deal && deal.lead_id) openLeadDetail(deal.lead_id);
+}
+
+// ── TASKS ──
+async function loadTasks() {
+  allTasks = await sb('tasks?order=due_date.asc') || [];
+  const filter = document.getElementById('task-filter-status').value;
+  const now = new Date().toISOString().split('T')[0];
+  let filtered = allTasks;
+  if (filter === 'pending') filtered = filtered.filter(t => t.status !== 'completed');
+  if (filter === 'completed') filtered = filtered.filter(t => t.status === 'completed');
+  if (filter === 'overdue') filtered = filtered.filter(t => t.status !== 'completed' && t.due_date && t.due_date < now);
+
+  document.getElementById('tasks-body').innerHTML = filtered.map(t => {
+    const lead = allLeads.find(l => l.id === t.lead_id);
+    const overdue = t.status !== 'completed' && t.due_date && t.due_date < now;
+    return '<tr><td>'+esc(t.title)+'</td><td>'+esc(lead?.name||'-')+'</td><td>'+agentName(t.assigned_to)+'</td><td style="'+(overdue?'color:var(--red)':'')+'">'+ fmtDate(t.due_date)+(overdue?' ⚠':'')+'</td><td>'+statusBadge(t.status||'pending')+'</td><td>'+(t.status!=='completed'?'<button class="btn btn-sm btn-green" onclick="completeTask(\''+t.id+'\')">Done</button>':'✓')+'</td></tr>';
+  }).join('');
+}
+
+async function completeTask(id) {
+  await sb('tasks?id=eq.'+id, { method:'PATCH', body: JSON.stringify({status:'completed',completed_at:new Date().toISOString()}) });
+  loadTasks();
+}
+
+// ── AGENTS ──
+async function loadAgents() {
+  if (!allAgents.length) allAgents = await sb('agents?order=name.asc') || [];
+  const grid = document.getElementById('agents-grid');
+  grid.innerHTML = allAgents.map(a => {
+    const leads = allLeads.filter(l => l.assigned_to === a.id).length;
+    const deals = allDeals.filter(d => d.agent_id === a.id).length;
+    const signed = allDeals.filter(d => d.agent_id === a.id && d.stage === 'signed').length;
+    return '<div class="agent-card"><h3>'+esc(a.name)+'</h3><div class="role">'+esc(a.role||'Agent')+'</div>'+(a.phone?'<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">'+fmtPhone(a.phone)+' &middot; '+esc(a.email||'')+'</div>':'')+'<div class="agent-stats"><div class="agent-stat"><div class="num">'+leads+'</div><div class="lbl">Leads</div></div><div class="agent-stat"><div class="num">'+deals+'</div><div class="lbl">Deals</div></div><div class="agent-stat"><div class="num">'+signed+'</div><div class="lbl">Signed</div></div></div></div>';
+  }).join('') || '<p style="color:var(--text-muted)">No agents yet. Add one to get started.</p>';
+}
+
+// ── COMMISSIONS ──
+async function loadCommissions() {
+  if (!allCommissions.length) allCommissions = await sb('commissions?order=created_at.desc') || [];
+  const pending = allCommissions.filter(c => c.status === 'pending');
+  const paid = allCommissions.filter(c => c.status === 'paid');
+  const now = new Date();
+  const mtd = allCommissions.filter(c => { const d = new Date(c.created_at); return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); }).reduce((s,c)=>s+(c.amount||0),0);
+  const ytd = paid.reduce((s,c)=>s+(c.amount||0),0);
+
+  document.getElementById('comm-mtd').textContent = '$' + mtd.toLocaleString();
+  document.getElementById('comm-pending').textContent = '$' + pending.reduce((s,c)=>s+(c.amount||0),0).toLocaleString();
+  document.getElementById('comm-ytd').textContent = '$' + ytd.toLocaleString();
+
+  document.getElementById('comm-body').innerHTML = allCommissions.slice(0,20).map(c => '<tr><td>'+agentName(c.agent_id)+'</td><td>'+esc(c.deal_label||'-')+'</td><td style="color:var(--gold)">$'+Number(c.amount||0).toLocaleString()+'</td><td>'+statusBadge(c.status)+'</td><td>'+fmtDate(c.created_at)+'</td></tr>').join('');
+  document.getElementById('comm-pending-body').innerHTML = pending.map(c => '<tr><td>'+agentName(c.agent_id)+'</td><td>'+esc(c.deal_label||'-')+'</td><td style="color:var(--gold)">$'+Number(c.amount||0).toLocaleString()+'</td><td>'+fmtDate(c.due_date)+'</td><td><button class="btn btn-sm btn-green" onclick="markPaid(\''+c.id+'\')">Mark Paid</button></td></tr>').join('');
+  document.getElementById('comm-paid-body').innerHTML = paid.map(c => '<tr><td>'+agentName(c.agent_id)+'</td><td>'+esc(c.deal_label||'-')+'</td><td style="color:var(--gold)">$'+Number(c.amount||0).toLocaleString()+'</td><td>'+fmtDate(c.paid_at)+'</td></tr>').join('');
+}
+
+async function markPaid(id) {
+  await sb('commissions?id=eq.'+id, { method:'PATCH', body: JSON.stringify({status:'paid',paid_at:new Date().toISOString()}) });
+  allCommissions = [];
+  loadCommissions();
+}
+
+function showCommTab(tab) {
+  document.querySelectorAll('.comm-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.comm-panel').forEach(p => p.style.display = 'none');
+  event.target.classList.add('active');
+  const panels = {overview:'comm-overview',pending:'comm-pending-panel',paid:'comm-paid-panel',structure:'comm-structure-panel'};
+  document.getElementById(panels[tab]).style.display = 'block';
+}
+
+// ── SEQUENCES ──
+async function loadSequences() {
+  allSequences = await sb('follow_up_sequences?order=name.asc') || [];
+  const grid = document.getElementById('seq-grid');
+  if (!allSequences.length) {
+    grid.innerHTML = '<p style="color:var(--text-muted)">No follow-up sequences configured.</p>';
+    return;
   }
+  grid.innerHTML = allSequences.map(seq => {
+    const steps = Array.isArray(seq.steps) ? seq.steps : [];
+    return '<div class="seq-card"><h3>'+esc(seq.name)+'</h3><div class="desc">'+esc(seq.description||'')+'</div>'+steps.map((st,i) => '<div class="seq-step"><span class="day">Day '+st.day+'</span><span class="type">'+esc(st.type||'email')+'</span><span>'+esc(st.label||st.template||'Step '+(i+1))+'</span></div>').join('')+'</div>';
+  }).join('');
 }
 
-function renderPipeline(leads) {
-  const el = document.getElementById('crm-pipeline');
-  let html = '';
-  STAGES.forEach(stage => {
-    const stageLeads = leads.filter(l => (l.status || 'new') === stage.key);
-    html += `<div class="pipeline-col">
-      <div class="pipeline-col-header">
-        <span class="pipeline-col-title" style="color:${stage.color}">${stage.label}</span>
-        <span class="pipeline-col-count">${stageLeads.length}</span>
-      </div>
-      <div class="pipeline-cards">`;
-    stageLeads.forEach(l => {
-      const srcBadge = SOURCE_BADGE[(l.source||'').toLowerCase()] || 'badge-gray';
-      html += `<div class="lead-card" onclick="openLeadModal('${l.id}')">
-        <div class="lead-card-name">${esc(l.name || 'Unknown')}</div>
-        <div class="lead-card-phone">${esc(l.phone || l.email || '--')}</div>
-        <div class="lead-card-meta">
-          <span class="badge ${srcBadge}">${esc(l.source || 'unknown')}</span>
-          ${l.property ? '<span class="badge badge-gold" style="font-size:10px;">' + esc(l.property.split(',')[0].split('-')[0].trim()) + '</span>' : ''}
-        </div>
-        <div class="lead-card-time">${timeAgo(l.created_at)}</div>
-      </div>`;
-    });
-    html += '</div></div>';
-  });
-  el.innerHTML = html;
+// ── SAVE FUNCTIONS ──
+async function saveLead() {
+  const data = {
+    name: document.getElementById('al-name').value.trim(),
+    email: document.getElementById('al-email').value.trim(),
+    phone: document.getElementById('al-phone').value.trim() || null,
+    source: document.getElementById('al-source').value,
+    property: document.getElementById('al-property').value.trim() || null,
+    assigned_to: document.getElementById('al-agent').value || null,
+    notes: document.getElementById('al-notes').value.trim() || null,
+    status: 'new',
+    client: 'rosalia',
+    created_at: new Date().toISOString(),
+  };
+  if (!data.name && !data.email) return alert('Name or email required');
+  await sb('leads', { method:'POST', headers:{...SB_HEADERS, Prefer:'return=representation'}, body: JSON.stringify(data) });
+  closeModal('add-lead-modal');
+  allLeads = await sb('leads?order=created_at.desc&limit=500') || [];
+  loadLeads();
 }
 
-function renderList(leads) {
-  const sorted = [...leads].sort((a, b) => {
-    const av = a[crmSortField] || '';
-    const bv = b[crmSortField] || '';
-    return av < bv ? -crmSortDir : av > bv ? crmSortDir : 0;
-  });
-  const body = document.getElementById('crm-list-body');
-  let html = '';
-  sorted.forEach(l => {
-    const booking = crmBookings.find(b => b.phone === l.phone || b.email === l.email);
-    const statusBadge = { new: 'badge-blue', contacted: 'badge-gold', toured: 'badge-purple', applied: 'badge-orange', rented: 'badge-green', lost: 'badge-gray', dnc: 'badge-red', needs_specialist: 'badge-red' };
-    html += `<tr onclick="openLeadModal('${l.id}')">
-      <td style="color:var(--text);font-weight:500;">${esc(l.name || 'Unknown')}</td>
-      <td>${esc(l.phone || '--')}</td>
-      <td>${esc(l.email || '--')}</td>
-      <td><span class="badge ${SOURCE_BADGE[(l.source||'').toLowerCase()] || 'badge-gray'}">${esc(l.source || '--')}</span></td>
-      <td><span class="badge ${statusBadge[l.status] || 'badge-gray'}">${esc(l.status || 'new')}</span></td>
-      <td>${timeAgo(l.created_at)}</td>
-      <td>${l.call_attempts || 0}</td>
-      <td>${booking ? '<span class="badge badge-green">Booked</span>' : '--'}</td>
-    </tr>`;
-  });
-  body.innerHTML = html;
+async function saveDeal() {
+  const data = {
+    lead_id: document.getElementById('ad-lead').value || null,
+    property: document.getElementById('ad-property').value.trim(),
+    monthly_rent: Number(document.getElementById('ad-rent').value) || null,
+    stage: document.getElementById('ad-stage').value,
+    agent_id: document.getElementById('ad-agent').value || null,
+    notes: document.getElementById('ad-notes').value.trim() || null,
+    created_at: new Date().toISOString(),
+  };
+  await sb('deals', { method:'POST', headers:{...SB_HEADERS, Prefer:'return=representation'}, body: JSON.stringify(data) });
+  closeModal('add-deal-modal');
+  allDeals = await sb('deals?order=created_at.desc') || [];
+  loadPipeline();
 }
 
-function crmSort(field) {
-  if (crmSortField === field) crmSortDir *= -1;
-  else { crmSortField = field; crmSortDir = 1; }
-  crmFilter();
-}
-
-function openLeadModal(id) {
-  currentLead = crmLeads.find(l => l.id === id);
-  if (!currentLead) return;
-  const l = currentLead;
-  document.getElementById('modal-lead-name').textContent = l.name || 'Unknown';
-  document.getElementById('modal-info').innerHTML = `
-    <div class="info-item"><label>Email</label><div class="val">${esc(l.email || '--')}</div></div>
-    <div class="info-item"><label>Phone</label><div class="val">${esc(l.phone || '--')}</div></div>
-    <div class="info-item"><label>Source</label><div class="val">${esc(l.source || '--')}</div></div>
-    <div class="info-item"><label>Created</label><div class="val">${l.created_at ? new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '--'}</div></div>`;
-  document.getElementById('modal-details').innerHTML = `
-    <div class="info-item"><label>Property</label><div class="val">${esc(l.property || '--')}</div></div>
-    <div class="info-item"><label>Budget</label><div class="val">${esc(l.budget || '--')}</div></div>
-    <div class="info-item"><label>Apartment Size</label><div class="val">${esc(l.apartment_size || '--')}</div></div>
-    <div class="info-item"><label>Move-in Date</label><div class="val">${esc(l.move_in_date || '--')}</div></div>
-    <div class="info-item"><label>Call Attempts</label><div class="val">${l.call_attempts || 0}</div></div>
-    <div class="info-item"><label>Follow-ups</label><div class="val">${l.follow_up_count || 0}</div></div>`;
-
-  // Timeline
-  const timeline = [];
-  if (l.replied_at) timeline.push({ icon: '\u2709\uFE0F', text: 'Email reply sent', time: l.replied_at });
-  if (l.called_at) timeline.push({ icon: '\uD83D\uDCDE', text: 'Call made', time: l.called_at });
-  if (l.last_follow_up_at) timeline.push({ icon: '\uD83D\uDD04', text: 'Follow-up sent', time: l.last_follow_up_at });
-  const booking = crmBookings.find(b => b.phone === l.phone || b.email === l.email);
-  if (booking) timeline.push({ icon: '\uD83D\uDCC5', text: 'Booking: ' + (booking.preferred_date || '') + ' ' + (booking.preferred_time || ''), time: booking.created_at });
-  const leadTasks = crmTasks.filter(t => t.lead_email === l.email);
-  leadTasks.forEach(t => timeline.push({ icon: '\u2705', text: (t.task_type || 'task') + ': ' + (t.description || '').slice(0, 80), time: t.created_at }));
-  timeline.sort((a, b) => new Date(b.time) - new Date(a.time));
-
-  const tEl = document.getElementById('modal-timeline');
-  if (timeline.length === 0) { tEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px 0;">No activity yet</div>'; }
-  else { tEl.innerHTML = timeline.map(t => `<div class="timeline-item"><span class="timeline-icon">${t.icon}</span><span style="color:var(--text-dim);">${esc(t.text)}</span><span class="timeline-time">${timeAgo(t.time)}</span></div>`).join(''); }
-
-  document.getElementById('modal-notes').value = l.notes || '';
-  document.getElementById('modal-status').value = l.status || 'new';
-  document.getElementById('modal-agent').value = l.assigned_to || '';
-  document.getElementById('lead-modal').classList.add('open');
-}
-
-function closeLeadModal() { document.getElementById('lead-modal').classList.remove('open'); currentLead = null; }
-
-async function saveNotes() {
-  if (!currentLead) return;
-  const notes = document.getElementById('modal-notes').value;
-  try {
-    await sbPatch('leads', `id=eq.${currentLead.id}`, { notes });
-    currentLead.notes = notes;
-    toast('Notes saved');
-  } catch (e) { toast('Failed to save notes'); }
+async function saveTask() {
+  const data = {
+    title: document.getElementById('at-title').value.trim(),
+    lead_id: document.getElementById('at-lead').value || null,
+    assigned_to: document.getElementById('at-agent').value || null,
+    due_date: document.getElementById('at-due').value || null,
+    priority: document.getElementById('at-priority').value,
+    description: document.getElementById('at-desc').value.trim() || null,
+    status: 'pending',
+    created_at: new Date().toISOString(),
+  };
+  if (!data.title) return alert('Task title required');
+  await sb('tasks', { method:'POST', headers:{...SB_HEADERS, Prefer:'return=representation'}, body: JSON.stringify(data) });
+  closeModal('add-task-modal');
+  loadTasks();
 }
 
 async function saveAgent() {
-  if (!currentLead) return;
-  const agent = document.getElementById('modal-agent').value;
-  await sbPatch('leads', `id=eq.${currentLead.id}`, { assigned_to: agent });
-  currentLead.assigned_to = agent;
-  toast('Agent updated');
+  const data = {
+    name: document.getElementById('aa-name').value.trim(),
+    email: document.getElementById('aa-email').value.trim(),
+    phone: document.getElementById('aa-phone').value.trim() || null,
+    role: document.getElementById('aa-role').value,
+    created_at: new Date().toISOString(),
+  };
+  if (!data.name) return alert('Name required');
+  await sb('agents', { method:'POST', headers:{...SB_HEADERS, Prefer:'return=representation'}, body: JSON.stringify(data) });
+  closeModal('add-agent-modal');
+  allAgents = [];
+  loadAgents();
+  populateAgentDropdowns();
 }
 
-async function updateStatus() {
-  if (!currentLead) return;
-  const status = document.getElementById('modal-status').value;
-  await sbPatch('leads', `id=eq.${currentLead.id}`, { status });
-  currentLead.status = status;
-  crmFilter();
-  toast('Status updated to ' + status);
-}
-
-async function scheduleFollowup() {
-  if (!currentLead) return;
-  const dt = document.getElementById('modal-followup-date').value;
-  if (!dt) { toast('Pick a date/time'); return; }
-  await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
-    method: 'POST',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-    body: JSON.stringify({ lead_name: currentLead.name, lead_email: currentLead.email, lead_phone: currentLead.phone, task_type: 'follow_up_reminder', description: `Scheduled follow-up for ${new Date(dt).toLocaleString()}`, status: 'pending' })
+// Populate lead dropdowns for deal/task modals
+function populateLeadDropdowns() {
+  ['ad-lead','at-lead'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<option value="">Select lead...</option>' + allLeads.slice(0,100).map(l => '<option value="'+l.id+'">'+esc(l.name||l.email||'Unknown')+'</option>').join('');
   });
-  toast('Follow-up scheduled');
 }
 
-function crmSendEmail() {
-  if (!currentLead || !currentLead.email) { toast('No email address'); return; }
-  document.getElementById('email-to').value = currentLead.email;
-  document.getElementById('email-subject').value = `Your Apartment Tour — Rosalia Group`;
-  const first = (currentLead.name || '').split(' ')[0] || 'there';
-  document.getElementById('email-body').value = `Hi ${first},\n\nThank you for your interest! We'd love to schedule a private tour for you.\n\nBook here: https://book.rosaliagroup.com/book\n\nRosalia Group | Inquiries Team | (862) 419-1763`;
-  document.getElementById('email-modal').classList.add('open');
-}
-
-async function crmSendEmailConfirm() {
-  const to = document.getElementById('email-to').value;
-  const subject = document.getElementById('email-subject').value;
-  const body = document.getElementById('email-body').value;
-  try {
-    await fetch('/.netlify/functions/sendemail', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, subject, body })
-    });
-    document.getElementById('email-modal').classList.remove('open');
-    toast('Email sent to ' + to);
-  } catch (e) { toast('Email failed'); }
-}
-
-function crmSendSMS() {
-  if (!currentLead || !currentLead.phone) { toast('No phone number'); return; }
-  document.getElementById('sms-to').value = currentLead.phone;
-  const first = (currentLead.name || '').split(' ')[0] || 'there';
-  document.getElementById('sms-msg').value = `Hi ${first}, this is Rosalia Group following up on your apartment inquiry! Book your tour here: https://book.rosaliagroup.com/book or call (862) 419-1763`;
-  document.getElementById('sms-modal').classList.add('open');
-}
-
-async function crmSendSMSConfirm() {
-  const phone = document.getElementById('sms-to').value;
-  const msg = document.getElementById('sms-msg').value;
-  try {
-    let p = phone.replace(/\D/g, '');
-    if (p.length === 10) p = '+1' + p;
-    else if (p.length === 11) p = '+' + p;
-    const r = await fetch('https://textbelt.com/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: p, message: msg, key: TEXTBELT_KEY }) });
-    const data = await r.json();
-    document.getElementById('sms-modal').classList.remove('open');
-    toast(data.success ? 'SMS sent!' : 'SMS failed: ' + (data.error || 'unknown'));
-  } catch (e) { toast('SMS failed'); }
-}
-
-async function crmTriggerCall() {
-  if (!currentLead || !currentLead.phone) { toast('No phone number'); return; }
-  try {
-    let p = currentLead.phone.replace(/\D/g, '');
-    if (p.length === 10) p = '+1' + p;
-    else if (p.length === 11) p = '+' + p;
-    else p = '+' + p;
-    const r = await fetch('https://api.vapi.ai/call/phone', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${VAPI_KEY}` },
-      body: JSON.stringify({ phoneNumberId: VAPI_PHONE_ID, assistantId: VAPI_ASSISTANT_ID, customer: { number: p, name: currentLead.name || undefined } })
-    });
-    const data = await r.json();
-    toast(data.id ? 'Call triggered!' : 'Call failed: ' + (data.message || 'unknown'));
-  } catch (e) { toast('Call failed: ' + e.message); }
-}
-
-function crmCopyCancelLink() {
-  if (!currentLead) return;
-  const l = currentLead;
-  const booking = crmBookings.find(b => b.phone === l.phone || b.email === l.email);
-  const url = `https://book.rosaliagroup.com/cancel?name=${encodeURIComponent(l.name||'')}&date=${encodeURIComponent(booking?.preferred_date||'')}&time=${encodeURIComponent(booking?.preferred_time||'')}&property=${encodeURIComponent(l.property||'')}&phone=${encodeURIComponent(l.phone||'')}`;
-  navigator.clipboard.writeText(url).then(() => toast('Cancel link copied!'));
-}
-
-// Init
-crmLoad();
+// ── INIT ──
+(async function init() {
+  await loadDashboard();
+  populateLeadDropdowns();
+})();
 </script>
 </body>
 </html>
