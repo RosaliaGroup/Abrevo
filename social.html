@@ -253,6 +253,12 @@
 <div class="app">
   <!-- Sidebar -->
   <nav class="sidebar">
+    <div style="padding:0 20px 16px;border-bottom:1px solid #2a2a2a;margin-bottom:8px">
+      <a href="/crm.html" style="display:flex;align-items:center;gap:8px;color:#999;font-size:12px;text-decoration:none">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to CRM
+      </a>
+    </div>
     <div class="sidebar-brand">
       <h2>Abrevo</h2>
       <span>Social Dashboard</span>
@@ -413,6 +419,12 @@
 
       <div class="card">
         <div class="card-title">Search Leads</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center">
+          <select id="enrich-agent-filter" style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:8px 12px;color:#e8e8e8;font-size:13px;width:180px" onchange="enrichFilter()">
+            <option value="">All agents</option>
+          </select>
+          <span style="font-size:12px;color:#666">Filter leads by agent</span>
+        </div>
         <div class="row gap-8 mb-12">
           <input type="text" id="lead-search" placeholder="Search by name, email, or phone..." style="flex:1;">
           <button class="btn btn-gold" onclick="searchLeads()">Search</button>
@@ -926,7 +938,27 @@ async function generateIdeas() {
 }
 
 // ---- Lead Enrichment ----
-async function searchLeads() {
+async function loadAgentFilter() {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/agents?select=id,name&order=name.asc', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    const agents = await res.json();
+    if (!Array.isArray(agents)) return;
+    const sel = document.getElementById('enrich-agent-filter');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">All agents</option>' + agents.map(a => '<option value="'+a.id+'">'+a.name+'</option>').join('');
+  } catch(e) { console.error('Agent filter load error:', e); }
+}
+
+function enrichFilter() {
+  const agentId = document.getElementById('enrich-agent-filter').value;
+  const searchEl = document.getElementById('lead-search');
+  if (searchEl && searchEl.value) searchLeads(agentId);
+  else loadAllLeads(agentId);
+}
+
+async function searchLeads(agentFilter) {
   const query = document.getElementById('lead-search').value.trim();
   if (!query) return toast('Enter a search term');
   document.getElementById('enrich-loading').style.display = 'flex';
@@ -934,7 +966,7 @@ async function searchLeads() {
 
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?or=(name.ilike.*${encodeURIComponent(query)}*,email.ilike.*${encodeURIComponent(query)}*,phone.ilike.*${encodeURIComponent(query)}*)&limit=20&order=created_at.desc`,
+      `${SUPABASE_URL}/rest/v1/leads?or=(name.ilike.*${encodeURIComponent(query)}*,email.ilike.*${encodeURIComponent(query)}*,phone.ilike.*${encodeURIComponent(query)}*)${agentFilter ? '&assigned_to=eq.'+agentFilter : ''}&limit=20&order=created_at.desc`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const leads = await res.json();
@@ -945,12 +977,12 @@ async function searchLeads() {
   document.getElementById('enrich-loading').style.display = 'none';
 }
 
-async function loadAllLeads() {
+async function loadAllLeads(agentFilter) {
   document.getElementById('enrich-loading').style.display = 'flex';
   document.getElementById('no-leads').style.display = 'none';
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?order=created_at.desc&limit=50&select=name,email,phone,source,client,created_at`,
+      `${SUPABASE_URL}/rest/v1/leads?order=created_at.desc&limit=50&select=name,email,phone,source,client,created_at,assigned_to${agentFilter ? '&assigned_to=eq.'+agentFilter : ''}`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const leads = await res.json();
@@ -1764,6 +1796,8 @@ async function monitorRefreshAll() {
     }
   }, 60000);
 }
+
+loadAgentFilter();
 </script>
 </body>
 </html>
