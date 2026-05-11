@@ -46,7 +46,7 @@
 
 [[redirects]]
   from = "/reschedule"
-  to = "/booking-rosalia.html?type=reschedule"
+  to = "/reschedule-rosalia.html"
   status = 302
   force = true
 
@@ -58,7 +58,7 @@
 
 [[redirects]]
   from = "/iron65-reschedule"
-  to = "/booking-form.html?type=reschedule"
+  to = "/reschedule-form.html"
   status = 302
   force = true
 
@@ -102,13 +102,13 @@
 
 [[redirects]]
   from = "https://book.rosaliagroup.com/reschedule"
-  to = "/booking-rosalia.html?type=reschedule"
+  to = "/reschedule-rosalia.html"
   status = 302
   force = true
 
 [[redirects]]
   from = "https://book.rosaliagroup.com/iron65-reschedule"
-  to = "/booking-form.html?type=reschedule"
+  to = "/reschedule-form.html"
   status = 302
   force = true
 
