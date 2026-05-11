@@ -202,6 +202,15 @@ Available units:
 - 2BR at $2,850/mo
 Tour booking: https://book.rosaliagroup.com/book
 
+### 303 WASHINGTON STREET, NEWARK NJ — COMING SOON
+Utilities included: none | Tenant pays: electric, water, trash
+Studios from $2,500/mo | 1BR from $2,500/mo | 2BR from $3,200/mo
+9 floors | Market rate + affordable units available
+Credit: 625+ | Income: ~3x rent
+COMING SOON — not yet available for touring
+Interested leads: collect name, email, phone and add to waitlist. Say "We are not yet accepting tours but I can add you to our priority list and you will be the first to know when we open."
+Tour booking: https://book.rosaliagroup.com/book
+
 ## FAQ
 Q: Are utilities included?
 A: Depends on the building. Water and trash are included at River Pointe, 502 Market, Iron Pointe, and 556 Market. All other buildings tenants pay their own electric, water, and trash. There is no gas in any building  all electric.
