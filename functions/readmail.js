@@ -1090,47 +1090,41 @@ async function processGoogleVoice(gv, fromEmail) {
       });
     }
 
-    // AI reply via Google Voice — short SMS-length reply
+    // AI reply via Google Voice — same generateReply as email + force booking link
     try {
-      if (gv.replyTo && ANTHROPIC_KEY) {
-        const isIron65 = /iron.?65|mcwhorter/i.test(lead?.property||'') || /iron.?65|mcwhorter/i.test(gv.message||'');
-        const bookingLink = isIron65 ? 'https://book.rosaliagroup.com/iron65' : 'https://book.rosaliagroup.com/book';
+      if (gv.replyTo) {
+        const leadContext = lead ? `Name: ${lead.name||'Unknown'} | Phone: ${lead.phone||gv.callerPhone} | Property: ${lead.property||'general inquiry'} | Status: ${lead.status||'new'}` : `Phone: ${gv.callerPhone} | New contact via Google Voice`;
+        const isIron65msg = /iron.?65|mcwhorter/i.test(gv.message||'') || /iron.?65|mcwhorter/i.test(lead?.property||'');
+        const bookingLink = isIron65msg ? 'https://book.rosaliagroup.com/iron65' : 'https://book.rosaliagroup.com/book';
 
-        const aiReplyRes = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 200,
-            messages: [{ role: 'user', content: `You are Ana from Rosalia Group, replying to a rental lead via text message. Rules:
-- Answer any question they ask directly and helpfully (pricing, availability, pet policy, move-in costs, etc.)
-- Do NOT ask questions back — give answers and direct them to book
-- Keep it 2-3 sentences max, under 250 chars
-- Always end with something like "Book a tour to see the space!" or "Schedule a visit to check it out!"
-- If they haven't booked yet, nudge them: "We'd love to show you around"
-- Do NOT include links, phone numbers, or sign-offs — those are added automatically after your reply
-- Be warm, confident, and helpful — not salesy
+        let smsReply = await generateReply(
+          `${gv.callerPhone}@txt.voice.google.com`,
+          `Re: Text from ${gv.callerPhone}`,
+          gv.message || '',
+          null,
+          leadContext,
+          null,
+          lead?.name || null,
+          isIron65msg ? 'iron65' : 'rosalia'
+        );
 
-Our properties: Studios from $1,400, 1BR from $1,600, 2BR from $2,200, 3BR from $2,800 in Newark NJ. Laundry in-unit on select units. Cats/small dogs OK with deposit. Move-in: first month + 1.5 month security.
-
-Lead: ${lead?.name||'there'} | Property: ${lead?.property||'our Newark apartments'}
-Their message: "${gv.message}"
-Reply with ONLY the text, no quotes.` }]
-          })
-        });
-        const aiData = await aiReplyRes.json();
-        let shortReply = (aiData.content?.[0]?.text||'').replace(/["]/g,'').trim();
-        // Build final SMS: AI reply + booking link + sign-off
-        const finalReply = `${shortReply}\n\nBook a tour: ${bookingLink}\n— Ana, Rosalia Group (201) 497-0225`;
-
-        const nodemailer = require('nodemailer');
-        const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
-        await t.sendMail({
-          from: `"Rosalia Group" <${GMAIL_USER}>`,
-          to: gv.replyTo,
-          subject: `Re: New text message from ${gv.callerPhone}`,
-          text: finalReply
-        });
-        console.log(`GV SMS reply sent: "${finalReply.slice(0,120)}"`);
-      } else if (!gv.replyTo) {
+        if (smsReply) {
+          // Always include booking link — remove trailing questions, append link
+          if (!smsReply.includes('book.rosaliagroup.com')) {
+            smsReply = smsReply.replace(/\?\s*$/, '').trim();
+            smsReply = `${smsReply}\n\nBook your tour: ${bookingLink}\n— Ana, Rosalia Group (201) 497-0225`;
+          }
+          const nodemailer = require('nodemailer');
+          const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+          await t.sendMail({
+            from: `"Rosalia Group" <${GMAIL_USER}>`,
+            to: gv.replyTo,
+            subject: `Re: New text message from ${gv.callerPhone}`,
+            text: smsReply
+          });
+          console.log(`GV SMS reply sent: "${smsReply.slice(0,100)}"`);
+        }
+      } else {
         console.log('GV SMS reply skipped — no replyTo');
       }
     } catch(e) { console.error('GV AI reply error:', e.message); }
