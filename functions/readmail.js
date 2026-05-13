@@ -1133,22 +1133,6 @@ Reply with ONLY the 1 sentence.` }]
         const smsData = await smsRes.json();
         let smsReply = (smsData.content?.[0]?.text || '').trim();
 
-        // Always send booking link as a SEPARATE second SMS segment
-        if (smsReply) {
-          if (!smsReply.includes('book.rosaliagroup.com')) {
-            // Send two separate emails = two SMS segments in GV
-            const nodemailer2 = require('nodemailer');
-            const t2 = nodemailer2.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
-            await t2.sendMail({
-              from: `"Rosalia Group" <${GMAIL_USER}>`,
-              to: gv.replyTo,
-              subject: `Re: New text message from ${gv.callerPhone}`,
-              text: `${bookingLink}\n— Ana, Rosalia Group (201) 497-0225`
-            });
-            console.log(`GV booking link sent separately: ${bookingLink}`);
-          }
-        }
-
         if (smsReply) {
           const nodemailer = require('nodemailer');
           const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
@@ -1159,6 +1143,18 @@ Reply with ONLY the 1 sentence.` }]
             text: smsReply
           });
           console.log(`GV SMS reply sent: "${smsReply.slice(0,100)}"`);
+
+          // Send booking link as separate SMS if not already in reply
+          if (!smsReply.includes('book.rosaliagroup.com')) {
+            const nodemailer2 = require('nodemailer');
+            const t2 = nodemailer2.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+            await t2.sendMail({
+              from: `"Rosalia Group" <${GMAIL_USER}>`,
+              to: gv.replyTo,
+              subject: `Re: New text message from ${gv.callerPhone}`,
+              text: `${bookingLink}\n— Ana, Rosalia Group (201) 497-0225`
+            });
+          }
 
           // Log outbound reply to activities
           if (lead) {
