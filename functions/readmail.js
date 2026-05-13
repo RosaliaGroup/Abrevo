@@ -568,7 +568,7 @@ function parseZillowEmail(body, from) {
   return lead;
 }
 
-function fetchUnreadEmails() {
+function fetchUnreadEmails(forceDays) {
   return new Promise((resolve, reject) => {
     const imap = new Imap({
       user: INBOX_EMAIL,
@@ -584,13 +584,14 @@ function fetchUnreadEmails() {
       imap.openBox('INBOX', false, (err) => {
         if (err) return reject(err);
         const since = new Date();
-        since.setDate(since.getDate() - 14);
+        since.setDate(since.getDate() - (forceDays || 14));
         const sinceStr = since.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        imap.search(['UNSEEN', ['SINCE', sinceStr]], (err, results) => {
+        const searchCriteria = forceDays ? [['SINCE', sinceStr]] : ['UNSEEN', ['SINCE', sinceStr]];
+        imap.search(searchCriteria, (err, results) => {
           if (err) return reject(err);
           if (!results || results.length === 0) { imap.end(); return resolve([]); }
           const toFetch = results.slice(0, 20);
-          const fetch = imap.fetch(toFetch, { bodies: '', markSeen: true });
+          const fetch = imap.fetch(toFetch, { bodies: '', markSeen: !forceDays });
           fetch.on('message', (msg) => {
             let buffer = '';
             msg.on('body', (stream) => { stream.on('data', (chunk) => { buffer += chunk.toString('utf8'); }); });
@@ -1000,9 +1001,12 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
   if (!GMAIL_PASS) return { statusCode: 500, headers, body: JSON.stringify({ error: 'GMAIL_PASS_INQUIRIES not set' }) };
 
+  const body = event.body ? JSON.parse(event.body) : {};
+  const forceDays = body.force_days ? parseInt(body.force_days, 10) : null;
+
   try {
-    console.log('readmail: fetching unread emails via IMAP...');
-    const rawEmails = await fetchUnreadEmails();
+    console.log(`readmail: fetching ${forceDays ? `emails from last ${forceDays} days` : 'unread emails'} via IMAP...`);
+    const rawEmails = await fetchUnreadEmails(forceDays);
     console.log(`Found ${rawEmails.length} unread emails`);
     const results = { processed: 0, skipped: 0, not_lead: 0, errors: 0 };
     const processedEmails = new Set(); // Prevent processing same sender twice per run
