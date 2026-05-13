@@ -245,8 +245,7 @@ const SKIP_SENDERS = [
   'mailer-daemon', 'postmaster',
   'notifications', 'automated', 'newsletter', 'unsubscribe',
   'realtor.com', 'planhub', 'rentspree',
-  'voice.google.com',
-  'txt.voice.google', 'mail.zillow',
+  'mail.zillow',  // voice.google.com removed — GV texts/calls processed separately
   'zillowrentals', 'mail.realtor', 'mail.instagram',
   'no-reply@mail.zillow', 'market-updates@', 'recommendations@',
   'rosaliagroup.com', 'mechanicalenterprise.com',
@@ -286,6 +285,36 @@ const SKIP_SUBJECTS = [
   'daily hot leads', 'no appointments',
   'appointment confirmed', 'your tour is confirmed', 'booking confirmed', 'tour confirmed', 'your appointment is confirmed',
 ];
+
+function isGoogleVoiceLead(from, subject) {
+  const f = (from || '').toLowerCase();
+  const s = (subject || '').toLowerCase();
+  if (f.includes('voice.google.com') || f.includes('txt.voice.google')) return true;
+  if (s.includes('new text message from') || s.includes('new voicemail from') ||
+      s.includes('missed call from') || s.includes('new group message')) return true;
+  return false;
+}
+
+function parseGoogleVoice(from, subject, body, replyTo) {
+  const result = { type: null, callerPhone: null, message: null, agentEmail: null, duration: null };
+  const s = (subject || '').toLowerCase();
+  if (s.includes('new text message')) result.type = 'sms';
+  else if (s.includes('new voicemail')) result.type = 'voicemail';
+  else if (s.includes('missed call')) result.type = 'missed_call';
+  const phoneMatch = subject.match(/from\s+([\(\d\s\)\-\.]+\d)/i);
+  if (phoneMatch) {
+    let p = phoneMatch[1].replace(/\D/g, '');
+    if (p.length === 10) p = '+1' + p;
+    else if (p.length === 11) p = '+' + p;
+    result.callerPhone = p;
+  }
+  const msgMatch = body.match(/([\s\S]+?)\s*(?:To reply|Google Voice|Your Google)/i);
+  if (msgMatch) result.message = msgMatch[1].trim().slice(0, 500);
+  const durMatch = body.match(/Duration:\s*([\d:]+)/i);
+  if (durMatch) result.duration = durMatch[1];
+  result.agentEmail = replyTo || null;
+  return result;
+}
 
 function isZillowLead(from) {
   const f = from.toLowerCase();
@@ -471,6 +500,7 @@ async function saveListingAlert(from, subject, body) {
 }
 
 function shouldSkip(from, subject) {
+  if (isGoogleVoiceLead(from, subject)) return false;
   // Known lead sources always pass through
   if (isZillowLead(from)) return false;
   if (isAvailLead(from)) return false;
@@ -996,6 +1026,72 @@ async function notifyAna(fromName, subject, phone, callAllowed) {
   } catch (err) { console.error('Ana email notification error:', err.message); }
 }
 
+async function processGoogleVoice(gv, fromEmail) {
+  const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+  const SB_H = { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+  console.log(`GV ${gv.type} from ${gv.callerPhone}`);
+  let lead = null;
+  if (gv.callerPhone) {
+    const digits = gv.callerPhone.replace(/\D/g, '');
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?phone=ilike.*${digits}*&order=created_at.desc&limit=1`, { headers: SB_H });
+    const data = await r.json();
+    if (Array.isArray(data) && data.length > 0) lead = data[0];
+  }
+  let agent = null;
+  if (fromEmail) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/agents?email=eq.${encodeURIComponent(fromEmail)}&limit=1`, { headers: SB_H });
+    const data = await r.json();
+    if (Array.isArray(data) && data.length > 0) agent = data[0];
+  }
+  const activitySummary = gv.type === 'sms'
+    ? `Text from ${gv.callerPhone}: "${(gv.message||'').slice(0,80)}"`
+    : gv.type === 'missed_call' ? `Missed call from ${gv.callerPhone}`
+    : `Voicemail from ${gv.callerPhone}${gv.duration ? ' ('+gv.duration+')' : ''}`;
+  if (lead) {
+    await fetch(`${SUPABASE_URL}/rest/v1/activities`, {
+      method: 'POST', headers: { ...SB_H, Prefer: 'return=minimal' },
+      body: JSON.stringify({ lead_id: lead.id, agent_id: agent?.id||null, type: gv.type==='sms'?'sms':'call', direction: 'inbound', summary: activitySummary, body: gv.message||null })
+    });
+    await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${lead.id}`, {
+      method: 'PATCH', headers: SB_H,
+      body: JSON.stringify({ last_contact_at: new Date().toISOString() })
+    });
+  }
+  if (gv.type === 'sms' && gv.message && ANTHROPIC_KEY) {
+    const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 200,
+        messages: [{ role: 'user', content: `Analyze this rental lead text message. Return JSON only:\nMessage: "${gv.message}"\nToday: ${new Date().toLocaleDateString()}\n\nReturn: {"action":"book_tour"|"create_task"|"none","date":"YYYY-MM-DD or null","time":"HH:MM AM/PM or null","task_title":"string or null","task_type":"call|followup|tour|null","task_due":"ISO or null"}` }]
+      })
+    });
+    const aiData = await aiRes.json();
+    let parsed = {};
+    try { parsed = JSON.parse((aiData.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim()); } catch(e){}
+    console.log('GV AI action:', parsed.action);
+    if (parsed.action === 'book_tour' && lead && parsed.date) {
+      await fetch('https://abrevo.co/.netlify/functions/book', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: lead.name||'Lead', phone: lead.phone, email: lead.email, type: lead.property||'Tour', preferred_date: parsed.date, preferred_time: parsed.time||'10:00 AM', source: 'google_voice_sms' })
+      });
+    } else if (parsed.action === 'create_task' && parsed.task_title) {
+      await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
+        method: 'POST', headers: { ...SB_H, Prefer: 'return=minimal' },
+        body: JSON.stringify({ lead_id: lead?.id||null, assigned_to: agent?.id||null, title: parsed.task_title, type: parsed.task_type||'followup', due_at: parsed.task_due||null, notes: `Auto from GV text: "${gv.message}"` })
+      });
+    }
+  }
+  if (gv.type === 'missed_call' && lead) {
+    await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
+      method: 'POST', headers: { ...SB_H, Prefer: 'return=minimal' },
+      body: JSON.stringify({ lead_id: lead.id, assigned_to: agent?.id||null, title: `Call back ${lead.name||gv.callerPhone}`, type: 'call', due_at: new Date(Date.now()+3600000).toISOString(), notes: `Missed GV call at ${new Date().toLocaleTimeString()}` })
+    });
+  }
+  return { lead: lead?.name||null, agent: agent?.name||null, action: gv.type };
+}
+
 exports.handler = async (event) => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
@@ -1080,6 +1176,19 @@ exports.handler = async (event) => {
             leadClient = 'iron65';
           }
           console.log('FUB lead - Name:', realName, 'Phone:', phone, 'Email:', realEmail, 'Client:', leadClient);
+        } else if (isGoogleVoiceLead(from, subject)) {
+          const gv = parseGoogleVoice(from, subject, body, replyTo || fromEmail);
+          if (gv.callerPhone || gv.type) {
+            try {
+              const gvResult = await processGoogleVoice(gv, fromEmail);
+              console.log('GV processed:', JSON.stringify(gvResult));
+              results.processed++;
+            } catch(e) {
+              console.error('GV processing error:', e.message);
+              results.errors++;
+            }
+          } else { results.skipped++; }
+          continue;
         } else if (isAvailLead(from)) {
           const p = parseAvailEmail(body);
           if (p.phone) phone = p.phone;
