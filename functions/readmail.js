@@ -1084,11 +1084,51 @@ async function processGoogleVoice(gv, fromEmail) {
       });
     }
   }
-  if (gv.type === 'missed_call' && lead) {
-    await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
-      method: 'POST', headers: { ...SB_H, Prefer: 'return=minimal' },
-      body: JSON.stringify({ lead_id: lead.id, assigned_to: agent?.id||null, title: `Call back ${lead.name||gv.callerPhone}`, type: 'call', due_at: new Date(Date.now()+3600000).toISOString(), notes: `Missed GV call at ${new Date().toLocaleTimeString()}` })
-    });
+  // Missed call — create task + immediately call back + SMS
+  if (gv.type === 'missed_call') {
+    // Create callback task
+    if (lead) {
+      await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
+        method: 'POST', headers: { ...SB_H, Prefer: 'return=minimal' },
+        body: JSON.stringify({ lead_id: lead.id, assigned_to: agent?.id||null, title: `Call back ${lead.name||gv.callerPhone}`, type: 'call', due_at: new Date().toISOString(), notes: `Missed GV call at ${new Date().toLocaleTimeString()}` })
+      });
+    }
+
+    // Check business hours before calling
+    const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const day = nowET.getDay();
+    const hour = nowET.getHours() + nowET.getMinutes()/60;
+    const inHours = (day===0||day===6) ? (hour>=10&&hour<17) : (hour>=9&&hour<18);
+
+    if (inHours && gv.callerPhone) {
+      // Call back via Vapi
+      try {
+        await fetch('https://api.vapi.ai/call/phone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 064f441d-a388-4404-8b6c-05e91e90f1ff' },
+          body: JSON.stringify({
+            phoneNumberId: '2e2b6713-f631-4e9e-95fa-3418ecc77c0a',
+            assistantId: '1cae5323-6b83-4434-8461-6330472da140',
+            customer: { number: gv.callerPhone, name: lead?.name || undefined },
+            assistantOverrides: { variableValues: { lead_name: lead?.name||'', lead_property: lead?.property||'' } }
+          })
+        });
+        console.log(`GV callback call triggered to ${gv.callerPhone}`);
+      } catch(e) { console.error('GV callback call error:', e.message); }
+
+      // SMS them too
+      try {
+        const smsMsg = `Hi${lead?.name ? ' ' + lead.name.split(' ')[0] : ''}! This is Ana from Rosalia Group — sorry I missed your call. I'm reaching back out now. Feel free to call (201) 497-0225 or reply here. — Rosalia Group`;
+        await fetch('https://textbelt.com/text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: gv.callerPhone, message: smsMsg, key: '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW' })
+        });
+        console.log(`GV callback SMS sent to ${gv.callerPhone}`);
+      } catch(e) { console.error('GV callback SMS error:', e.message); }
+    } else {
+      console.log('GV missed call outside business hours — task created, no auto-call');
+    }
   }
   return { lead: lead?.name||null, agent: agent?.name||null, action: gv.type };
 }
