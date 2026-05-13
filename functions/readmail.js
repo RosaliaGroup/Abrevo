@@ -531,6 +531,7 @@ function shouldSkip(from, subject) {
 }
 
 function isLead(subject, body, from) {
+  if (isGoogleVoiceLead(from || '', subject || '')) return true;
   // Known lead sources
   if (isZillowLead(from || '')) return true;
   if (isAvailLead(from || '')) return true;
