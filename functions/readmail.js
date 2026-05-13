@@ -308,8 +308,13 @@ function parseGoogleVoice(from, subject, body, replyTo) {
     else if (p.length === 11) p = '+' + p;
     result.callerPhone = p;
   }
-  const msgMatch = body.match(/([\s\S]+?)\s*(?:To reply|Google Voice|Your Google)/i);
-  if (msgMatch) result.message = msgMatch[1].trim().slice(0, 500);
+  const msgMatch = body.match(/([\s\S]+?)\s*(?:To respond|To reply|Google Voice|Your Google|YOUR ACCOUNT)/i);
+  if (msgMatch && msgMatch[1].trim().length > 2) {
+    result.message = msgMatch[1].trim().slice(0, 500);
+  } else {
+    const firstChunk = body.split(/To respond|To reply|Google Voice|YOUR ACCOUNT/i)[0];
+    if (firstChunk && firstChunk.trim().length > 2) result.message = firstChunk.trim().slice(0, 500);
+  }
   const durMatch = body.match(/Duration:\s*([\d:]+)/i);
   if (durMatch) result.duration = durMatch[1];
   result.replyTo = replyTo || null;
