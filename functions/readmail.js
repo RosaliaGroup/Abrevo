@@ -1109,16 +1109,27 @@ async function processGoogleVoice(gv, fromEmail) {
           isIron65 ? 'iron65' : leadClient
         );
 
-        if (smsReply) {
+        // Force booking link into SMS reply — GV texts should always end with link
+        let finalReply = smsReply || '';
+        const hasLink = finalReply.includes('book.rosaliagroup.com');
+        if (!hasLink && finalReply) {
+          const isIron65msg = /iron.?65|mcwhorter/i.test(gv.message||'') || /iron.?65|mcwhorter/i.test(lead?.property||'');
+          const bookingLink = isIron65msg ? 'https://book.rosaliagroup.com/iron65' : 'https://book.rosaliagroup.com/book';
+          // Replace any question at the end with the booking link
+          finalReply = finalReply.replace(/\?[^?]*$/, '').trim();
+          finalReply = `${finalReply}\n\nBook your tour here:\n${bookingLink}\n— Ana, Rosalia Group (201) 497-0225`;
+        }
+
+        if (finalReply) {
           const nodemailer = require('nodemailer');
           const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
           await t.sendMail({
             from: `"Rosalia Group" <${GMAIL_USER}>`,
             to: gv.replyTo,
             subject: `Re: New text message from ${gv.callerPhone}`,
-            text: smsReply
+            text: finalReply
           });
-          console.log(`GV SMS reply sent: "${smsReply.slice(0,80)}"`);
+          console.log(`GV SMS reply sent: "${finalReply.slice(0,80)}"`);
         }
       } else {
         console.log('GV SMS reply skipped — no replyTo');
