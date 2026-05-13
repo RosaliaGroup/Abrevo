@@ -1085,29 +1085,46 @@ async function processGoogleVoice(gv, fromEmail) {
       });
     }
 
-    // AI reply via Google Voice email relay
+    // AI reply via Google Voice — same logic as email reply
     try {
-      const aiReplyRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 300,
-          messages: [{ role: 'user', content: `You are the Rosalia Group leasing team. A lead texted the GV number. Reply as you would to an email lead — same warmth, same goal: book a tour.\n\nLead: ${lead?.name||'there'} | Property: ${lead?.property||'our apartments'}\nMessage: "${gv.message}"\n\nRules:\n- Answer their question in 1 sentence\n- Always end with the booking link on its own line\n- Iron 65 / McWhorter → use: ${IRON65_BOOKING_URL}\n- All other properties → use: ${BOOKING_FORM_URL}\n- Sign off: — Ana, Rosalia Group (201) 497-0225\n- Max 300 chars total\n\nReply with ONLY the message text, no quotes.` }]
-        })
-      });
-      const aiReplyData = await aiReplyRes.json();
-      const aiReplyText = (aiReplyData.content?.[0]?.text||'').slice(0,320);
-      if (aiReplyText && gv.replyTo) {
-        const nodemailer = require('nodemailer');
-        const replyTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: GMAIL_USER, pass: GMAIL_PASS }});
-        await replyTrans.sendMail({
-          from: `"Rosalia Group" <${GMAIL_USER}>`,
-          to: gv.replyTo,
-          subject: `Re: New text message from ${gv.callerPhone}`,
-          text: aiReplyText
+      if (gv.replyTo && lead) {
+        const smsReply = await generateReply({
+          ...lead,
+          message: gv.message,
+          source: 'google_voice_sms',
+          category: lead.category || 'rental',
         });
-        console.log(`GV AI reply sent to ${gv.replyTo}: "${aiReplyText.slice(0,60)}"`);
-      } else if (aiReplyText) {
-        console.log('GV AI reply skipped — no replyTo address');
+        if (smsReply) {
+          const nodemailer = require('nodemailer');
+          const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+          await t.sendMail({
+            from: `"Rosalia Group" <${GMAIL_USER}>`,
+            to: gv.replyTo,
+            subject: `Re: New text message from ${gv.callerPhone}`,
+            text: smsReply
+          });
+          console.log(`GV SMS reply sent: "${smsReply.slice(0,80)}"`);
+        }
+      } else if (gv.replyTo && !lead) {
+        // New contact — create minimal lead object for reply
+        const smsReply = await generateReply({
+          name: null, email: null, phone: gv.callerPhone,
+          message: gv.message, source: 'google_voice_sms', category: 'rental',
+          property: null
+        });
+        if (smsReply) {
+          const nodemailer = require('nodemailer');
+          const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+          await t.sendMail({
+            from: `"Rosalia Group" <${GMAIL_USER}>`,
+            to: gv.replyTo,
+            subject: `Re: New text message from ${gv.callerPhone}`,
+            text: smsReply
+          });
+          console.log(`GV SMS reply sent to new contact: "${smsReply.slice(0,80)}"`);
+        }
+      } else {
+        console.log('GV SMS reply skipped — no replyTo');
       }
     } catch(e) { console.error('GV AI reply error:', e.message); }
   }
