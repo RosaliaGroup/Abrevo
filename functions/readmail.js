@@ -1139,9 +1139,20 @@ Reply with ONLY the SMS text.` }]
         const smsData = await smsRes.json();
         let smsReply = (smsData.content?.[0]?.text || '').trim();
 
-        // Force booking link if not already in reply and not a confirmation message
-        if (smsReply && !smsReply.includes('book.rosaliagroup.com')) {
-          smsReply = `${smsReply}\n${bookingLink}`;
+        // Always send booking link as a SEPARATE second SMS segment
+        if (smsReply) {
+          if (!smsReply.includes('book.rosaliagroup.com')) {
+            // Send two separate emails = two SMS segments in GV
+            const nodemailer2 = require('nodemailer');
+            const t2 = nodemailer2.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+            await t2.sendMail({
+              from: `"Rosalia Group" <${GMAIL_USER}>`,
+              to: gv.replyTo,
+              subject: `Re: New text message from ${gv.callerPhone}`,
+              text: `${bookingLink}\n— Ana, Rosalia Group (201) 497-0225`
+            });
+            console.log(`GV booking link sent separately: ${bookingLink}`);
+          }
         }
 
         if (smsReply) {
