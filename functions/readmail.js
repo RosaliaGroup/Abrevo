@@ -1101,7 +1101,7 @@ async function processGoogleVoice(gv, fromEmail) {
           ? gv.replyTo
           : `${gv.callerPhone.replace(/\D/g,'').slice(-10)}@txt.voice.google.com`;
         const nodemailer = require('nodemailer');
-        const replyTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS }});
+        const replyTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS_INQUIRIES }});
         await replyTrans.sendMail({
           from: `"Rosalia Group" <${process.env.GMAIL_USER}>`,
           to: gvReplyAddr,
@@ -1156,7 +1156,7 @@ async function processGoogleVoice(gv, fromEmail) {
           : `${gv.callerPhone.replace(/\D/g,'').slice(-10)}@txt.voice.google.com`;
         const smsMsg = `Hi${lead?.name ? ' ' + lead.name.split(' ')[0] : ''}! This is Ana from Rosalia Group — sorry we missed your call. Calling you back now. Feel free to call or text (201) 497-0225 anytime.`;
         const nodemailer = require('nodemailer');
-        const smsTrans = nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS } });
+        const smsTrans = nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS_INQUIRIES } });
         await smsTrans.sendMail({ from: `"Rosalia Group" <${process.env.GMAIL_USER}>`, to: gvReplyAddr, subject: smsMsg, text: smsMsg });
         console.log(`GV missed call SMS sent to ${gvReplyAddr}`);
       } catch(e) { console.error('GV callback SMS error:', e.message); }
@@ -1198,7 +1198,7 @@ async function processGoogleVoice(gv, fromEmail) {
         try {
           const gvReplyAddr = gv.replyTo && gv.replyTo.includes('@') ? gv.replyTo : `${gv.callerPhone.replace(/\D/g,'').slice(-10)}@txt.voice.google.com`;
           const nodemailer = require('nodemailer');
-          const vmTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS }});
+          const vmTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS_INQUIRIES }});
           await vmTrans.sendMail({ from: `"Rosalia Group" <${process.env.GMAIL_USER}>`, to: gvReplyAddr, subject: vmReply, text: vmReply });
           console.log(`GV voicemail SMS reply sent: "${vmReply.slice(0,60)}"`);
         } catch(e) { console.error('GV voicemail SMS error:', e.message); }
