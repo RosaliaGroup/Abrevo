@@ -1083,6 +1083,26 @@ async function processGoogleVoice(gv, fromEmail) {
         body: JSON.stringify({ lead_id: lead?.id||null, assigned_to: agent?.id||null, title: parsed.task_title, type: parsed.task_type||'followup', due_at: parsed.task_due||null, notes: `Auto from GV text: "${gv.message}"` })
       });
     }
+
+    // AI reply to lead via Google Voice email relay
+    try {
+      const replyRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150,
+          messages: [{ role: 'user', content: `You are Ana from Rosalia Group. Reply to this rental lead text in 1-2 short sentences. Warm and helpful. Sign off: Ana, Rosalia Group.\nLead: ${lead?.name||'there'} | Property: ${lead?.property||'our apartments'}\nMessage: "${gv.message}"\n${parsed.action==='book_tour'?'Tour booked on '+parsed.date+' at '+(parsed.time||'10:00 AM')+'.':''}\nReply with ONLY the SMS text, max 160 chars.` }]
+        })
+      });
+      const replyData = await replyRes.json();
+      const replyText = (replyData.content?.[0]?.text||'').slice(0,160);
+      if (replyText && gv.callerPhone) {
+        const digits = gv.callerPhone.replace(/\D/g,'').slice(-10);
+        const nodemailer = require('nodemailer');
+        const t = nodemailer.createTransport({ service:'gmail', auth:{ user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS }});
+        await t.sendMail({ from: process.env.GMAIL_USER, to: `${digits}@txt.voice.google.com`, subject: replyText, text: replyText });
+        console.log(`GV AI reply sent: "${replyText.slice(0,60)}"`);
+      }
+    } catch(e) { console.error('GV AI reply error:', e.message); }
   }
   // Missed call — create task + immediately call back + SMS
   if (gv.type === 'missed_call') {
@@ -1116,15 +1136,15 @@ async function processGoogleVoice(gv, fromEmail) {
         console.log(`GV callback call triggered to ${gv.callerPhone}`);
       } catch(e) { console.error('GV callback call error:', e.message); }
 
-      // SMS them too
+      // SMS via Google Voice email relay (shows from Ana's GV number)
       try {
-        const smsMsg = `Hi${lead?.name ? ' ' + lead.name.split(' ')[0] : ''}! This is Ana from Rosalia Group — sorry I missed your call. I'm reaching back out now. Feel free to call (201) 497-0225 or reply here. — Rosalia Group`;
-        await fetch('https://textbelt.com/text', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: gv.callerPhone, message: smsMsg, key: '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW' })
-        });
-        console.log(`GV callback SMS sent to ${gv.callerPhone}`);
+        const digits = gv.callerPhone.replace(/\D/g, '').slice(-10);
+        const gvEmail = `${digits}@txt.voice.google.com`;
+        const smsMsg = `Hi${lead?.name ? ' ' + lead.name.split(' ')[0] : ''}! This is Ana from Rosalia Group — sorry we missed your call. I'm reaching back out now. Feel free to call or text (201) 497-0225 anytime.`;
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS } });
+        await transporter.sendMail({ from: process.env.GMAIL_USER, to: gvEmail, subject: smsMsg, text: smsMsg });
+        console.log(`GV callback SMS sent via email relay to ${gvEmail}`);
       } catch(e) { console.error('GV callback SMS error:', e.message); }
     } else {
       console.log('GV missed call outside business hours — task created, no auto-call');
