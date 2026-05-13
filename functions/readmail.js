@@ -1090,15 +1090,25 @@ async function processGoogleVoice(gv, fromEmail) {
       });
     }
 
-    // AI reply via Google Voice — same logic as email reply
+    // AI reply via Google Voice — using same generateReply as email
     try {
-      if (gv.replyTo && lead) {
-        const smsReply = await generateReply({
-          ...lead,
-          message: gv.message,
-          source: 'google_voice_sms',
-          category: lead.category || 'rental',
-        });
+      if (gv.replyTo) {
+        const leadName = lead?.name || null;
+        const leadClient = 'rosalia';
+        const leadContext = lead ? `Name: ${lead.name||'Unknown'} | Phone: ${lead.phone||gv.callerPhone} | Property interest: ${lead.property||'general inquiry'} | Status: ${lead.status||'new'}` : `Phone: ${gv.callerPhone} | New contact via Google Voice`;
+        const isIron65 = /iron.?65|mcwhorter/i.test(lead?.property||'') || /iron.?65|mcwhorter/i.test(gv.message||'');
+
+        const smsReply = await generateReply(
+          `${gv.callerPhone}@txt.voice.google.com`,
+          `Re: Text from ${gv.callerPhone}`,
+          gv.message || '',
+          null,
+          leadContext,
+          null,
+          leadName,
+          isIron65 ? 'iron65' : leadClient
+        );
+
         if (smsReply) {
           const nodemailer = require('nodemailer');
           const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
@@ -1109,24 +1119,6 @@ async function processGoogleVoice(gv, fromEmail) {
             text: smsReply
           });
           console.log(`GV SMS reply sent: "${smsReply.slice(0,80)}"`);
-        }
-      } else if (gv.replyTo && !lead) {
-        // New contact — create minimal lead object for reply
-        const smsReply = await generateReply({
-          name: null, email: null, phone: gv.callerPhone,
-          message: gv.message, source: 'google_voice_sms', category: 'rental',
-          property: null
-        });
-        if (smsReply) {
-          const nodemailer = require('nodemailer');
-          const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
-          await t.sendMail({
-            from: `"Rosalia Group" <${GMAIL_USER}>`,
-            to: gv.replyTo,
-            subject: `Re: New text message from ${gv.callerPhone}`,
-            text: smsReply
-          });
-          console.log(`GV SMS reply sent to new contact: "${smsReply.slice(0,80)}"`);
         }
       } else {
         console.log('GV SMS reply skipped — no replyTo');
