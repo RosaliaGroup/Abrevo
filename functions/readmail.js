@@ -1096,19 +1096,18 @@ async function processGoogleVoice(gv, fromEmail) {
       });
       const aiReplyData = await aiReplyRes.json();
       const aiReplyText = (aiReplyData.content?.[0]?.text||'').slice(0,160);
-      if (aiReplyText && gv.callerPhone) {
-        const gvReplyAddr = gv.replyTo && gv.replyTo.includes('@')
-          ? gv.replyTo
-          : `${gv.callerPhone.replace(/\D/g,'').slice(-10)}@txt.voice.google.com`;
+      if (aiReplyText && gv.replyTo) {
         const nodemailer = require('nodemailer');
         const replyTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS_INQUIRIES }});
         await replyTrans.sendMail({
           from: `"Rosalia Group" <${process.env.GMAIL_USER}>`,
-          to: gvReplyAddr,
+          to: gv.replyTo,
           subject: `Re: New text message from ${gv.callerPhone}`,
           text: aiReplyText
         });
-        console.log(`GV AI reply sent to ${gvReplyAddr}: "${aiReplyText.slice(0,60)}"`);
+        console.log(`GV AI reply sent to ${gv.replyTo}: "${aiReplyText.slice(0,60)}"`);
+      } else if (aiReplyText) {
+        console.log('GV AI reply skipped — no replyTo address');
       }
     } catch(e) { console.error('GV AI reply error:', e.message); }
   }
@@ -1148,18 +1147,17 @@ async function processGoogleVoice(gv, fromEmail) {
       } catch(e) { console.error('GV callback call error:', e.message); }
 
       // SMS via Google Voice reply-to (threads in GV conversation)
-      try {
-        const gvReplyAddr = gv.replyTo && gv.replyTo.includes('txt.voice.google.com')
-          ? gv.replyTo
-          : gv.replyTo && gv.replyTo.includes('@')
-          ? gv.replyTo
-          : `${gv.callerPhone.replace(/\D/g,'').slice(-10)}@txt.voice.google.com`;
-        const smsMsg = `Hi${lead?.name ? ' ' + lead.name.split(' ')[0] : ''}! This is Ana from Rosalia Group — sorry we missed your call. Calling you back now. Feel free to call or text (201) 497-0225 anytime.`;
-        const nodemailer = require('nodemailer');
-        const smsTrans = nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS_INQUIRIES } });
-        await smsTrans.sendMail({ from: `"Rosalia Group" <${process.env.GMAIL_USER}>`, to: gvReplyAddr, subject: smsMsg, text: smsMsg });
-        console.log(`GV missed call SMS sent to ${gvReplyAddr}`);
-      } catch(e) { console.error('GV callback SMS error:', e.message); }
+      if (gv.replyTo) {
+        try {
+          const smsMsg = `Hi${lead?.name ? ' ' + lead.name.split(' ')[0] : ''}! This is Ana from Rosalia Group — sorry we missed your call. Calling you back now. Feel free to call or text (201) 497-0225 anytime.`;
+          const nodemailer = require('nodemailer');
+          const smsTrans = nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS_INQUIRIES } });
+          await smsTrans.sendMail({ from: `"Rosalia Group" <${process.env.GMAIL_USER}>`, to: gv.replyTo, subject: smsMsg, text: smsMsg });
+          console.log(`GV missed call SMS sent to ${gv.replyTo}`);
+        } catch(e) { console.error('GV callback SMS error:', e.message); }
+      } else {
+        console.log('GV missed call SMS skipped — no replyTo address');
+      }
     } else {
       console.log('GV missed call outside business hours — task created, no auto-call');
     }
@@ -1193,15 +1191,16 @@ async function processGoogleVoice(gv, fromEmail) {
       const vmData = await vmRes.json();
       const vmReply = (vmData.content?.[0]?.text||'').slice(0,160);
 
-      // Send SMS reply via GV email relay
-      if (vmReply) {
+      // Send SMS reply via GV replyTo
+      if (vmReply && gv.replyTo) {
         try {
-          const gvReplyAddr = gv.replyTo && gv.replyTo.includes('@') ? gv.replyTo : `${gv.callerPhone.replace(/\D/g,'').slice(-10)}@txt.voice.google.com`;
           const nodemailer = require('nodemailer');
           const vmTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS_INQUIRIES }});
-          await vmTrans.sendMail({ from: `"Rosalia Group" <${process.env.GMAIL_USER}>`, to: gvReplyAddr, subject: vmReply, text: vmReply });
-          console.log(`GV voicemail SMS reply sent: "${vmReply.slice(0,60)}"`);
+          await vmTrans.sendMail({ from: `"Rosalia Group" <${process.env.GMAIL_USER}>`, to: gv.replyTo, subject: vmReply, text: vmReply });
+          console.log(`GV voicemail SMS reply sent to ${gv.replyTo}: "${vmReply.slice(0,60)}"`);
         } catch(e) { console.error('GV voicemail SMS error:', e.message); }
+      } else if (vmReply) {
+        console.log('GV voicemail SMS skipped — no replyTo address');
       }
 
       // Call back via Vapi
