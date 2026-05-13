@@ -1101,9 +1101,9 @@ async function processGoogleVoice(gv, fromEmail) {
           ? gv.replyTo
           : `${gv.callerPhone.replace(/\D/g,'').slice(-10)}@txt.voice.google.com`;
         const nodemailer = require('nodemailer');
-        const replyTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS }});
+        const replyTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: GMAIL_USER, pass: GMAIL_PASS }});
         await replyTrans.sendMail({
-          from: `"Rosalia Group" <${process.env.GMAIL_USER}>`,
+          from: `"Rosalia Group" <${GMAIL_USER}>`,
           to: gvReplyAddr,
           subject: `Re: New text message from ${gv.callerPhone}`,
           text: aiReplyText
@@ -1123,10 +1123,13 @@ async function processGoogleVoice(gv, fromEmail) {
     }
 
     // Check business hours before calling
-    const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    const day = nowET.getDay();
-    const hour = nowET.getHours() + nowET.getMinutes()/60;
+    const nowUTC = new Date();
+    const etOffset = -4; // EDT (UTC-4), use -5 for EST
+    const nowET = new Date(nowUTC.getTime() + etOffset * 3600000);
+    const day = nowET.getUTCDay();
+    const hour = nowET.getUTCHours() + nowET.getUTCMinutes()/60;
     const inHours = (day===0||day===6) ? (hour>=10&&hour<17) : (hour>=9&&hour<18);
+    console.log(`GV missed call business hours check: ET ${nowET.toUTCString()} day=${day} hour=${hour.toFixed(1)} inHours=${inHours}`);
 
     if (inHours && gv.callerPhone) {
       // Call back via Vapi
@@ -1153,8 +1156,8 @@ async function processGoogleVoice(gv, fromEmail) {
           : `${gv.callerPhone.replace(/\D/g,'').slice(-10)}@txt.voice.google.com`;
         const smsMsg = `Hi${lead?.name ? ' ' + lead.name.split(' ')[0] : ''}! This is Ana from Rosalia Group — sorry we missed your call. Calling you back now. Feel free to call or text (201) 497-0225 anytime.`;
         const nodemailer = require('nodemailer');
-        const smsTrans = nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS } });
-        await smsTrans.sendMail({ from: `"Rosalia Group" <${process.env.GMAIL_USER}>`, to: gvReplyAddr, subject: smsMsg, text: smsMsg });
+        const smsTrans = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+        await smsTrans.sendMail({ from: `"Rosalia Group" <${GMAIL_USER}>`, to: gvReplyAddr, subject: smsMsg, text: smsMsg });
         console.log(`GV missed call SMS sent to ${gvReplyAddr}`);
       } catch(e) { console.error('GV callback SMS error:', e.message); }
     } else {
