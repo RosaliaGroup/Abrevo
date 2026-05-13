@@ -1099,13 +1099,20 @@ async function processGoogleVoice(gv, fromEmail) {
         const aiReplyRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 100,
-            messages: [{ role: 'user', content: `You are Ana from Rosalia Group. Reply to this rental lead's text. Write 1 SHORT sentence (max 80 chars). Warm and helpful. Do NOT include any links or sign-off.\nLead: ${lead?.name||'there'} | Property: ${lead?.property||'our apartments'}\nMessage: "${gv.message}"\nReply with ONLY the 1 sentence, nothing else.` }]
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150,
+            messages: [{ role: 'user', content: `You are Ana from Rosalia Group, replying to a rental lead via text. Be warm, helpful, and concise (2-3 sentences max, under 200 chars total).
+- If they ask a question, answer it directly
+- If they want availability/pricing, give brief info
+- Always encourage them to book a tour or reach out
+- Do NOT include links, phone numbers, or sign-offs — those are added automatically
+Lead: ${lead?.name||'there'} | Property: ${lead?.property||'our Newark apartments'}
+Their message: "${gv.message}"
+Reply with ONLY the text, no quotes.` }]
           })
         });
         const aiData = await aiReplyRes.json();
         let shortReply = (aiData.content?.[0]?.text||'').replace(/["]/g,'').trim();
-        // Build final SMS: short reply + booking link + sign-off
+        // Build final SMS: AI reply + booking link + sign-off
         const finalReply = `${shortReply}\n\nBook a tour: ${bookingLink}\n— Ana, Rosalia Group (201) 497-0225`;
 
         const nodemailer = require('nodemailer');
