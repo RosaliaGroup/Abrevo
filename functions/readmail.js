@@ -1090,12 +1090,29 @@ async function processGoogleVoice(gv, fromEmail) {
       const aiReplyRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150,
-          messages: [{ role: 'user', content: `You are Ana from Rosalia Group. Reply to this rental lead text in 1-2 short sentences. Warm, helpful. End with: — Ana, Rosalia Group\nLead: ${lead?.name||'there'} | Property: ${lead?.property||'our apartments'}\nMessage: "${gv.message}"\n${parsed.action==='book_tour'?'Tour booked '+parsed.date+' at '+(parsed.time||'10:00 AM')+'.':''}\nReply ONLY the SMS text, max 160 chars.` }]
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 300,
+          messages: [{ role: 'user', content: `You are Ana from Rosalia Group. Reply to this rental lead's text message via SMS. Rules:
+1. Always include the booking link on its own line at the end
+2. Use Iron 65 link if they mention Iron 65 or McWhorter: https://book.rosaliagroup.com/iron65
+3. Use Rosalia link for everything else: https://book.rosaliagroup.com/book
+4. If they ask a question — answer briefly in 1 sentence then send the link
+5. If they want to schedule/book — say "Great! Here is your booking link:" then the link
+6. Max 160 chars for the text part, link is separate
+7. Sign off: — Ana, Rosalia Group
+
+Lead: ${lead?.name||'there'} | Property interest: ${lead?.property||'our apartments'}
+Their message: "${gv.message}"
+${parsed.action==='book_tour'?'They want to book — send the link immediately.':''}
+
+Reply format:
+[1 sentence response]
+[booking link on its own line]
+
+Reply with ONLY the SMS text, no quotes, no labels.` }]
         })
       });
       const aiReplyData = await aiReplyRes.json();
-      const aiReplyText = (aiReplyData.content?.[0]?.text||'').slice(0,160);
+      const aiReplyText = (aiReplyData.content?.[0]?.text||'').slice(0,320);
       if (aiReplyText && gv.replyTo) {
         const nodemailer = require('nodemailer');
         const replyTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: GMAIL_USER, pass: GMAIL_PASS }});
