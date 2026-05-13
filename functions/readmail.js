@@ -1084,23 +1084,23 @@ async function processGoogleVoice(gv, fromEmail) {
       });
     }
 
-    // AI reply to lead via Google Voice email relay
+    // AI reply via Google Voice email relay
     try {
-      const replyRes = await fetch('https://api.anthropic.com/v1/messages', {
+      const aiReplyRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150,
-          messages: [{ role: 'user', content: `You are Ana from Rosalia Group. Reply to this rental lead text in 1-2 short sentences. Warm and helpful. Sign off: Ana, Rosalia Group.\nLead: ${lead?.name||'there'} | Property: ${lead?.property||'our apartments'}\nMessage: "${gv.message}"\n${parsed.action==='book_tour'?'Tour booked on '+parsed.date+' at '+(parsed.time||'10:00 AM')+'.':''}\nReply with ONLY the SMS text, max 160 chars.` }]
+          messages: [{ role: 'user', content: `You are Ana from Rosalia Group. Reply to this rental lead text in 1-2 short sentences. Warm, helpful. End with: — Ana, Rosalia Group\nLead: ${lead?.name||'there'} | Property: ${lead?.property||'our apartments'}\nMessage: "${gv.message}"\n${parsed.action==='book_tour'?'Tour booked '+parsed.date+' at '+(parsed.time||'10:00 AM')+'.':''}\nReply ONLY the SMS text, max 160 chars.` }]
         })
       });
-      const replyData = await replyRes.json();
-      const replyText = (replyData.content?.[0]?.text||'').slice(0,160);
-      if (replyText && gv.callerPhone) {
-        const digits = gv.callerPhone.replace(/\D/g,'').slice(-10);
+      const aiReplyData = await aiReplyRes.json();
+      const aiReplyText = (aiReplyData.content?.[0]?.text||'').slice(0,160);
+      if (aiReplyText && gv.callerPhone) {
+        const replyDigits = gv.callerPhone.replace(/\D/g,'').slice(-10);
         const nodemailer = require('nodemailer');
-        const t = nodemailer.createTransport({ service:'gmail', auth:{ user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS }});
-        await t.sendMail({ from: process.env.GMAIL_USER, to: `${digits}@txt.voice.google.com`, subject: replyText, text: replyText });
-        console.log(`GV AI reply sent: "${replyText.slice(0,60)}"`);
+        const replyTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS }});
+        await replyTrans.sendMail({ from: process.env.GMAIL_USER, to: `${replyDigits}@txt.voice.google.com`, subject: aiReplyText, text: aiReplyText });
+        console.log(`GV AI reply sent: "${aiReplyText.slice(0,60)}"`);
       }
     } catch(e) { console.error('GV AI reply error:', e.message); }
   }
@@ -1136,14 +1136,14 @@ async function processGoogleVoice(gv, fromEmail) {
         console.log(`GV callback call triggered to ${gv.callerPhone}`);
       } catch(e) { console.error('GV callback call error:', e.message); }
 
-      // SMS via Google Voice email relay (shows from Ana's GV number)
+      // SMS via Google Voice email relay — shows from Ana's GV number (201) 497-0225
       try {
         const digits = gv.callerPhone.replace(/\D/g, '').slice(-10);
         const gvEmail = `${digits}@txt.voice.google.com`;
-        const smsMsg = `Hi${lead?.name ? ' ' + lead.name.split(' ')[0] : ''}! This is Ana from Rosalia Group — sorry we missed your call. I'm reaching back out now. Feel free to call or text (201) 497-0225 anytime.`;
+        const smsMsg = `Hi${lead?.name ? ' ' + lead.name.split(' ')[0] : ''}! This is Ana from Rosalia Group — sorry we missed your call. Calling you back now. Feel free to call or text (201) 497-0225 anytime.`;
         const nodemailer = require('nodemailer');
-        const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS } });
-        await transporter.sendMail({ from: process.env.GMAIL_USER, to: gvEmail, subject: smsMsg, text: smsMsg });
+        const smsTrans = nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS } });
+        await smsTrans.sendMail({ from: process.env.GMAIL_USER, to: gvEmail, subject: smsMsg, text: smsMsg });
         console.log(`GV callback SMS sent via email relay to ${gvEmail}`);
       } catch(e) { console.error('GV callback SMS error:', e.message); }
     } else {
