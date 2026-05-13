@@ -1140,7 +1140,7 @@ Reply with ONLY the SMS text.` }]
         let smsReply = (smsData.content?.[0]?.text || '').trim();
 
         // Force booking link if not already in reply and not a confirmation message
-        if (smsReply && !smsReply.includes('book.rosaliagroup.com') && !smsReply.toLowerCase().includes('confirmed') && !smsReply.toLowerCase().includes('see you')) {
+        if (smsReply && !smsReply.includes('book.rosaliagroup.com')) {
           smsReply = `${smsReply}\n${bookingLink}`;
         }
 
