@@ -1090,48 +1090,34 @@ async function processGoogleVoice(gv, fromEmail) {
       });
     }
 
-    // AI reply via Google Voice — using same generateReply as email
+    // AI reply via Google Voice — short SMS-length reply
     try {
-      if (gv.replyTo) {
-        const leadName = lead?.name || null;
-        const leadClient = 'rosalia';
-        const leadContext = lead ? `Name: ${lead.name||'Unknown'} | Phone: ${lead.phone||gv.callerPhone} | Property interest: ${lead.property||'general inquiry'} | Status: ${lead.status||'new'}` : `Phone: ${gv.callerPhone} | New contact via Google Voice`;
+      if (gv.replyTo && ANTHROPIC_KEY) {
         const isIron65 = /iron.?65|mcwhorter/i.test(lead?.property||'') || /iron.?65|mcwhorter/i.test(gv.message||'');
+        const bookingLink = isIron65 ? 'https://book.rosaliagroup.com/iron65' : 'https://book.rosaliagroup.com/book';
 
-        const smsReply = await generateReply(
-          `${gv.callerPhone}@txt.voice.google.com`,
-          `Re: Text from ${gv.callerPhone}`,
-          gv.message || '',
-          null,
-          leadContext,
-          null,
-          leadName,
-          isIron65 ? 'iron65' : leadClient
-        );
+        const aiReplyRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 100,
+            messages: [{ role: 'user', content: `You are Ana from Rosalia Group. Reply to this rental lead's text. Write 1 SHORT sentence (max 80 chars). Warm and helpful. Do NOT include any links or sign-off.\nLead: ${lead?.name||'there'} | Property: ${lead?.property||'our apartments'}\nMessage: "${gv.message}"\nReply with ONLY the 1 sentence, nothing else.` }]
+          })
+        });
+        const aiData = await aiReplyRes.json();
+        let shortReply = (aiData.content?.[0]?.text||'').replace(/["]/g,'').trim();
+        // Build final SMS: short reply + booking link + sign-off
+        const finalReply = `${shortReply}\n\nBook a tour: ${bookingLink}\n— Ana, Rosalia Group (201) 497-0225`;
 
-        // Force booking link into SMS reply — GV texts should always end with link
-        let finalReply = smsReply || '';
-        const hasLink = finalReply.includes('book.rosaliagroup.com');
-        if (!hasLink && finalReply) {
-          const isIron65msg = /iron.?65|mcwhorter/i.test(gv.message||'') || /iron.?65|mcwhorter/i.test(lead?.property||'');
-          const bookingLink = isIron65msg ? 'https://book.rosaliagroup.com/iron65' : 'https://book.rosaliagroup.com/book';
-          // Replace any question at the end with the booking link
-          finalReply = finalReply.replace(/\?[^?]*$/, '').trim();
-          finalReply = `${finalReply}\n\nBook your tour here:\n${bookingLink}\n— Ana, Rosalia Group (201) 497-0225`;
-        }
-
-        if (finalReply) {
-          const nodemailer = require('nodemailer');
-          const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
-          await t.sendMail({
-            from: `"Rosalia Group" <${GMAIL_USER}>`,
-            to: gv.replyTo,
-            subject: `Re: New text message from ${gv.callerPhone}`,
-            text: finalReply
-          });
-          console.log(`GV SMS reply sent: "${finalReply.slice(0,80)}"`);
-        }
-      } else {
+        const nodemailer = require('nodemailer');
+        const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+        await t.sendMail({
+          from: `"Rosalia Group" <${GMAIL_USER}>`,
+          to: gv.replyTo,
+          subject: `Re: New text message from ${gv.callerPhone}`,
+          text: finalReply
+        });
+        console.log(`GV SMS reply sent: "${finalReply.slice(0,120)}"`);
+      } else if (!gv.replyTo) {
         console.log('GV SMS reply skipped — no replyTo');
       }
     } catch(e) { console.error('GV AI reply error:', e.message); }
