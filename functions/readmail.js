@@ -1090,30 +1090,61 @@ async function processGoogleVoice(gv, fromEmail) {
       });
     }
 
-    // AI reply via Google Voice — same generateReply as email + force booking link
+    // AI reply via Google Voice — conversation-aware SMS with booking link
     try {
       if (gv.replyTo) {
-        const leadContext = lead ? `Name: ${lead.name||'Unknown'} | Phone: ${lead.phone||gv.callerPhone} | Property: ${lead.property||'general inquiry'} | Status: ${lead.status||'new'}` : `Phone: ${gv.callerPhone} | New contact via Google Voice`;
         const isIron65msg = /iron.?65|mcwhorter/i.test(gv.message||'') || /iron.?65|mcwhorter/i.test(lead?.property||'');
         const bookingLink = isIron65msg ? 'https://book.rosaliagroup.com/iron65' : 'https://book.rosaliagroup.com/book';
 
-        let smsReply = await generateReply(
-          `${gv.callerPhone}@txt.voice.google.com`,
-          `Re: Text from ${gv.callerPhone}`,
-          gv.message || '',
-          null,
-          leadContext,
-          null,
-          lead?.name || null,
-          isIron65msg ? 'iron65' : 'rosalia'
-        );
+        // Get conversation history for this phone number
+        let conversationHistory = '';
+        try {
+          const histRes = await fetch(`${SUPABASE_URL}/rest/v1/activities?lead_id=eq.${lead?.id || '00000000-0000-0000-0000-000000000000'}&type=in.(sms)&order=created_at.asc&limit=10&select=direction,summary,body,created_at`, { headers: SB_H });
+          const history = await histRes.json();
+          if (Array.isArray(history) && history.length > 0) {
+            conversationHistory = '\n\nCONVERSATION HISTORY (oldest first):\n' + history.map(h => {
+              const who = h.direction === 'inbound' ? 'Lead' : 'Ana';
+              const msg = (h.body || h.summary || '').replace(/^Text from[^:]+:\s*/i,'').replace(/<https[^>]+>/g,'').trim().slice(0,200);
+              return `${who}: ${msg}`;
+            }).filter(h => h.length > 6).join('\n');
+          }
+        } catch(e) { console.error('History fetch error:', e.message); }
+
+        const smsRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150,
+            messages: [{ role: 'user', content: `You are Ana from Rosalia Group having a real SMS conversation with a rental lead. Goal: get them to book a tour.
+
+Lead message: "${gv.message}"
+Property interest: ${lead?.property || 'Newark apartments'}
+${conversationHistory}
+
+Our properties: 1BR from $1,600, 2BR from $2,200 Newark NJ. Laundry available. Pets OK.
+Booking link: ${bookingLink}
+
+Rules:
+- Read the conversation history — do not repeat what was already said
+- Answer questions directly in 1 sentence
+- If you already sent the booking link — ask if they were able to book, and offer to help if not
+- If they confirm a date/time — say great and confirm the booking
+- If no booking link sent yet — always end your reply with the link on its own line
+- If they seem hesitant — address concern then resend the link
+- Max 3 sentences total
+- Sign off: — Ana (201) 497-0225
+
+Reply with ONLY the SMS text.` }]
+          })
+        });
+        const smsData = await smsRes.json();
+        let smsReply = (smsData.content?.[0]?.text || '').trim();
+
+        // Force booking link if not already in reply and not a confirmation message
+        if (smsReply && !smsReply.includes('book.rosaliagroup.com') && !smsReply.toLowerCase().includes('confirmed') && !smsReply.toLowerCase().includes('see you')) {
+          smsReply = `${smsReply}\n${bookingLink}`;
+        }
 
         if (smsReply) {
-          // Always include booking link — remove trailing questions, append link
-          if (!smsReply.includes('book.rosaliagroup.com')) {
-            smsReply = smsReply.replace(/\?\s*$/, '').trim();
-            smsReply = `${smsReply}\n\nBook your tour: ${bookingLink}\n— Ana, Rosalia Group (201) 497-0225`;
-          }
           const nodemailer = require('nodemailer');
           const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
           await t.sendMail({
@@ -1123,6 +1154,14 @@ async function processGoogleVoice(gv, fromEmail) {
             text: smsReply
           });
           console.log(`GV SMS reply sent: "${smsReply.slice(0,100)}"`);
+
+          // Log outbound reply to activities
+          if (lead) {
+            await fetch(`${SUPABASE_URL}/rest/v1/activities`, {
+              method: 'POST', headers: { ...SB_H, Prefer: 'return=minimal' },
+              body: JSON.stringify({ lead_id: lead.id, agent_id: agent?.id||null, type: 'sms', direction: 'outbound', summary: `GV SMS reply: "${smsReply.slice(0,80)}"`, body: smsReply })
+            });
+          }
         }
       } else {
         console.log('GV SMS reply skipped — no replyTo');
