@@ -1101,9 +1101,9 @@ async function processGoogleVoice(gv, fromEmail) {
           ? gv.replyTo
           : `${gv.callerPhone.replace(/\D/g,'').slice(-10)}@txt.voice.google.com`;
         const nodemailer = require('nodemailer');
-        const replyTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: GMAIL_USER, pass: GMAIL_PASS }});
+        const replyTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS }});
         await replyTrans.sendMail({
-          from: `"Rosalia Group" <${GMAIL_USER}>`,
+          from: `"Rosalia Group" <${process.env.GMAIL_USER}>`,
           to: gvReplyAddr,
           subject: `Re: New text message from ${gv.callerPhone}`,
           text: aiReplyText
@@ -1156,14 +1156,73 @@ async function processGoogleVoice(gv, fromEmail) {
           : `${gv.callerPhone.replace(/\D/g,'').slice(-10)}@txt.voice.google.com`;
         const smsMsg = `Hi${lead?.name ? ' ' + lead.name.split(' ')[0] : ''}! This is Ana from Rosalia Group — sorry we missed your call. Calling you back now. Feel free to call or text (201) 497-0225 anytime.`;
         const nodemailer = require('nodemailer');
-        const smsTrans = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
-        await smsTrans.sendMail({ from: `"Rosalia Group" <${GMAIL_USER}>`, to: gvReplyAddr, subject: smsMsg, text: smsMsg });
+        const smsTrans = nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS } });
+        await smsTrans.sendMail({ from: `"Rosalia Group" <${process.env.GMAIL_USER}>`, to: gvReplyAddr, subject: smsMsg, text: smsMsg });
         console.log(`GV missed call SMS sent to ${gvReplyAddr}`);
       } catch(e) { console.error('GV callback SMS error:', e.message); }
     } else {
       console.log('GV missed call outside business hours — task created, no auto-call');
     }
   }
+  // VOICEMAIL — read transcript, call back + text reply
+  if (gv.type === 'voicemail' && gv.message) {
+    const nowUTC = new Date();
+    const etOffset = -4;
+    const nowET = new Date(nowUTC.getTime() + etOffset * 3600000);
+    const day = nowET.getUTCDay();
+    const hour = nowET.getUTCHours() + nowET.getUTCMinutes()/60;
+    const inHours = (day===0||day===6) ? (hour>=10&&hour<17) : (hour>=9&&hour<18);
+
+    // Create task with voicemail transcript
+    if (lead) {
+      await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
+        method: 'POST', headers: { ...SB_H, Prefer: 'return=minimal' },
+        body: JSON.stringify({ lead_id: lead.id, assigned_to: agent?.id||null, title: `Voicemail from ${lead.name||gv.callerPhone}`, type: 'call', due_at: new Date().toISOString(), notes: `Voicemail transcript: "${gv.message}"` })
+      });
+    }
+
+    if (inHours && gv.callerPhone && ANTHROPIC_KEY) {
+      // AI reads voicemail and generates SMS reply
+      const vmRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150,
+          messages: [{ role: 'user', content: `You are Ana from Rosalia Group. A rental lead left a voicemail. Write a warm SMS reply acknowledging their voicemail and offering to help. 1-2 sentences max 160 chars. End with: — Ana, Rosalia Group\nLead: ${lead?.name||'there'} | Property: ${lead?.property||'our apartments'}\nVoicemail: "${gv.message}"\nReply ONLY the SMS text.` }]
+        })
+      });
+      const vmData = await vmRes.json();
+      const vmReply = (vmData.content?.[0]?.text||'').slice(0,160);
+
+      // Send SMS reply via GV email relay
+      if (vmReply) {
+        try {
+          const gvReplyAddr = gv.replyTo && gv.replyTo.includes('@') ? gv.replyTo : `${gv.callerPhone.replace(/\D/g,'').slice(-10)}@txt.voice.google.com`;
+          const nodemailer = require('nodemailer');
+          const vmTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS }});
+          await vmTrans.sendMail({ from: `"Rosalia Group" <${process.env.GMAIL_USER}>`, to: gvReplyAddr, subject: vmReply, text: vmReply });
+          console.log(`GV voicemail SMS reply sent: "${vmReply.slice(0,60)}"`);
+        } catch(e) { console.error('GV voicemail SMS error:', e.message); }
+      }
+
+      // Call back via Vapi
+      try {
+        await fetch('https://api.vapi.ai/call/phone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 064f441d-a388-4404-8b6c-05e91e90f1ff' },
+          body: JSON.stringify({
+            phoneNumberId: '2e2b6713-f631-4e9e-95fa-3418ecc77c0a',
+            assistantId: '1cae5323-6b83-4434-8461-6330472da140',
+            customer: { number: gv.callerPhone, name: lead?.name||undefined },
+            assistantOverrides: { variableValues: { lead_name: lead?.name||'', lead_property: lead?.property||'', missed_call: 'true' } }
+          })
+        });
+        console.log(`GV voicemail callback call triggered to ${gv.callerPhone}`);
+      } catch(e) { console.error('GV voicemail call error:', e.message); }
+    } else {
+      console.log('GV voicemail outside business hours — task created, no auto-call/text');
+    }
+  }
+
   return { lead: lead?.name||null, agent: agent?.name||null, action: gv.type };
 }
 
