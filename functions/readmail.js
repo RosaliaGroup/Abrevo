@@ -1297,7 +1297,7 @@ exports.handler = async (event) => {
     const rawEmails = await fetchUnreadEmails(forceDays);
     console.log(`Found ${rawEmails.length} unread emails`);
     const results = { processed: 0, skipped: 0, not_lead: 0, errors: 0 };
-    const processedEmails = new Set(); // Prevent processing same sender twice per run
+    const processedEmails = new Set(); // Prevent processing same sender+subject twice per run
 
     for (const raw of rawEmails) {
       try {
@@ -1318,13 +1318,14 @@ exports.handler = async (event) => {
 
         console.log('Processing:', from, '|', subject);
 
-        // Per-run dedup: skip if we already processed this sender
-        if (processedEmails.has(fromEmail.toLowerCase())) {
-          console.log('Skipping (already processed this run):', fromEmail);
+        // Per-run dedup: skip if we already processed this sender+subject
+        const dedupKey = `${fromEmail.toLowerCase()}::${subject}`;
+        if (processedEmails.has(dedupKey)) {
+          console.log('Skipping (already processed this run):', fromEmail, subject);
           results.skipped++;
           continue;
         }
-        processedEmails.add(fromEmail.toLowerCase());
+        processedEmails.add(dedupKey);
 
         // Detect listing expiration/renewal alerts
         if (isListingAlert(from, subject)) {
