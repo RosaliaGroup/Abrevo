@@ -1120,11 +1120,12 @@ Lead message: "${gv.message}"
 ${conversationHistory}
 
 Rules:
+- NEVER ask the lead any questions — just answer and send the link
 - Max 1 sentence reply — no more
 - Do NOT mention amenities, laundry, pets, or anything you are not 100% sure about
 - Just confirm you have what they need and invite them to book
 - Example good reply: "Yes, we have 2BR options in Newark in that range — here is the link to book a tour:"
-- Example bad reply: anything more than 1 sentence or mentioning specific features
+- Example bad reply: anything more than 1 sentence or mentioning specific features or asking questions
 - Do NOT add sign-off, phone number, or links — those are added automatically
 
 Reply with ONLY the 1 sentence.` }]
