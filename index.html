@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ABREVO — Your Business, Fully Run by AI</title>
+<meta name="description" content="Abrevo handles every business function — calls, emails, support, marketing, social media, client acquisition — in 138 languages, around the clock. You collect the revenue.">
+<meta property="og:title" content="ABREVO — Your Business, Fully Run by AI">
+<meta property="og:description" content="100% AI-operated business platform. Calls, emails, support, sales, marketing. $299/mo. No staff needed.">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+:root {
+  --black: #07070a;
+  --white: #f4f1ea;
+  --gold: #c9a84c;
+  --gold2: #e2c97e;
+  --gold3: #f0e0a8;
+  --dim: #9a8f78;
+  --panel: #0f0f12;
+  --border: rgba(201,168,76,0.15);
+  --border2: rgba(201,168,76,0.35);
+  --green: #2ecc71;
+  --red: #e74c3c;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--black);
+  color:var(--white);
+  font-family:'Instrument Serif',serif;
+  overflow-x:hidden;
+}
+
+/* ── CURSOR ── */
+#cur{position:fixed;width:10px;height:10px;background:var(--gold);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .2s,height .2s;mix-blend-mode:difference;}
+#cur2{position:fixed;width:36px;height:36px;border:1px solid rgba(201,168,76,.4);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:left .1s ease-out,top .1s ease-out;}
+body:hover #cur{width:10px;}
+
+/* ── NAV ── */
+#nav{
+  position:fixed;top:0;left:0;right:0;z-index:500;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:1.2rem 3rem;
+  background:rgba(7,7,10,.9);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  transition:padding .3s;
+}
+.nav-logo{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.8rem;letter-spacing:5px;
+  background:linear-gradient(135deg,var(--gold),var(--gold3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  cursor:pointer;
+}
+.nav-links{display:flex;gap:2rem;align-items:center;}
+.nav-links a{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.6rem;letter-spacing:2px;text-transform:uppercase;
+  color:var(--dim);text-decoration:none;
+  transition:color .2s;cursor:pointer;
+}
+.nav-links a:hover{color:var(--gold);}
+.nav-btn{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.6rem;letter-spacing:2px;text-transform:uppercase;
+  background:var(--gold);color:var(--black);
+  padding:.6rem 1.5rem;border:none;cursor:pointer;
+  font-weight:500;transition:background .2s,transform .2s;
+}
+.nav-btn:hover{background:var(--gold2);transform:translateY(-1px);}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:.5rem;}
+.hamburger span{width:24px;height:1px;background:var(--gold);display:block;transition:.3s;}
+
+/* ── HERO ── */
+#hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  justify-content:center;align-items:center;
+  text-align:center;
+  padding:7rem 2rem 4rem;
+  position:relative;overflow:hidden;
+}
+.hero-grid{
+  position:absolute;inset:0;
+  background:linear-gradient(rgba(201,168,76,.03) 1px,transparent 1px),
+             linear-gradient(90deg,rgba(201,168,76,.03) 1px,transparent 1px);
+  background-size:70px 70px;
+  mask-image:radial-gradient(ellipse 90% 90% at 50% 50%,black 20%,transparent 80%);
+}
+.hero-glow{
+  position:absolute;width:800px;height:800px;
+  background:radial-gradient(circle,rgba(201,168,76,.07) 0%,transparent 70%);
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  pointer-events:none;
+  animation:breathe 6s ease-in-out infinite;
+}
+@keyframes breathe{0%,100%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-50%,-50%) scale(1.1);}}
+
+.hero-badge{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.6rem;letter-spacing:3px;text-transform:uppercase;
+  color:var(--gold);margin-bottom:2rem;
+  display:flex;align-items:center;gap:.8rem;
+  opacity:0;animation:up .8s .2s forwards;
+}
+.dot-live{
+  width:7px;height:7px;background:var(--green);
+  border-radius:50%;
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(46,204,113,.5);}50%{box-shadow:0 0 0 8px rgba(46,204,113,0);}}
+
+.hero-h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(4rem,14vw,13rem);
+  letter-spacing:6px;line-height:.92;
+  background:linear-gradient(175deg,var(--white) 0%,var(--gold2) 50%,var(--gold) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  opacity:0;animation:up .9s .4s forwards;
+}
+.hero-tagline{
+  font-style:italic;font-size:clamp(1rem,2.5vw,1.6rem);
+  color:var(--dim);margin-top:1.2rem;max-width:620px;
+  opacity:0;animation:up .9s .6s forwards;
+}
+.hero-line{
+  width:60px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  margin:2rem auto;
+  opacity:0;animation:up .9s .7s forwards;
+}
+.hero-body{
+  font-size:1.05rem;color:#7a7060;
+  max-width:520px;line-height:1.9;font-weight:300;
+  opacity:0;animation:up .9s .8s forwards;
+}
+.hero-ctas{
+  display:flex;gap:1rem;margin-top:2.5rem;
+  flex-wrap:wrap;justify-content:center;
+  opacity:0;animation:up .9s 1s forwards;
+}
+.btn-primary{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.7rem;letter-spacing:2px;text-transform:uppercase;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  color:var(--black);padding:1rem 2.8rem;
+  border:none;cursor:pointer;font-weight:500;
+  transition:transform .25s,box-shadow .25s;
+  position:relative;overflow:hidden;
+}
+.btn-primary::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);
+  transform:translateX(-100%);transition:transform .5s;
+}
+.btn-primary:hover::after{transform:translateX(100%);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(201,168,76,.35);}
+.btn-ghost{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.7rem;letter-spacing:2px;text-transform:uppercase;
+  background:transparent;color:var(--white);
+  padding:1rem 2.8rem;border:1px solid var(--border2);
+  cursor:pointer;transition:border-color .2s,color .2s;
+}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+
+@keyframes up{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── TICKER ── */
+.ticker-wrap{
+  background:var(--gold);padding:.6rem 0;
+  overflow:hidden;white-space:nowrap;
+}
+.ticker{
+  display:inline-block;
+  animation:ticker 30s linear infinite;
+}
+.ticker span{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.6rem;letter-spacing:3px;text-transform:uppercase;
+  color:var(--black);margin-right:4rem;
+}
+@keyframes ticker{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+/* ── STATS ── */
+.stats{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  border-bottom:1px solid var(--border);
+}
+.stat{
+  padding:3rem 2rem;text-align:center;
+  border-right:1px solid var(--border);
+  position:relative;overflow:hidden;
+}
+.stat:last-child{border-right:none;}
+.stat::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;
+  height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  transform:scaleX(0);transition:.4s;
+}
+.stat:hover::after{transform:scaleX(1);}
+.stat-n{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:3.5rem;letter-spacing:2px;
+  color:var(--gold2);line-height:1;
+}
+.stat-l{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.5rem;letter-spacing:3px;text-transform:uppercase;
+  color:var(--dim);margin-top:.5rem;
+}
+
+/* ── SECTIONS ── */
+.sec{padding:6rem 4rem;max-width:1280px;margin:0 auto;}
+.sec-tag{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.55rem;letter-spacing:4px;text-transform:uppercase;
+  color:var(--gold);margin-bottom:1.2rem;
+  display:flex;align-items:center;gap:1rem;
+}
+.sec-tag::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border2),transparent);}
+.sec-h2{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(2.5rem,5vw,5rem);
+  letter-spacing:3px;line-height:1;color:var(--white);
+}
+.sec-h2 i{
+  font-family:'Instrument Serif',serif;
+  font-style:italic;font-size:.7em;
+  color:var(--gold2);letter-spacing:1px;
+}
+.sec-sub{font-size:1rem;color:var(--dim);max-width:560px;line-height:1.8;margin-top:1rem;}
+
+/* ── HOW IT WORKS ── */
+.how-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1px;background:var(--border);
+  margin-top:4rem;
+}
+.how-card{
+  background:var(--panel);padding:2.5rem 2rem;
+  position:relative;overflow:hidden;
+  transition:background .3s;
+}
+.how-card:hover{background:rgba(201,168,76,.05);}
+.how-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  transform:scaleX(0);transition:.4s;
+}
+.how-card:hover::before{transform:scaleX(1);}
+.how-num{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:5rem;color:rgba(201,168,76,.08);
+  line-height:1;margin-bottom:-.5rem;
+  position:absolute;top:1rem;right:1.5rem;
+}
+.how-icon{font-size:2rem;margin-bottom:1rem;}
+.how-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.4rem;letter-spacing:2px;color:var(--white);
+  margin-bottom:.8rem;
+}
+.how-desc{font-size:.9rem;color:var(--dim);line-height:1.8;}
+
+/* ── SERVICES ── */
+.services-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);
+  gap:1px;background:var(--border);
+  margin-top:4rem;
+}
+.svc-card{
+  background:var(--panel);padding:2.5rem;
+  display:flex;gap:1.5rem;
+  transition:background .3s;
+  position:relative;overflow:hidden;
+}
+.svc-card:hover{background:rgba(201,168,76,.04);}
+.svc-icon-wrap{
+  width:52px;height:52px;flex-shrink:0;
+  background:rgba(201,168,76,.1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;border:1px solid var(--border);
+}
+.svc-content h3{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.2rem;letter-spacing:2px;color:var(--white);
+  margin-bottom:.5rem;
+}
+.svc-content p{font-size:.88rem;color:var(--dim);line-height:1.75;}
+.svc-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:1rem;}
+.svc-tag{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.5rem;letter-spacing:1px;text-transform:uppercase;
+  padding:.2rem .6rem;border:1px solid var(--border);color:#4a4030;
+}
+
+/* ── DEMO WIDGET ── */
+#demo-section{
+  background:var(--panel);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+.demo-inner{
+  max-width:900px;margin:0 auto;
+  padding:5rem 3rem;
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:4rem;align-items:center;
+}
+.demo-left h2{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:3rem;letter-spacing:3px;color:var(--white);
+  line-height:1;margin-bottom:1rem;
+}
+.demo-left p{font-size:.95rem;color:var(--dim);line-height:1.8;margin-bottom:2rem;}
+.chat-window{
+  background:rgba(7,7,10,.8);
+  border:1px solid var(--border2);
+  border-radius:2px;overflow:hidden;
+}
+.chat-header{
+  background:rgba(201,168,76,.08);
+  padding:.8rem 1.2rem;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:.8rem;
+}
+.chat-header-dot{
+  width:8px;height:8px;background:var(--green);
+  border-radius:50%;
+  animation:pulse 2s infinite;
+}
+.chat-header-text{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.55rem;letter-spacing:2px;text-transform:uppercase;
+  color:var(--gold);
+}
+.chat-body{padding:1.5rem;min-height:220px;display:flex;flex-direction:column;gap:1rem;}
+.chat-msg{
+  max-width:85%;padding:.8rem 1rem;
+  font-size:.85rem;line-height:1.6;
+}
+.chat-msg.ai{
+  background:rgba(201,168,76,.08);
+  border:1px solid var(--border);
+  align-self:flex-start;color:var(--white);
+}
+.chat-msg.user{
+  background:rgba(201,168,76,.15);
+  border:1px solid var(--border2);
+  align-self:flex-end;color:var(--white);
+}
+.chat-msg.typing{align-self:flex-start;}
+.typing-dots{display:flex;gap:4px;padding:.5rem;}
+.typing-dots span{
+  width:6px;height:6px;background:var(--gold);
+  border-radius:50%;
+  animation:typing 1.2s ease-in-out infinite;
+}
+.typing-dots span:nth-child(2){animation-delay:.2s;}
+.typing-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes typing{0%,60%,100%{transform:translateY(0);opacity:.5;}30%{transform:translateY(-6px);opacity:1;}}
+.chat-input-wrap{
+  border-top:1px solid var(--border);
+  padding:.8rem;display:flex;gap:.6rem;
+}
+.chat-input{
+  flex:1;background:transparent;border:1px solid var(--border);
+  color:var(--white);padding:.5rem .8rem;
+  font-family:'Instrument Serif',serif;font-size:.85rem;
+  outline:none;
+}
+.chat-input::placeholder{color:var(--dim);}
+.chat-send{
+  background:var(--gold);color:var(--black);
+  border:none;padding:.5rem 1rem;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.55rem;letter-spacing:1px;
+  cursor:pointer;transition:background .2s;
+}
+.chat-send:hover{background:var(--gold2);}
+
+/* ── PRICING ── */
+#pricing-section{border-top:1px solid var(--border);}
+.pricing-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1px;background:var(--border);
+  margin-top:4rem;
+}
+.price-card{
+  background:var(--panel);padding:3rem 2.5rem;
+  position:relative;transition:background .3s;
+}
+.price-card:hover{background:rgba(201,168,76,.04);}
+.price-card.hot{
+  background:rgba(201,168,76,.07);
+  border:1px solid var(--border2);
+  margin:-1px;
+}
+.price-card.hot::before{
+  content:'BEST VALUE';
+  position:absolute;top:-1px;left:50%;transform:translateX(-50%);
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.45rem;letter-spacing:3px;
+  background:var(--gold);color:var(--black);
+  padding:.25rem .8rem;
+}
+.price-tier{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.55rem;letter-spacing:3px;text-transform:uppercase;
+  color:var(--dim);margin-bottom:1.5rem;
+}
+.price-amt{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:5rem;letter-spacing:2px;line-height:1;
+  color:var(--white);
+}
+.price-amt sup{font-size:1.8rem;vertical-align:top;margin-top:1rem;display:inline-block;}
+.price-amt sub{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.7rem;color:var(--dim);
+}
+.price-pitch{
+  font-style:italic;font-size:.9rem;
+  color:var(--dim);margin:1rem 0 2rem;line-height:1.6;
+}
+.price-features{list-style:none;}
+.price-features li{
+  font-size:.88rem;color:#8a8070;
+  padding:.55rem 0;border-top:1px solid var(--border);
+  display:flex;align-items:flex-start;gap:.6rem;
+}
+.price-features li::before{content:'✓';color:var(--green);flex-shrink:0;font-size:.8rem;}
+.price-cta{
+  margin-top:2.5rem;width:100%;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.6rem;letter-spacing:2px;text-transform:uppercase;
+  padding:1rem;cursor:pointer;transition:all .3s;
+  background:transparent;color:var(--white);
+  border:1px solid var(--border2);
+}
+.price-card.hot .price-cta{
+  background:var(--gold);color:var(--black);border-color:var(--gold);
+}
+.price-cta:hover{background:var(--gold);color:var(--black);border-color:var(--gold);}
+
+/* ── STRIPE MODAL ── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;z-index:800;
+  background:rgba(7,7,10,.95);backdrop-filter:blur(10px);
+  align-items:center;justify-content:center;
+  padding:2rem;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:var(--panel);
+  border:1px solid var(--border2);
+  width:100%;max-width:520px;
+  max-height:90vh;overflow-y:auto;
+}
+.modal-header{
+  padding:2rem;border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:flex-start;
+}
+.modal-header h2{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.8rem;letter-spacing:3px;color:var(--white);
+}
+.modal-close{
+  background:none;border:none;color:var(--dim);
+  font-size:1.5rem;cursor:pointer;transition:color .2s;
+  line-height:1;
+}
+.modal-close:hover{color:var(--white);}
+.modal-body{padding:2rem;}
+.plan-summary{
+  background:rgba(201,168,76,.07);
+  border:1px solid var(--border);
+  padding:1.2rem;margin-bottom:2rem;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.plan-name{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.2rem;letter-spacing:2px;color:var(--gold);
+}
+.plan-price{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.9rem;color:var(--white);
+}
+.form-group{margin-bottom:1.2rem;}
+.form-label{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.55rem;letter-spacing:2px;text-transform:uppercase;
+  color:var(--dim);display:block;margin-bottom:.5rem;
+}
+.form-input{
+  width:100%;background:rgba(201,168,76,.05);
+  border:1px solid var(--border2);color:var(--white);
+  padding:.8rem 1rem;font-family:'Instrument Serif',serif;
+  font-size:.95rem;outline:none;
+  transition:border-color .2s;
+}
+.form-input:focus{border-color:var(--gold);}
+.form-input::placeholder{color:#4a4030;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+#card-element{
+  background:rgba(201,168,76,.05);
+  border:1px solid var(--border2);
+  padding:1rem;
+  transition:border-color .2s;
+}
+#card-element.StripeElement--focus{border-color:var(--gold);}
+.stripe-submit{
+  width:100%;margin-top:1.5rem;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.65rem;letter-spacing:2px;text-transform:uppercase;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  color:var(--black);padding:1.1rem;
+  border:none;cursor:pointer;font-weight:500;
+  transition:opacity .2s,transform .2s;
+  position:relative;
+}
+.stripe-submit:hover{opacity:.9;transform:translateY(-1px);}
+.stripe-submit:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.stripe-note{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.5rem;color:var(--dim);text-align:center;
+  margin-top:1rem;letter-spacing:1px;line-height:1.8;
+}
+#form-message{
+  padding:.8rem;margin-top:1rem;
+  font-family:'IBM Plex Mono',monospace;font-size:.6rem;
+  letter-spacing:1px;text-align:center;display:none;
+}
+#form-message.success{background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);color:var(--green);}
+#form-message.error{background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);color:var(--red);}
+
+/* ── ONBOARDING MODAL ── */
+.onboard-steps{
+  display:flex;gap:.5rem;margin-bottom:2rem;
+}
+.onboard-step-dot{
+  flex:1;height:3px;background:var(--border);
+  transition:background .3s;
+}
+.onboard-step-dot.done{background:var(--gold);}
+.step-content{display:none;}
+.step-content.active{display:block;}
+.select-input{
+  width:100%;background:rgba(201,168,76,.05);
+  border:1px solid var(--border2);color:var(--white);
+  padding:.8rem 1rem;font-family:'Instrument Serif',serif;
+  font-size:.95rem;outline:none;cursor:pointer;
+}
+.select-input option{background:var(--panel);}
+.textarea-input{
+  width:100%;background:rgba(201,168,76,.05);
+  border:1px solid var(--border2);color:var(--white);
+  padding:.8rem 1rem;font-family:'Instrument Serif',serif;
+  font-size:.95rem;outline:none;resize:vertical;min-height:90px;
+}
+.next-btn{
+  width:100%;margin-top:1.5rem;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.6rem;letter-spacing:2px;text-transform:uppercase;
+  background:var(--gold);color:var(--black);
+  padding:1rem;border:none;cursor:pointer;
+  transition:background .2s;
+}
+.next-btn:hover{background:var(--gold2);}
+.back-btn{
+  background:transparent;color:var(--dim);
+  border:1px solid var(--border);
+  width:100%;margin-top:.6rem;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.6rem;letter-spacing:2px;text-transform:uppercase;
+  padding:.8rem;cursor:pointer;transition:all .2s;
+}
+.back-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ── AFFILIATE ── */
+#affiliate{
+  background:var(--panel);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+.affiliate-inner{
+  max-width:1000px;margin:0 auto;padding:5rem 3rem;
+  display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;
+}
+.aff-left h2{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:3.5rem;letter-spacing:3px;line-height:1;
+  color:var(--white);margin-bottom:1rem;
+}
+.aff-left p{font-size:.95rem;color:var(--dim);line-height:1.8;margin-bottom:2rem;}
+.aff-box{
+  background:rgba(201,168,76,.06);
+  border:1px solid var(--border2);padding:2rem;
+}
+.aff-stat{margin-bottom:1.5rem;}
+.aff-stat-n{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:3rem;letter-spacing:2px;color:var(--gold2);
+}
+.aff-stat-l{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.5rem;letter-spacing:2px;text-transform:uppercase;
+  color:var(--dim);margin-top:.2rem;
+}
+.aff-form-input{
+  width:100%;background:rgba(201,168,76,.05);
+  border:1px solid var(--border2);color:var(--white);
+  padding:.8rem 1rem;font-family:'Instrument Serif',serif;
+  font-size:.95rem;outline:none;margin-bottom:.8rem;
+}
+.aff-btn{
+  width:100%;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.6rem;letter-spacing:2px;text-transform:uppercase;
+  background:transparent;color:var(--gold);
+  padding:.9rem;border:1px solid var(--border2);
+  cursor:pointer;transition:all .2s;
+}
+.aff-btn:hover{background:var(--gold);color:var(--black);}
+#aff-result{
+  display:none;margin-top:1rem;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.6rem;color:var(--green);letter-spacing:1px;
+  line-height:2;
+}
+
+/* ── CONTACT ── */
+.contact-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:1px;background:var(--border);
+  margin-top:4rem;
+}
+.contact-info{
+  background:var(--panel);padding:3rem;
+}
+.contact-info h3{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.5rem;letter-spacing:3px;color:var(--white);
+  margin-bottom:1.5rem;
+}
+.contact-item{
+  display:flex;gap:1rem;align-items:flex-start;
+  margin-bottom:1.5rem;
+  font-size:.9rem;color:var(--dim);line-height:1.6;
+}
+.contact-icon{
+  width:36px;height:36px;background:rgba(201,168,76,.1);
+  border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.9rem;flex-shrink:0;
+}
+.contact-form{background:var(--panel);padding:3rem;}
+.contact-form h3{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.5rem;letter-spacing:3px;color:var(--white);
+  margin-bottom:1.5rem;
+}
+.contact-submit{
+  width:100%;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.6rem;letter-spacing:2px;text-transform:uppercase;
+  background:var(--gold);color:var(--black);
+  padding:1rem;border:none;cursor:pointer;
+  transition:background .2s;margin-top:.5rem;
+}
+.contact-submit:hover{background:var(--gold2);}
+#contact-msg{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.6rem;color:var(--green);
+  letter-spacing:1px;margin-top:1rem;display:none;
+}
+
+/* ── FOOTER ── */
+footer{
+  border-top:1px solid var(--border);
+  background:var(--panel);
+}
+.footer-top{
+  display:grid;grid-template-columns:2fr 1fr 1fr 1fr;
+  gap:3rem;padding:4rem;
+  border-bottom:1px solid var(--border);
+}
+.footer-brand .f-logo{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:2rem;letter-spacing:5px;
+  color:var(--gold);margin-bottom:1rem;
+}
+.footer-brand p{font-size:.85rem;color:var(--dim);line-height:1.8;max-width:260px;}
+.footer-col h4{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.55rem;letter-spacing:3px;text-transform:uppercase;
+  color:var(--gold);margin-bottom:1.2rem;
+}
+.footer-col a{
+  display:block;font-size:.85rem;color:var(--dim);
+  text-decoration:none;margin-bottom:.6rem;
+  cursor:pointer;transition:color .2s;
+}
+.footer-col a:hover{color:var(--gold);}
+.footer-bottom{
+  padding:1.5rem 4rem;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.footer-copy{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.5rem;color:var(--dim);letter-spacing:1px;
+}
+.footer-badges{display:flex;gap:.8rem;}
+.badge-item{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.45rem;letter-spacing:1px;text-transform:uppercase;
+  padding:.2rem .6rem;border:1px solid var(--border);color:var(--dim);
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  #nav{padding:1rem 1.5rem;}
+  .nav-links{display:none;}
+  .hamburger{display:flex;}
+  .nav-links.open{
+    display:flex;flex-direction:column;
+    position:fixed;inset:0;top:60px;
+    background:var(--black);padding:3rem;
+    gap:2rem;align-items:center;justify-content:center;
+    z-index:400;
+  }
+  .nav-links.open a{font-size:1rem;}
+  .sec{padding:4rem 1.5rem;}
+  .stats,.how-grid,.services-grid,.pricing-grid,.contact-grid{grid-template-columns:1fr;}
+  .demo-inner,.affiliate-inner{grid-template-columns:1fr;}
+  .footer-top{grid-template-columns:1fr 1fr;}
+  .footer-bottom{flex-direction:column;gap:1rem;text-align:center;}
+  body{cursor:auto;}
+  #cur,#cur2{display:none;}
+}
+@media(max-width:600px){
+  .footer-top{grid-template-columns:1fr;}
+  .hero-ctas{flex-direction:column;align-items:stretch;width:100%;max-width:320px;}
+  .btn-primary,.btn-ghost{width:100%;text-align:center;padding:.9rem 1.5rem;font-size:.65rem;}
+  #hero{padding:5rem 1.2rem 3rem;}
+  .hero-h1{font-size:clamp(3rem,16vw,5.5rem);}
+  .hero-tagline{font-size:.92rem;}
+  .hero-body{font-size:.85rem;}
+  .hero-ctas{margin-top:1.5rem;}
+}
+
+/* ── SCROLL REVEAL ── */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s,transform .7s;}
+.reveal.visible{opacity:1;transform:translateY(0);}
+</style>
+</head>
+<body>
+
+<div id="cur"></div>
+<div id="cur2"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-logo" onclick="scrollTo(0,0)">ABREVO</div>
+  <div class="nav-links" id="navLinks">
+    <a onclick="scrollToSec('how')">How It Works</a>
+    <a onclick="scrollToSec('services')">Services</a>
+    <a onclick="scrollToSec('pricing-section')">Pricing</a>
+    <a onclick="scrollToSec('affiliate')">Earn 20%</a>
+    <a onclick="scrollToSec('contact')">Contact</a>
+    <button class="nav-btn" onclick="openModal('growth')">Start Free Trial</button>
+  </div>
+  <div class="hamburger" id="hamburger" onclick="toggleNav()">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-badge"><span class="dot-live"></span>Live Platform · All Systems Operational</div>
+  <h1 class="hero-h1">ABREVO</h1>
+  <p class="hero-tagline">Your entire business, operated by artificial intelligence.</p>
+  <div class="hero-line"></div>
+  <p class="hero-body">Calls answered. Emails managed. Clients acquired. Social media running. Support resolved. 24 hours a day. 138 languages. Zero staff.</p>
+  <div class="hero-ctas">
+    <button class="btn-primary" onclick="openModal('growth')">Start for $699/mo →</button>
+    <button class="btn-ghost" onclick="scrollToSec('demo-section')">See AI Demo ↓</button>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker">
+    <span>📞 AI Answers Every Call</span>
+    <span>✉️ Emails Handled Automatically</span>
+    <span>🎯 AI Finds New Clients Daily</span>
+    <span>📱 Social Media On Autopilot</span>
+    <span>💬 24/7 Customer Support</span>
+    <span>🌍 138 Languages Supported</span>
+    <span>📞 AI Answers Every Call</span>
+    <span>✉️ Emails Handled Automatically</span>
+    <span>🎯 AI Finds New Clients Daily</span>
+    <span>📱 Social Media On Autopilot</span>
+    <span>💬 24/7 Customer Support</span>
+    <span>🌍 138 Languages Supported</span>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat reveal"><div class="stat-n" data-target="500">0</div><div class="stat-l">Million SMBs We Serve</div></div>
+  <div class="stat reveal"><div class="stat-n" data-target="138">0</div><div class="stat-l">Languages Supported</div></div>
+  <div class="stat reveal"><div class="stat-n">24/7</div><div class="stat-l">Always Operational</div></div>
+  <div class="stat reveal"><div class="stat-n">$0</div><div class="stat-l">Staff Cost For You</div></div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="sec" id="how">
+  <div class="sec-tag">Simple Process</div>
+  <h2 class="sec-h2">Up & Running<br><i>in 48 Hours</i></h2>
+  <p class="sec-sub">From signup to fully operational AI business — faster than hiring a single employee.</p>
+  <div class="how-grid">
+    <div class="how-card reveal">
+      <div class="how-num">01</div>
+      <div class="how-icon">✍️</div>
+      <div class="how-title">You Subscribe</div>
+      <p class="how-desc">Choose your plan, complete our 5-minute onboarding form telling us about your business. That's the only input you'll ever need to give.</p>
+    </div>
+    <div class="how-card reveal">
+      <div class="how-num">02</div>
+      <div class="how-icon">⚙️</div>
+      <div class="how-title">We Deploy Your AI</div>
+      <p class="how-desc">Within 48 hours, six specialized AI agents are trained on your business, connected to your channels, and fully operational — calls, emails, social, support, sales, marketing.</p>
+    </div>
+    <div class="how-card reveal">
+      <div class="how-num">03</div>
+      <div class="how-icon">💰</div>
+      <div class="how-title">You Collect Revenue</div>
+      <p class="how-desc">Your AI staff works around the clock. You get weekly reports on everything they've done. Your only job is to make strategic decisions and spend the profits.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section class="sec" id="services" style="padding-top:0;">
+  <div class="sec-tag">What Your AI Does</div>
+  <h2 class="sec-h2">Six Agents.<br><i>One Complete Business.</i></h2>
+  <div class="services-grid">
+    <div class="svc-card reveal">
+      <div class="svc-icon-wrap">📞</div>
+      <div class="svc-content">
+        <h3>AI Call Agent</h3>
+        <p>Answers every inbound call, makes outbound sales calls, qualifies leads, books appointments, handles complaints — in any language, any time zone, sounding completely human.</p>
+        <div class="svc-tags"><span class="svc-tag">Vapi.ai</span><span class="svc-tag">Twilio</span><span class="svc-tag">ElevenLabs</span></div>
+      </div>
+    </div>
+    <div class="svc-card reveal">
+      <div class="svc-icon-wrap">✉️</div>
+      <div class="svc-content">
+        <h3>AI Email Agent</h3>
+        <p>Reads, categorizes, and responds to every email. Runs outreach campaigns. Follows up on leads. Manages newsletters. Fully autonomous inbox management.</p>
+        <div class="svc-tags"><span class="svc-tag">GPT-4o</span><span class="svc-tag">SendGrid</span><span class="svc-tag">Zapier</span></div>
+      </div>
+    </div>
+    <div class="svc-card reveal">
+      <div class="svc-icon-wrap">💬</div>
+      <div class="svc-content">
+        <h3>AI Support Agent</h3>
+        <p>Resolves customer tickets, troubleshoots issues, handles refunds, answers FAQs — with the patience and knowledge of an entire support team, always available.</p>
+        <div class="svc-tags"><span class="svc-tag">Claude API</span><span class="svc-tag">Intercom</span><span class="svc-tag">Zendesk</span></div>
+      </div>
+    </div>
+    <div class="svc-card reveal">
+      <div class="svc-icon-wrap">📱</div>
+      <div class="svc-content">
+        <h3>AI Social Agent</h3>
+        <p>Creates and publishes daily content across LinkedIn, Instagram, X, TikTok, Facebook. Generates images, writes captions, replies to comments — every single day.</p>
+        <div class="svc-tags"><span class="svc-tag">Buffer API</span><span class="svc-tag">DALL-E 3</span><span class="svc-tag">Make.com</span></div>
+      </div>
+    </div>
+    <div class="svc-card reveal">
+      <div class="svc-icon-wrap">🎯</div>
+      <div class="svc-content">
+        <h3>AI Sales Agent</h3>
+        <p>Finds new prospects daily, sends personalized outreach, follows up, handles objections, and books demos — entirely without human involvement. A tireless closer.</p>
+        <div class="svc-tags"><span class="svc-tag">Apollo.io</span><span class="svc-tag">Instantly.ai</span><span class="svc-tag">Hunter.io</span></div>
+      </div>
+    </div>
+    <div class="svc-card reveal">
+      <div class="svc-icon-wrap">📣</div>
+      <div class="svc-content">
+        <h3>AI Marketing Agent</h3>
+        <p>Writes SEO blog posts, manages Google Ads, runs A/B tests, tracks analytics, and optimizes campaigns — a full marketing department running on autopilot.</p>
+        <div class="svc-tags"><span class="svc-tag">SEMrush API</span><span class="svc-tag">Google Ads</span><span class="svc-tag">n8n</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO WIDGET -->
+<div id="demo-section">
+  <div class="demo-inner">
+    <div class="demo-left">
+      <div class="sec-tag" style="margin-bottom:1rem;">Live AI Demo</div>
+      <h2>Talk to Your<br>AI Agent Now</h2>
+      <p>This is exactly what your customers experience. Ask it anything about your business — it responds in real time, in any language.</p>
+      <button class="btn-primary" onclick="openModal('starter')">Get Your Own AI →</button>
+    </div>
+    <div class="chat-window">
+      <div class="chat-header">
+        <span class="chat-header-dot"></span>
+        <span class="chat-header-text">Abrevo AI · Online · Responds in any language</span>
+      </div>
+      <div class="chat-body" id="chatBody">
+        <div class="chat-msg ai">Hello! I'm your Abrevo AI assistant. I handle all business communications for your company — calls, emails, support, and sales. How can I help you today?</div>
+      </div>
+      <div class="chat-input-wrap">
+        <input class="chat-input" id="chatInput" placeholder="Ask anything..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="chat-send" onclick="sendChat()">SEND</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRICING -->
+<section class="sec" id="pricing-section">
+  <div class="sec-tag">Transparent Pricing</div>
+  <h2 class="sec-h2">Choose Your<br><i>Growth Speed.</i></h2>
+  <p class="sec-sub">One subscription replaces an entire business team. Cancel anytime.</p>
+  <div class="pricing-grid">
+    <div class="price-card reveal">
+      <div class="price-tier">Starter Plan</div>
+      <div class="price-amt"><sup>$</sup>299<sub>/mo</sub></div>
+      <p class="price-pitch">Perfect for solo entrepreneurs & local businesses taking their first step into AI automation.</p>
+      <ul class="price-features">
+        <li>AI call answering (100 calls/mo)</li>
+        <li>Email management (500/mo)</li>
+        <li>Social media posts (1x daily, 3 platforms)</li>
+        <li>Basic customer support bot</li>
+        <li>Monthly performance report</li>
+        <li>2 languages supported</li>
+        <li>48hr setup & onboarding</li>
+      </ul>
+      <button class="price-cta" onclick="openModal('starter')">Start Now →</button>
+    </div>
+    <div class="price-card hot reveal">
+      <div class="price-tier">Growth Plan</div>
+      <div class="price-amt"><sup>$</sup>699<sub>/mo</sub></div>
+      <p class="price-pitch">For ambitious businesses ready to compete at enterprise level without the enterprise costs.</p>
+      <ul class="price-features">
+        <li>Unlimited AI calls (inbound + outbound)</li>
+        <li>Unlimited email management</li>
+        <li>Social media (3x daily, all platforms)</li>
+        <li>Full support + troubleshooting AI</li>
+        <li>Outbound sales outreach (200 leads/mo)</li>
+        <li>SEO blog content (4 posts/mo)</li>
+        <li>5 languages supported</li>
+        <li>Weekly CEO dashboard report</li>
+      </ul>
+      <button class="price-cta" onclick="openModal('growth')">Start Free Trial →</button>
+    </div>
+    <div class="price-card reveal">
+      <div class="price-tier">Empire Plan</div>
+      <div class="price-amt"><sup>$</sup>2,499<sub>/mo</sub></div>
+      <p class="price-pitch">Full AI business operations. Custom trained on your brand. Globally deployed. Enterprise-grade SLA.</p>
+      <ul class="price-features">
+        <li>Everything in Growth</li>
+        <li>Custom-trained AI agents (your brand voice)</li>
+        <li>1,000+ outbound leads/mo</li>
+        <li>All 138 languages</li>
+        <li>CRM, ERP & custom integrations</li>
+        <li>Dedicated account manager (AI)</li>
+        <li>99.9% uptime SLA</li>
+        <li>Priority CEO escalation alerts</li>
+      </ul>
+      <button class="price-cta" onclick="openModal('empire')">Build Empire →</button>
+    </div>
+  </div>
+</section>
+
+<!-- AFFILIATE -->
+<div id="affiliate">
+  <div class="affiliate-inner">
+    <div class="aff-left reveal">
+      <div class="sec-tag" style="margin-bottom:1rem;">Referral Program</div>
+      <h2>Earn 20%<br>Recurring<br>Commission</h2>
+      <p>Refer one business to Abrevo and earn 20% of their subscription every single month — forever. Refer 10 businesses on Growth and earn $1,398/mo passively.</p>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--gold);letter-spacing:2px;margin-top:1rem;">NO CAP · PAID MONTHLY · LIFETIME</div>
+    </div>
+    <div class="aff-box reveal">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem;">
+        <div class="aff-stat">
+          <div class="aff-stat-n">20%</div>
+          <div class="aff-stat-l">Per Referral Monthly</div>
+        </div>
+        <div class="aff-stat">
+          <div class="aff-stat-n">$139</div>
+          <div class="aff-stat-l">Per Growth Referral/Mo</div>
+        </div>
+        <div class="aff-stat">
+          <div class="aff-stat-n">∞</div>
+          <div class="aff-stat-l">No Referral Cap</div>
+        </div>
+        <div class="aff-stat">
+          <div class="aff-stat-n">30d</div>
+          <div class="aff-stat-l">Cookie Duration</div>
+        </div>
+      </div>
+      <input class="aff-form-input" id="affEmail" placeholder="Enter your email address" type="email">
+      <input class="aff-form-input" id="affName" placeholder="Your full name">
+      <button class="aff-btn" onclick="joinAffiliate()">Generate My Referral Link →</button>
+      <div id="aff-result"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT -->
+<section class="sec" id="contact">
+  <div class="sec-tag">Get In Touch</div>
+  <h2 class="sec-h2">Questions?<br><i>We Answer Fast.</i></h2>
+  <div class="contact-grid">
+    <div class="contact-info reveal">
+      <h3>CONTACT INFO</h3>
+      <div class="contact-item">
+        <div class="contact-icon">📧</div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--gold);letter-spacing:2px;margin-bottom:.3rem;">EMAIL</div>
+          <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="18707d74747758797a6a7d6e77367b77">[email&#160;protected]</a>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-icon">📞</div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--gold);letter-spacing:2px;margin-bottom:.3rem;">PHONE (AI Answers)</div>
+          +1 (800) ABREVO-1
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-icon">⏰</div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--gold);letter-spacing:2px;margin-bottom:.3rem;">AVAILABILITY</div>
+          24/7 · 365 days · All timezones
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-icon">🌍</div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--gold);letter-spacing:2px;margin-bottom:.3rem;">GLOBAL COVERAGE</div>
+          195 countries · 138 languages
+        </div>
+      </div>
+      <div style="background:rgba(201,168,76,.06);border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--gold);letter-spacing:2px;margin-bottom:.8rem;">AVERAGE RESPONSE TIME</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.5rem;letter-spacing:2px;color:var(--white);">Under 3 Min</div>
+        <div style="font-size:.8rem;color:var(--dim);margin-top:.4rem;">AI handles all inquiries instantly</div>
+      </div>
+    </div>
+    <div class="contact-form reveal">
+      <h3>SEND A MESSAGE</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">First Name</label>
+          <input class="form-input" id="cFirstName" placeholder="John">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name</label>
+          <input class="form-input" id="cLastName" placeholder="Smith">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Business Email</label>
+        <input class="form-input" id="cEmail" type="email" placeholder="john@company.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Company Name</label>
+        <input class="form-input" id="cCompany" placeholder="Acme Corp">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Message</label>
+        <textarea class="form-input textarea-input" id="cMessage" placeholder="Tell us about your business and what you need..."></textarea>
+      </div>
+      <button class="contact-submit" onclick="submitContact()">Send Message →</button>
+      <div id="contact-msg"></div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="f-logo">ABREVO</div>
+      <p>The world's first 100% AI-operated business platform. Your entire business, automated and growing — while you sleep.</p>
+      <div style="margin-top:1.5rem;font-family:'IBM Plex Mono',monospace;font-size:.5rem;color:var(--dim);letter-spacing:1px;">© 2025 ABREVO INC. · PATENT PENDING · abrevo.co</div>
+    </div>
+    <div class="footer-col">
+      <h4>Platform</h4>
+      <a onclick="scrollToSec('how')">How It Works</a>
+      <a onclick="scrollToSec('services')">AI Services</a>
+      <a onclick="scrollToSec('pricing-section')">Pricing</a>
+      <a onclick="openModal('growth')">Start Free Trial</a>
+    </div>
+    <div class="footer-col">
+      <h4>Company</h4>
+      <a>About Abrevo</a>
+      <a>Press & Media</a>
+      <a onclick="scrollToSec('affiliate')">Affiliate Program</a>
+      <a onclick="scrollToSec('contact')">Contact</a>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <a>Terms of Service</a>
+      <a>Privacy Policy</a>
+      <a>Refund Policy</a>
+      <a>Patent Pending</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-copy">BUILT BY AI · OPERATED BY AI · OWNED BY YOU · abrevo.co</div>
+    <div class="footer-badges">
+      <span class="badge-item">🔒 SSL Secured</span>
+      <span class="badge-item">💳 Stripe Payments</span>
+      <span class="badge-item">🌍 138 Languages</span>
+      <span class="badge-item">⚖️ Patent Pending</span>
+    </div>
+  </div>
+</footer>
+
+<!-- CHECKOUT MODAL -->
+<div class="modal-overlay" id="checkoutModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2 id="modalTitle">Start Growing</h2>
+        <div style="font-style:italic;font-size:.9rem;color:var(--dim);margin-top:.3rem;" id="modalSub">7-day free trial · Cancel anytime</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="plan-summary">
+        <div class="plan-name" id="planName">Growth Plan</div>
+        <div class="plan-price" id="planPrice">$699 / month</div>
+      </div>
+
+      <!-- STEP 1: Account Info -->
+      <div class="onboard-steps">
+        <div class="onboard-step-dot done" id="dot1"></div>
+        <div class="onboard-step-dot" id="dot2"></div>
+        <div class="onboard-step-dot" id="dot3"></div>
+      </div>
+
+      <div id="step1" class="step-content active">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--gold);letter-spacing:2px;margin-bottom:1.5rem;">STEP 1 OF 3 · YOUR ACCOUNT</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">First Name</label>
+            <input class="form-input" id="s1first" placeholder="John">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name</label>
+            <input class="form-input" id="s1last" placeholder="Smith">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Business Email</label>
+          <input class="form-input" id="s1email" type="email" placeholder="you@company.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Company Name</label>
+          <input class="form-input" id="s1company" placeholder="Your Business Name">
+        </div>
+        <button class="next-btn" onclick="goStep(2)">Continue →</button>
+      </div>
+
+      <div id="step2" class="step-content">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--gold);letter-spacing:2px;margin-bottom:1.5rem;">STEP 2 OF 3 · YOUR BUSINESS</div>
+        <div class="form-group">
+          <label class="form-label">Industry</label>
+          <select class="select-input form-input" id="s2industry">
+            <option value="">Select your industry</option>
+            <option>Real Estate</option>
+            <option>Healthcare / Medical</option>
+            <option>Legal Services</option>
+            <option>E-Commerce / Retail</option>
+            <option>Restaurants / Food</option>
+            <option>Consulting / Coaching</option>
+            <option>Construction / Trades</option>
+            <option>Financial Services</option>
+            <option>Technology / SaaS</option>
+            <option>Marketing Agency</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Primary Language</label>
+          <select class="select-input form-input" id="s2lang">
+            <option>English</option>
+            <option>Spanish</option>
+            <option>French</option>
+            <option>Portuguese</option>
+            <option>German</option>
+            <option>Arabic</option>
+            <option>Mandarin</option>
+            <option>Japanese</option>
+            <option>Hindi</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Describe Your Business (AI will be trained on this)</label>
+          <textarea class="textarea-input" id="s2desc" placeholder="E.g. We are a real estate agency in Miami specializing in luxury condos. Our clients are high-net-worth individuals..."></textarea>
+        </div>
+        <button class="next-btn" onclick="goStep(3)">Continue →</button>
+        <button class="back-btn" onclick="goStep(1)">← Back</button>
+      </div>
+
+      <div id="step3" class="step-content">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--gold);letter-spacing:2px;margin-bottom:1.5rem;">STEP 3 OF 3 · PAYMENT</div>
+        <div class="form-group">
+          <label class="form-label">Cardholder Name</label>
+          <input class="form-input" id="cardName" placeholder="John Smith">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Card Details</label>
+          <div id="card-element"></div>
+        </div>
+        <div id="form-message"></div>
+        <button class="stripe-submit" id="submitBtn" onclick="handlePayment()">
+          <span id="submitText">🔒 Start My Free Trial</span>
+        </button>
+        <div class="stripe-note">
+          🔒 Secured by Stripe · No charge for 7 days · Cancel anytime<br>
+          After trial: billed monthly · All major cards accepted
+        </div>
+        <button class="back-btn" onclick="goStep(2)">← Back</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ── CONFIG ── Replace with your real Stripe publishable key
+const STRIPE_KEY = 'pk_test_51T4DsERx9hGfqzJMYFLwfvUGkxEahRTmWJlb40jDr9GhMk4Dt3RsTt8XxPTsO6CxrggMsKRoMY8fbMyfJBiWNIVD00CqSx8nQ8';
+const PLAN_PRICES = {
+  starter: { name:'Starter Plan', price:'$299 / month', amount:29900, priceId:'price_1T4EX4Rx9hGfqzJMstqYANTX' },
+  growth:  { name:'Growth Plan',  price:'$699 / month', amount:69900, priceId:'price_1T4EWTRx9hGfqzJMiNxDfcRs' },
+  empire:  { name:'Empire Plan',  price:'$2,499 / month', amount:249900, priceId:'price_1T4EXYRx9hGfqzJMaGMOwcTx' }
+};
+
+// ── CURSOR ──
+const cur = document.getElementById('cur');
+const cur2 = document.getElementById('cur2');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; });
+(function anim(){
+  cur.style.left=mx+'px'; cur.style.top=my+'px';
+  rx+=(mx-rx)*.13; ry+=(my-ry)*.13;
+  cur2.style.left=rx+'px'; cur2.style.top=ry+'px';
+  requestAnimationFrame(anim);
+})();
+
+// ── NAV ──
+function toggleNav(){
+  document.getElementById('navLinks').classList.toggle('open');
+}
+function scrollToSec(id){
+  document.getElementById(id).scrollIntoView({behavior:'smooth'});
+  document.getElementById('navLinks').classList.remove('open');
+}
+window.addEventListener('scroll',()=>{
+  document.getElementById('nav').style.padding = scrollY>80?'.8rem 3rem':'1.2rem 3rem';
+});
+
+// ── SCROLL REVEAL ──
+const revealEls = document.querySelectorAll('.reveal');
+const obs = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); });
+},{threshold:.15});
+revealEls.forEach(el=>obs.observe(el));
+
+// ── COUNT UP ──
+document.querySelectorAll('[data-target]').forEach(el=>{
+  const obs2 = new IntersectionObserver(entries=>{
+    if(entries[0].isIntersecting){
+      const target = +el.dataset.target;
+      let c=0; const step=target/60;
+      const t=setInterval(()=>{
+        c+=step; if(c>=target){c=target;clearInterval(t);}
+        el.textContent=Math.floor(c)+(target===500?'M+':'');
+      },25);
+      obs2.disconnect();
+    }
+  },{threshold:.5});
+  obs2.observe(el);
+});
+
+// ── STRIPE SETUP ──
+let stripe, elements, cardElement, currentPlan='growth';
+function initStripe(){
+  if(STRIPE_KEY.includes('YOUR_')) return; // Demo mode
+  stripe = Stripe(STRIPE_KEY);
+  elements = stripe.elements({
+    appearance:{
+      theme:'night',
+      variables:{colorPrimary:'#c9a84c',colorBackground:'#0f0f12',colorText:'#f4f1ea',colorDanger:'#e74c3c',fontFamily:'IBM Plex Mono, monospace'}
+    }
+  });
+  cardElement = elements.create('card',{style:{base:{fontSize:'14px',color:'#f4f1ea','::placeholder':{color:'#4a4030'}}}});
+  cardElement.mount('#card-element');
+}
+
+// ── MODAL ──
+function openModal(plan){
+  currentPlan = plan;
+  const p = PLAN_PRICES[plan];
+  document.getElementById('planName').textContent = p.name;
+  document.getElementById('planPrice').textContent = p.price;
+  document.getElementById('modalTitle').textContent = plan==='empire'?'Build Your Empire':'Start Growing';
+  document.getElementById('checkoutModal').classList.add('open');
+  document.body.style.overflow='hidden';
+  goStep(1);
+  setTimeout(initStripe, 100);
+}
+function closeModal(){
+  document.getElementById('checkoutModal').classList.remove('open');
+  document.body.style.overflow='';
+}
+document.getElementById('checkoutModal').addEventListener('click',function(e){
+  if(e.target===this) closeModal();
+});
+
+// ── STEPS ──
+function goStep(n){
+  // Validate step 1
+  if(n===2){
+    const first=document.getElementById('s1first').value.trim();
+    const email=document.getElementById('s1email').value.trim();
+    const company=document.getElementById('s1company').value.trim();
+    if(!first||!email||!company){
+      showMsg('Please fill in all fields.','error'); return;
+    }
+    if(!/\S+@\S+\.\S+/.test(email)){
+      showMsg('Please enter a valid email address.','error'); return;
+    }
+  }
+  hideMsg();
+  [1,2,3].forEach(i=>{
+    document.getElementById('step'+i).classList.toggle('active',i===n);
+    document.getElementById('dot'+i).classList.toggle('done',i<=n);
+  });
+}
+
+// ── PAYMENT ──
+async function handlePayment(){
+  const name = document.getElementById('cardName').value.trim();
+  if(!name){ showMsg('Please enter your cardholder name.','error'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  const txt = document.getElementById('submitText');
+  btn.disabled=true;
+  txt.textContent='Processing...';
+
+  // Demo mode (no real Stripe key)
+  if(!stripe||!cardElement){
+    await new Promise(r=>setTimeout(r,1500));
+    showMsg('🎉 Welcome to Abrevo! Check your email for onboarding instructions. Your AI team will be live within 48 hours.','success');
+    txt.textContent='🔒 Start My Free Trial';
+    btn.disabled=false;
+    setTimeout(()=>{ closeModal(); showSuccessToast(); }, 3000);
+    return;
+  }
+
+  // Real Stripe flow
+  try {
+    const {paymentMethod, error} = await stripe.createPaymentMethod({
+      type:'card', card:cardElement,
+      billing_details:{
+        name,
+        email:document.getElementById('s1email').value
+      }
+    });
+    if(error){ showMsg(error.message,'error'); btn.disabled=false; txt.textContent='🔒 Start My Free Trial'; return; }
+    // Here you'd POST to your server: { paymentMethodId, planId, email, businessInfo }
+    // Then create a Stripe subscription server-side
+    showMsg('🎉 Success! Welcome to Abrevo. Check your email for onboarding instructions.','success');
+    setTimeout(()=>{ closeModal(); showSuccessToast(); }, 3000);
+  } catch(e){
+    showMsg('Something went wrong. Please try again.','error');
+  }
+  btn.disabled=false;
+  txt.textContent='🔒 Start My Free Trial';
+}
+
+function showMsg(msg,type){
+  const el=document.getElementById('form-message');
+  el.textContent=msg; el.className=type; el.style.display='block';
+}
+function hideMsg(){ document.getElementById('form-message').style.display='none'; }
+
+// ── SUCCESS TOAST ──
+function showSuccessToast(){
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:2rem;right:2rem;background:linear-gradient(135deg,#2ecc71,#27ae60);color:#000;padding:1rem 1.5rem;font-family:IBM Plex Mono,monospace;font-size:.65rem;letter-spacing:1px;z-index:999;animation:up .4s forwards;border-radius:2px;';
+  t.textContent='🎉 Account created! Check your email.';
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 5000);
+}
+
+// ── AI DEMO CHAT ──
+const aiReplies = [
+  "I can handle that for your business right away. As your dedicated AI agent, I manage all communications 24/7 — no breaks, no delays, always professional.",
+  "Great question! With Abrevo, your customers receive responses within seconds — in their native language. I'm currently supporting businesses in 47 countries.",
+  "I handle calls, emails, support tickets, social media, and outbound sales simultaneously. Your human team doesn't need to touch any of it.",
+  "Your AI team goes live within 48 hours of signup. I'll be trained on your specific business, your tone, your FAQs, and your sales process.",
+  "Absolutely — I can handle Spanish, French, Mandarin, Arabic, Portuguese, and 132 other languages. Your global expansion is already built in.",
+  "The Abrevo platform has helped businesses reduce their operational costs by 70–80% while increasing response speed by 10x. Would you like to see a plan?",
+];
+let replyIdx=0;
+function sendChat(){
+  const input=document.getElementById('chatInput');
+  const body=document.getElementById('chatBody');
+  const msg=input.value.trim();
+  if(!msg)return;
+  body.insertAdjacentHTML('beforeend',`<div class="chat-msg user">${msg}</div>`);
+  body.insertAdjacentHTML('beforeend',`<div class="chat-msg typing"><div class="typing-dots"><span></span><span></span><span></span></div></div>`);
+  input.value='';
+  body.scrollTop=body.scrollHeight;
+  setTimeout(()=>{
+    body.querySelector('.typing').remove();
+    body.insertAdjacentHTML('beforeend',`<div class="chat-msg ai">${aiReplies[replyIdx%aiReplies.length]}</div>`);
+    replyIdx++;
+    body.scrollTop=body.scrollHeight;
+  },1200);
+}
+
+// ── AFFILIATE ──
+function joinAffiliate(){
+  const email=document.getElementById('affEmail').value.trim();
+  const name=document.getElementById('affName').value.trim();
+  if(!email||!name){ alert('Please enter your name and email.'); return; }
+  const code=name.toLowerCase().replace(/\s+/g,'')+Math.floor(Math.random()*1000);
+  const link=`https://abrevo.co?ref=${code}`;
+  document.getElementById('aff-result').style.display='block';
+  document.getElementById('aff-result').innerHTML=
+    `✅ You're in! Your referral link:<br><br>
+     <span style="color:#f4f1ea;word-break:break-all;">${link}</span><br><br>
+     Share this link and earn 20% every month for every client you refer.<br>
+     Payments via Stripe · Processed on the 1st of each month.`;
+}
+
+// ── CONTACT ──
+function submitContact(){
+  const name=document.getElementById('cFirstName').value.trim();
+  const email=document.getElementById('cEmail').value.trim();
+  const msg=document.getElementById('cMessage').value.trim();
+  if(!name||!email||!msg){ alert('Please fill in all required fields.'); return; }
+  const el=document.getElementById('contact-msg');
+  el.style.display='block';
+  el.textContent='✅ Message received! Our AI will respond within 3 minutes. Check your email.';
+  document.getElementById('cFirstName').value='';
+  document.getElementById('cEmail').value='';
+  document.getElementById('cMessage').value='';
+  docume
