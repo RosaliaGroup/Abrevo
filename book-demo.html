@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book a Discovery Call — Abrevo</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--black:#07070a;--white:#f4f1ea;--gold:#c9a84c;--gold2:#e2c97e;--gold3:#f0e0a8;--dim:#9a8f78;--panel:#0f0f12;--border:rgba(201,168,76,0.15);--border2:rgba(201,168,76,0.35);--green:#2ecc71;--red:#e74c3c;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--black);color:var(--white);font-family:'Instrument Serif',serif;min-height:100vh;}
+
+#nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;justify-content:space-between;align-items:center;padding:1rem 3rem;background:rgba(7,7,10,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:5px;background:linear-gradient(135deg,var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none;}
+
+.page{max-width:1100px;margin:0 auto;padding:7rem 3rem 4rem;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start;}
+.left h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,5vw,4rem);letter-spacing:3px;line-height:1;margin-bottom:1.5rem;}
+.left h1 span{display:block;font-family:'Instrument Serif',serif;font-style:italic;font-size:.6em;color:var(--gold2);letter-spacing:1px;margin-top:.3rem;}
+.left p{font-size:1rem;color:var(--dim);line-height:1.9;margin-bottom:1.5rem;}
+.left ul{list-style:none;margin-bottom:2rem;}
+.left ul li{font-size:.95rem;color:var(--dim);padding:.5rem 0;display:flex;align-items:flex-start;gap:.6rem;line-height:1.6;}
+.left ul li::before{content:'✓';color:var(--green);flex-shrink:0;}
+.left .ana-intro{background:var(--panel);border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;}
+.left .ana-intro h3{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;color:var(--white);margin-bottom:.5rem;}
+.left .ana-intro p{font-size:.85rem;margin-bottom:0;}
+
+.right{background:var(--panel);border:1px solid var(--border2);padding:2.5rem;}
+.right h2{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:3px;color:var(--white);margin-bottom:2rem;}
+.form-group{margin-bottom:1.2rem;}
+.form-label{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:.5rem;}
+.form-input{width:100%;background:rgba(201,168,76,.05);border:1px solid var(--border2);color:var(--white);padding:.8rem 1rem;font-family:'Instrument Serif',serif;font-size:.95rem;outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--gold);}
+.form-input::placeholder{color:#4a4030;}
+.form-input option{background:var(--panel);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.checkbox-group{display:flex;flex-direction:column;gap:.5rem;}
+.checkbox-group label{display:flex;align-items:center;gap:.6rem;font-size:.85rem;color:var(--dim);cursor:pointer;}
+.checkbox-group input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px;}
+.submit-btn{width:100%;margin-top:1.5rem;font-family:'IBM Plex Mono',monospace;font-size:.65rem;letter-spacing:2px;text-transform:uppercase;background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--black);padding:1.1rem;border:none;cursor:pointer;font-weight:500;transition:opacity .2s,transform .2s;}
+.submit-btn:hover{opacity:.9;transform:translateY(-1px);}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+#formMsg{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:1px;text-align:center;margin-top:1rem;display:none;padding:.8rem;}
+#formMsg.success{display:block;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);color:var(--green);}
+#formMsg.error{display:block;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);color:var(--red);}
+
+footer{border-top:1px solid var(--border);padding:1.5rem 4rem;text-align:center;background:var(--panel);}
+.footer-copy{font-family:'IBM Plex Mono',monospace;font-size:.5rem;color:var(--dim);letter-spacing:1px;}
+
+@media(max-width:900px){
+  .page{grid-template-columns:1fr;padding:6rem 1.5rem 3rem;}
+  .form-row{grid-template-columns:1fr;}
+  #nav{padding:.8rem 1.5rem;}
+}
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <a class="nav-logo" href="/">ABREVO</a>
+</nav>
+
+<div class="page">
+  <div class="left">
+    <h1>Book a Discovery Call<span>with Abrevo</span></h1>
+    <p>30 minutes. No commitment. We'll review your business and show you exactly how Abrevo can automate your listing marketing.</p>
+    <ul>
+      <li>Your current marketing reviewed</li>
+      <li>Custom AI plan for your agency</li>
+      <li>Pricing walkthrough for your volume</li>
+      <li>Live demo of listing pages & chatbots</li>
+      <li>Absolutely no commitment required</li>
+    </ul>
+    <div class="ana-intro">
+      <h3>You'll Speak With Ana Haynes</h3>
+      <p>Founder of Abrevo. Former real estate operator. She'll understand your business because she's built one herself.</p>
+    </div>
+  </div>
+  <div class="right">
+    <h2>Schedule Your Call</h2>
+    <form id="bookForm" onsubmit="return submitForm(event)">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" name="full_name" placeholder="Jane Smith" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" name="email" type="email" placeholder="jane@agency.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input class="form-input" name="phone" type="tel" placeholder="(555) 123-4567" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Agency Name</label>
+        <input class="form-input" name="agency" placeholder="Your Agency Name">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Your Role</label>
+          <select class="form-input" name="role">
+            <option value="">Select...</option>
+            <option>Broker/Owner</option>
+            <option>Agent</option>
+            <option>Marketing Manager</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Listings Per Year</label>
+          <select class="form-input" name="listings_per_year">
+            <option value="">Select...</option>
+            <option>1-5</option>
+            <option>6-20</option>
+            <option>21-50</option>
+            <option>50+</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Interested In</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="interest" value="single"> Single Listing $299</label>
+          <label><input type="checkbox" name="interest" value="5pack"> 5-Listing Pack $1,299</label>
+          <label><input type="checkbox" name="interest" value="unlimited"> Unlimited Agency $2,499/mo</label>
+          <label><input type="checkbox" name="interest" value="addons"> Add-ons (Ads, Social, Video)</label>
+          <label><input type="checkbox" name="interest" value="exploring"> Just exploring</label>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Preferred Date</label>
+          <input class="form-input" name="preferred_date" type="date" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Preferred Time (ET)</label>
+          <select class="form-input" name="preferred_time" required>
+            <option value="">Select...</option>
+            <option>9:00 AM</option>
+            <option>10:00 AM</option>
+            <option>11:00 AM</option>
+            <option>1:00 PM</option>
+            <option>2:00 PM</option>
+            <option>3:00 PM</option>
+            <option>4:00 PM</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Message (Optional)</label>
+        <textarea class="form-input" name="message" rows="3" placeholder="Tell us about your agency or what you're looking for..." style="resize:vertical;min-height:80px;"></textarea>
+      </div>
+      <button class="submit-btn" type="submit">Book Discovery Call &rarr;</button>
+      <div id="formMsg"></div>
+    </form>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-copy">&copy; 2026 ABREVO &middot; abrevo.co</div>
+</footer>
+
+<script>
+async function submitForm(e){
+  e.preventDefault();
+  const form=document.getElementById('bookForm');
+  const btn=form.querySelector('.submit-btn');
+  const msg=document.getElementById('formMsg');
+  btn.disabled=true;
+  btn.textContent='Submitting...';
+  msg.className='';msg.style.display='none';
+
+  const fd=new FormData(form);
+  const interests=[];
+  form.querySelectorAll('input[name=interest]:checked').forEach(c=>interests.push(c.value));
+
+  const payload={
+    full_name:fd.get('full_name'),
+    email:fd.get('email'),
+    phone:fd.get('phone'),
+    type:'Abrevo Discovery Call',
+    preferred_date:fd.get('preferred_date'),
+    preferred_time:fd.get('preferred_time'),
+    additional_notes:'Agency: '+(fd.get('agency')||'N/A')+' | Role: '+(fd.get('role')||'N/A')+' | Listings/yr: '+(fd.get('listings_per_year')||'N/A')+' | Interested in: '+(interests.join(', ')||'N/A')+' | Message: '+(fd.get('message')||'N/A'),
+    source:'web'
+  };
+
+  try{
+    const res=await fetch('/.netlify/functions/book?client=abrevo',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    if(!res.ok){
+      const data=await res.json().catch(()=>({}));
+      throw new Error(data.error||'Booking failed');
+    }
+    msg.textContent='Thanks! We\'ll confirm your discovery call shortly. Check your email.';
+    msg.className='success';
+    form.reset();
+  }catch(err){
+    // Mailto fallback
+    const subject=encodeURIComponent('Discovery Call Request - '+fd.get('full_name'));
+    const body=encodeURIComponent('Name: '+fd.get('full_name')+'\nEmail: '+fd.get('email')+'\nPhone: '+fd.get('phone')+'\nAgency: '+fd.get('agency')+'\nDate: '+fd.get('preferred_date')+' '+fd.get('preferred_time'));
+    msg.innerHTML='Having trouble submitting. <a href="mailto:hello@abrevo.co?subject='+subject+'&body='+body+'" style="color:var(--gold);">Email us directly instead.</a>';
+    msg.className='error';
+  }
+  btn.disabled=false;
+  btn.textContent='Book Discovery Call \u2192';
+}
+</script>
+</body>
+</html>

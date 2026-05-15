@@ -143,6 +143,36 @@
   force = true
 
 [[redirects]]
+  from = "/book/florostone"
+  to = "/book-demo.html?client=florostone"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/florostone"
+  to = "/florostone.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/listings/:slug"
+  to = "/listings/:slug.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/tour/:slug"
+  to = "/tour/:slug.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/book-demo"
+  to = "/book-demo.html"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FloroStone Realty — Boutique Real Estate in New Jersey</title>
+<meta name="description" content="FloroStone Realty — boutique real estate agency serving NJ & NY. 15+ years experience. NJ Realtors Circle of Excellence winners.">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--black:#07070a;--white:#f4f1ea;--gold:#c9a84c;--gold2:#e2c97e;--gold3:#f0e0a8;--dim:#9a8f78;--panel:#0f0f12;--border:rgba(201,168,76,0.15);--border2:rgba(201,168,76,0.35);--green:#2ecc71;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--black);color:var(--white);font-family:'Instrument Serif',serif;overflow-x:hidden;}
+
+/* Nav */
+#nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;justify-content:space-between;align-items:center;padding:1.2rem 3rem;background:rgba(7,7,10,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+.nav-logo{display:flex;align-items:center;gap:1rem;}
+.nav-logo img{height:40px;object-fit:contain;}
+.nav-logo span{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:4px;color:var(--white);}
+.nav-links{display:flex;gap:2rem;align-items:center;}
+.nav-links a{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--dim);text-decoration:none;cursor:pointer;transition:color .2s;}
+.nav-links a:hover{color:var(--gold);}
+.nav-btn{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;background:var(--gold);color:var(--black);padding:.6rem 1.5rem;border:none;cursor:pointer;font-weight:500;text-decoration:none;transition:background .2s;}
+.nav-btn:hover{background:var(--gold2);}
+
+/* Sections */
+.sec{padding:6rem 4rem;max-width:1280px;margin:0 auto;}
+.sec-tag{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:4px;text-transform:uppercase;color:var(--gold);margin-bottom:1.2rem;display:flex;align-items:center;gap:1rem;}
+.sec-tag::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border2),transparent);}
+.sec-h2{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,5vw,5rem);letter-spacing:3px;line-height:1;color:var(--white);}
+.sec-h2 i{font-family:'Instrument Serif',serif;font-style:italic;font-size:.7em;color:var(--gold2);letter-spacing:1px;}
+.sec-sub{font-size:1rem;color:var(--dim);max-width:560px;line-height:1.8;margin-top:1rem;}
+
+/* Hero */
+#hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:7rem 2rem 4rem;position:relative;overflow:hidden;}
+.hero-grid{position:absolute;inset:0;background:linear-gradient(rgba(201,168,76,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,.03) 1px,transparent 1px);background-size:70px 70px;mask-image:radial-gradient(ellipse 90% 90% at 50% 50%,black 20%,transparent 80%);}
+.hero-glow{position:absolute;width:800px;height:800px;background:radial-gradient(circle,rgba(201,168,76,.07) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;}
+.hero-logo{margin-bottom:2rem;}
+.hero-logo img{height:80px;object-fit:contain;}
+.hero-h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(3rem,10vw,7rem);letter-spacing:6px;line-height:.92;background:linear-gradient(175deg,var(--white) 0%,var(--gold2) 50%,var(--gold) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-tagline{font-style:italic;font-size:clamp(1rem,2.5vw,1.6rem);color:var(--dim);margin-top:1.2rem;max-width:620px;}
+.hero-line{width:60px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:2rem auto;}
+.hero-body{font-size:1.05rem;color:#7a7060;max-width:520px;line-height:1.9;font-weight:300;}
+.btn-primary{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:2px;text-transform:uppercase;background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--black);padding:1rem 2.8rem;border:none;cursor:pointer;font-weight:500;text-decoration:none;display:inline-block;margin-top:2.5rem;transition:transform .25s,box-shadow .25s;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(201,168,76,.35);}
+.btn-ghost{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:2px;text-transform:uppercase;background:transparent;color:var(--white);padding:1rem 2.8rem;border:1px solid var(--border2);cursor:pointer;text-decoration:none;display:inline-block;margin-top:1rem;transition:border-color .2s,color .2s;}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+
+/* Pillars */
+.pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin-top:4rem;}
+.pillar{background:var(--panel);padding:2.5rem 2rem;text-align:center;transition:background .3s;position:relative;overflow:hidden;}
+.pillar:hover{background:rgba(201,168,76,.05);}
+.pillar::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);transform:scaleX(0);transition:.4s;}
+.pillar:hover::before{transform:scaleX(1);}
+.pillar-icon{font-size:2rem;margin-bottom:1rem;}
+.pillar h3{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:2px;color:var(--white);margin-bottom:.8rem;}
+.pillar p{font-size:.9rem;color:var(--dim);line-height:1.8;}
+
+/* Team */
+.team-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin-top:4rem;}
+.agent-card{background:var(--panel);padding:2rem;text-align:center;transition:background .3s;}
+.agent-card:hover{background:rgba(201,168,76,.04);}
+.agent-avatar{width:80px;height:80px;border-radius:50%;background:rgba(201,168,76,.1);border:1px solid var(--border2);margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:var(--gold);}
+.agent-name{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:2px;color:var(--white);}
+.agent-role{font-size:.85rem;color:var(--gold);margin-top:.3rem;font-style:italic;}
+.agent-license{font-family:'IBM Plex Mono',monospace;font-size:.5rem;letter-spacing:1px;color:var(--dim);margin-top:.4rem;}
+.agent-phone{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--dim);margin-top:.5rem;}
+.agent-phone a{color:var(--dim);text-decoration:none;transition:color .2s;}
+.agent-phone a:hover{color:var(--gold);}
+
+/* Listings */
+.listing-card{background:var(--panel);border:1px solid var(--border);margin-top:3rem;display:grid;grid-template-columns:1fr 1fr;overflow:hidden;transition:border-color .3s;}
+.listing-card:hover{border-color:var(--border2);}
+.listing-img{background:rgba(201,168,76,.06);min-height:300px;display:flex;align-items:center;justify-content:center;font-size:3rem;color:rgba(201,168,76,.3);}
+.listing-info{padding:2.5rem;}
+.listing-info h3{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:2px;color:var(--white);margin-bottom:.5rem;}
+.listing-info .listing-meta{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:1rem;}
+.listing-info p{font-size:.9rem;color:var(--dim);line-height:1.8;margin-bottom:1.5rem;}
+
+/* Testimonials */
+.testimonials{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin-top:4rem;}
+.testimonial{background:var(--panel);padding:2.5rem 2rem;transition:background .3s;}
+.testimonial:hover{background:rgba(201,168,76,.04);}
+.testimonial-stars{color:var(--gold);font-size:1rem;letter-spacing:2px;margin-bottom:1rem;}
+.testimonial p{font-size:.9rem;color:var(--dim);line-height:1.8;font-style:italic;margin-bottom:1rem;}
+.testimonial-author{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:2px;color:var(--gold);text-transform:uppercase;}
+
+/* Contact bar */
+.contact-bar{background:var(--panel);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:4rem 3rem;text-align:center;}
+.contact-bar h2{font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:3px;color:var(--white);margin-bottom:1rem;}
+.contact-bar p{font-size:.95rem;color:var(--dim);margin-bottom:2rem;line-height:1.8;}
+.contact-details{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:2px;color:var(--dim);margin-top:2rem;}
+.contact-details a{color:var(--dim);text-decoration:none;transition:color .2s;}
+.contact-details a:hover{color:var(--gold);}
+
+/* Socials */
+.socials{display:flex;gap:1.5rem;justify-content:center;margin-top:1.5rem;}
+.socials a{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:1px;color:var(--dim);text-decoration:none;text-transform:uppercase;transition:color .2s;}
+.socials a:hover{color:var(--gold);}
+
+/* Footer */
+footer{border-top:1px solid var(--border);padding:2rem 4rem;display:flex;justify-content:space-between;align-items:center;background:var(--panel);}
+.footer-credit{font-family:'IBM Plex Mono',monospace;font-size:.5rem;color:var(--dim);letter-spacing:1px;}
+.footer-credit a{color:var(--gold);text-decoration:none;}
+.footer-license{font-family:'IBM Plex Mono',monospace;font-size:.5rem;color:var(--dim);letter-spacing:1px;}
+
+/* Responsive */
+@media(max-width:900px){
+  #nav{padding:1rem 1.5rem;}
+  .nav-links{display:none;}
+  .sec{padding:4rem 1.5rem;}
+  .pillars,.team-grid,.testimonials{grid-template-columns:1fr;}
+  .listing-card{grid-template-columns:1fr;}
+  footer{flex-direction:column;gap:1rem;text-align:center;}
+}
+@media(max-width:600px){
+  #hero{padding:5rem 1.2rem 3rem;}
+  .hero-h1{font-size:clamp(2.5rem,12vw,4rem);}
+}
+/* Reveal */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s,transform .7s;}
+.reveal.visible{opacity:1;transform:translateY(0);}
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <div class="nav-logo">
+    <img src="https://media-production.lp-cdn.com/media/rvkdlcd2xkiwxzcsv58t" alt="FloroStone Realty">
+    <span>FLOROSTONE</span>
+  </div>
+  <div class="nav-links">
+    <a href="#mission">Mission</a>
+    <a href="#team">Team</a>
+    <a href="#listings">Listings</a>
+    <a href="#testimonials">Reviews</a>
+    <a href="#contact-section" class="nav-btn">Book Consultation</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-logo">
+    <img src="https://media-production.lp-cdn.com/media/iwbt6xfff7jkf41undnp" alt="FloroStone Realty">
+  </div>
+  <h1 class="hero-h1">FLOROSTONE REALTY</h1>
+  <p class="hero-tagline">We work as a team. We prioritize your needs. We are local.</p>
+  <div class="hero-line"></div>
+  <p class="hero-body">Boutique-style real estate agency serving New Jersey & New York. 15+ years of experience. NJ Realtors Circle of Excellence winners. Our listings sell at 95-110% of list price.</p>
+  <a class="btn-primary" href="/book/florostone">Book a Consultation &rarr;</a>
+</section>
+
+<!-- MISSION -->
+<section class="sec" id="mission">
+  <div class="sec-tag">Our Mission</div>
+  <h2 class="sec-h2">Highest Level of Service<br><i>& Outstanding Results.</i></h2>
+  <p class="sec-sub">We provide the highest level of service and advocacy for buyers and sellers while producing outstanding results.</p>
+  <div class="pillars">
+    <div class="pillar reveal">
+      <div class="pillar-icon">🤝</div>
+      <h3>We Work As a Team</h3>
+      <p>Every client benefits from the collective expertise of our entire agency. When you work with one of us, you work with all of us.</p>
+    </div>
+    <div class="pillar reveal">
+      <div class="pillar-icon">🎯</div>
+      <h3>We Prioritize Your Needs</h3>
+      <p>Your goals drive every decision. Whether buying your first home or selling an investment property, your interests always come first.</p>
+    </div>
+    <div class="pillar reveal">
+      <div class="pillar-icon">📍</div>
+      <h3>We Are Local</h3>
+      <p>Deep roots in the communities we serve. We know every neighborhood, every school district, every commute route — because we live here too.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section class="sec" id="team" style="padding-top:0;">
+  <div class="sec-tag">Our Team</div>
+  <h2 class="sec-h2">Meet the<br><i>FloroStone Team.</i></h2>
+  <div class="team-grid">
+    <div class="agent-card reveal">
+      <div class="agent-avatar">GF</div>
+      <div class="agent-name">Grisela Flores</div>
+      <div class="agent-role">Broker of Record — CEO</div>
+      <div class="agent-license">License #792631</div>
+      <div class="agent-phone"><a href="tel:+19082207865">(908) 220-7865</a></div>
+    </div>
+    <div class="agent-card reveal">
+      <div class="agent-avatar">KC</div>
+      <div class="agent-name">Katherine Cabrera</div>
+      <div class="agent-role">Realtor&reg;, Real Estate Instructor</div>
+      <div class="agent-license">License #1865990</div>
+      <div class="agent-phone"><a href="tel:+19084455319">(908) 445-5319</a></div>
+    </div>
+    <div class="agent-card reveal">
+      <div class="agent-avatar">JF</div>
+      <div class="agent-name">Jasmin Flores</div>
+      <div class="agent-role">Realtor&reg;, Notary</div>
+      <div class="agent-license">License #1755112</div>
+      <div class="agent-phone"><a href="tel:+19084144916">(908) 414-4916</a></div>
+    </div>
+    <div class="agent-card reveal">
+      <div class="agent-avatar">YV</div>
+      <div class="agent-name">Yazmin Valdez</div>
+      <div class="agent-role">Realtor&reg;</div>
+      <div class="agent-license">License #2292799</div>
+      <div class="agent-phone"><a href="tel:+19087681181">(908) 768-1181</a></div>
+    </div>
+    <div class="agent-card reveal">
+      <div class="agent-avatar">OM</div>
+      <div class="agent-name">Olga Martinez</div>
+      <div class="agent-role">Realtor&reg;</div>
+      <div class="agent-license">License #1759017</div>
+      <div class="agent-phone"><a href="tel:+19085774818">(908) 577-4818</a></div>
+    </div>
+    <div class="agent-card reveal">
+      <div class="agent-avatar">RS</div>
+      <div class="agent-name">Ricardo Sosa Jr.</div>
+      <div class="agent-role">Realtor&reg;</div>
+      <div class="agent-license">License #1974460</div>
+      <div class="agent-phone"><a href="tel:+19089432975">(908) 943-2975</a></div>
+    </div>
+    <div class="agent-card reveal">
+      <div class="agent-avatar">EG</div>
+      <div class="agent-name">Eveling Grajales</div>
+      <div class="agent-role">Realtor&reg;</div>
+      <div class="agent-license">License #2298707</div>
+      <div class="agent-phone"><a href="tel:+16316802626">(631) 680-2626</a></div>
+    </div>
+    <div class="agent-card reveal">
+      <div class="agent-avatar">IS</div>
+      <div class="agent-name">Inette Sosa</div>
+      <div class="agent-role">Realtor&reg;</div>
+      <div class="agent-license">License #0680947</div>
+      <div class="agent-phone"><a href="tel:+19089666278">(908) 966-6278</a></div>
+    </div>
+    <div class="agent-card reveal">
+      <div class="agent-avatar">CL</div>
+      <div class="agent-name">Christopher Lopez</div>
+      <div class="agent-role">Realtor&reg;</div>
+      <div class="agent-license">License #2439130</div>
+      <div class="agent-phone"><a href="tel:+19083400560">(908) 340-0560</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- LISTINGS -->
+<section class="sec" id="listings" style="padding-top:0;">
+  <div class="sec-tag">Featured Listings</div>
+  <h2 class="sec-h2">Current<br><i>Properties.</i></h2>
+  <div class="listing-card reveal">
+    <div class="listing-img">🏠</div>
+    <div class="listing-info">
+      <div class="listing-meta">New Listing &middot; Roselle Park, NJ</div>
+      <h3>422 Faitoute Ave</h3>
+      <p>Beautifully renovated colonial with 3 bedrooms, 1.5 bathrooms. Hardwood floors throughout, updated kitchen, full basement, fenced backyard with deck. Walking distance to NJ Transit.</p>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--gold2);margin-bottom:1.5rem;">Contact for Price</div>
+      <a class="btn-primary" href="/listings/422-faitoute-ave" style="margin-top:0;padding:.8rem 2rem;font-size:.6rem;">View Listing &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="sec" id="testimonials" style="padding-top:0;">
+  <div class="sec-tag">What Our Clients Say</div>
+  <h2 class="sec-h2">Real Results,<br><i>Real People.</i></h2>
+  <div class="testimonials">
+    <div class="testimonial reveal">
+      <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+      <p>"FloroStone Realty made the entire process seamless. They truly prioritized our needs and found us the perfect home. Their local knowledge is unmatched."</p>
+      <div class="testimonial-author">&mdash; Florinda F.</div>
+    </div>
+    <div class="testimonial reveal">
+      <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+      <p>"The team at FloroStone went above and beyond. They negotiated an incredible deal for us and handled every detail with professionalism. Highly recommend!"</p>
+      <div class="testimonial-author">&mdash; Velez J.</div>
+    </div>
+    <div class="testimonial reveal">
+      <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+      <p>"Working with Grisela and her team was an absolute pleasure. They sold our home quickly and for more than we expected. True experts in the local market."</p>
+      <div class="testimonial-author">&mdash; Dee G.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<div class="contact-bar" id="contact-section">
+  <div class="sec-tag" style="justify-content:center;">Ready to Get Started?</div>
+  <h2>Book a Free<br>Consultation</h2>
+  <p>Whether you're buying, selling, or just exploring — let's talk. No pressure, no commitment.</p>
+  <a class="btn-primary" href="/book/florostone" style="margin-top:0;">Book Consultation &rarr;</a>
+  <div style="margin-top:1rem;">
+    <a class="btn-ghost" href="tel:+19084455339" style="margin-top:.5rem;">Call (908) 445-5339</a>
+  </div>
+  <div class="contact-details" style="margin-top:2rem;">
+    429 Chestnut Street, Roselle Park, NJ 07204 &middot; LIC# 1539648<br>
+    <a href="tel:+19084455339">(908) 445-5339</a> &middot; <a href="mailto:info@florostone.com">info@florostone.com</a>
+  </div>
+  <div class="socials">
+    <a href="https://facebook.com/florostone" target="_blank" rel="noopener">Facebook</a>
+    <a href="https://instagram.com/florostonerealty" target="_blank" rel="noopener">Instagram</a>
+    <a href="https://linkedin.com/company/florostonerealty" target="_blank" rel="noopener">LinkedIn</a>
+    <a href="https://youtube.com/channel/UCvGbWrIjvqyUFH22uyoSi7Q" target="_blank" rel="noopener">YouTube</a>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-credit">Marketing powered by <a href="https://abrevo.co">Abrevo</a> &middot; abrevo.co</div>
+  <div class="footer-license">&copy; 2026 FloroStone Realty &middot; NJ Licensed</div>
+</footer>
+
+<script>
+const revealEls=document.querySelectorAll('.reveal');
+const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});},{threshold:.15});
+revealEls.forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>

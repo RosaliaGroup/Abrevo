@@ -68,6 +68,22 @@ const CLIENTS = {
     notifyName: 'Ana',
     teamName: 'Rosalia Group',
     googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
+  },
+  abrevo: {
+    calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com',
+    notifyPhone: '+12014970225',
+    notifyEmail: 'hello@abrevo.co',
+    notifyName: 'Ana',
+    teamName: 'Abrevo',
+    googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
+  },
+  florostone: {
+    calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com',
+    notifyPhone: '+12014970225',
+    notifyEmail: 'info@florostone.com',
+    notifyName: 'FloroStone Team',
+    teamName: 'FloroStone Realty',
+    googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
   }
 };
 

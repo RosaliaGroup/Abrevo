@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schedule Tour — 422 Faitoute Ave | FloroStone Realty</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--black:#07070a;--white:#f4f1ea;--gold:#c9a84c;--gold2:#e2c97e;--gold3:#f0e0a8;--dim:#9a8f78;--panel:#0f0f12;--border:rgba(201,168,76,0.15);--border2:rgba(201,168,76,0.35);--green:#2ecc71;--red:#e74c3c;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--black);color:var(--white);font-family:'Instrument Serif',serif;min-height:100vh;}
+#nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;justify-content:space-between;align-items:center;padding:1rem 3rem;background:rgba(7,7,10,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+.nav-logo{display:flex;align-items:center;gap:1rem;text-decoration:none;}
+.nav-logo img{height:36px;object-fit:contain;}
+.nav-logo span{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:4px;color:var(--white);}
+
+.page{max-width:1100px;margin:0 auto;padding:7rem 3rem 4rem;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start;}
+
+.left h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,4vw,3.5rem);letter-spacing:3px;line-height:1;margin-bottom:1.5rem;}
+.left h1 span{display:block;font-family:'Instrument Serif',serif;font-style:italic;font-size:.55em;color:var(--gold2);letter-spacing:1px;margin-top:.3rem;}
+.property-thumb{background:rgba(201,168,76,.06);border:1px solid var(--border);padding:2rem;text-align:center;font-size:3rem;margin-bottom:1.5rem;color:rgba(201,168,76,.2);}
+.property-details{list-style:none;border-top:1px solid var(--border);}
+.property-details li{padding:.6rem 0;border-bottom:1px solid var(--border);font-size:.9rem;color:var(--dim);display:flex;justify-content:space-between;}
+.property-details li strong{color:var(--white);}
+.hosted-by{margin-top:2rem;background:var(--panel);border:1px solid var(--border);padding:1.5rem;display:flex;align-items:center;gap:1rem;}
+.hosted-logo{height:36px;object-fit:contain;}
+.hosted-text{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:2px;color:var(--dim);text-transform:uppercase;}
+
+.right{background:var(--panel);border:1px solid var(--border2);padding:2.5rem;}
+.right h2{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:3px;color:var(--white);margin-bottom:2rem;}
+.form-group{margin-bottom:1.2rem;}
+.form-label{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:.5rem;}
+.form-input{width:100%;background:rgba(201,168,76,.05);border:1px solid var(--border2);color:var(--white);padding:.8rem 1rem;font-family:'Instrument Serif',serif;font-size:.95rem;outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--gold);}
+.form-input::placeholder{color:#4a4030;}
+.form-input option{background:var(--panel);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.radio-group{display:flex;gap:1rem;flex-wrap:wrap;}
+.radio-group label{display:flex;align-items:center;gap:.5rem;font-size:.85rem;color:var(--dim);cursor:pointer;}
+.radio-group input{accent-color:var(--gold);}
+.submit-btn{width:100%;margin-top:1.5rem;font-family:'IBM Plex Mono',monospace;font-size:.65rem;letter-spacing:2px;text-transform:uppercase;background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--black);padding:1.1rem;border:none;cursor:pointer;font-weight:500;transition:opacity .2s,transform .2s;}
+.submit-btn:hover{opacity:.9;transform:translateY(-1px);}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+#formMsg{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:1px;text-align:center;margin-top:1rem;display:none;padding:.8rem;}
+#formMsg.success{display:block;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);color:var(--green);}
+#formMsg.error{display:block;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);color:var(--red);}
+
+footer{border-top:1px solid var(--border);padding:1.5rem 4rem;text-align:center;background:var(--panel);}
+.footer-copy{font-family:'IBM Plex Mono',monospace;font-size:.5rem;color:var(--dim);letter-spacing:1px;}
+.footer-copy a{color:var(--gold);text-decoration:none;}
+
+@media(max-width:900px){
+  .page{grid-template-columns:1fr;padding:6rem 1.5rem 3rem;}
+  .form-row{grid-template-columns:1fr;}
+  #nav{padding:.8rem 1.5rem;}
+}
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <a class="nav-logo" href="/florostone">
+    <img src="https://media-production.lp-cdn.com/media/rvkdlcd2xkiwxzcsv58t" alt="FloroStone">
+    <span>FLOROSTONE</span>
+  </a>
+</nav>
+
+<div class="page">
+  <div class="left">
+    <h1>Schedule Your Private Tour<span>422 Faitoute Ave, Roselle Park NJ</span></h1>
+    <div class="property-thumb">🏠</div>
+    <ul class="property-details">
+      <li><span>Address</span><strong>422 Faitoute Ave, Roselle Park NJ 07204</strong></li>
+      <li><span>Bedrooms</span><strong>3</strong></li>
+      <li><span>Bathrooms</span><strong>1.5</strong></li>
+      <li><span>Style</span><strong>Renovated Colonial</strong></li>
+      <li><span>Price</span><strong>Contact for Price</strong></li>
+    </ul>
+    <div class="hosted-by">
+      <img class="hosted-logo" src="https://media-production.lp-cdn.com/media/rvkdlcd2xkiwxzcsv58t" alt="FloroStone">
+      <div class="hosted-text">Hosted by FloroStone Realty<br>Broker: Grisela Flores &middot; (908) 445-5339</div>
+    </div>
+  </div>
+  <div class="right">
+    <h2>Book Your Tour</h2>
+    <form id="tourForm" onsubmit="return submitTour(event)">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" name="full_name" placeholder="Jane Smith" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" name="email" type="email" placeholder="jane@email.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input class="form-input" name="phone" type="tel" placeholder="(555) 123-4567" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Are you working with an agent?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="has_agent" value="Yes"> Yes</label>
+          <label><input type="radio" name="has_agent" value="No" checked> No</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pre-approved for financing?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="financing" value="Yes"> Yes</label>
+          <label><input type="radio" name="financing" value="Pre-approved"> Pre-approved</label>
+          <label><input type="radio" name="financing" value="Cash"> Cash</label>
+          <label><input type="radio" name="financing" value="Not yet" checked> Not yet</label>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Preferred Tour Date</label>
+          <input class="form-input" name="preferred_date" type="date" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Preferred Time</label>
+          <select class="form-input" name="preferred_time" required>
+            <option value="">Select...</option>
+            <option>9:00 AM</option><option>10:00 AM</option><option>11:00 AM</option>
+            <option>12:00 PM</option><option>1:00 PM</option><option>2:00 PM</option>
+            <option>3:00 PM</option><option>4:00 PM</option><option>5:00 PM</option>
+            <option>6:00 PM</option><option>7:00 PM</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Anything we should know?</label>
+        <textarea class="form-input" name="notes" rows="3" placeholder="Questions, accessibility needs, timing preferences..." style="resize:vertical;min-height:80px;"></textarea>
+      </div>
+      <button class="submit-btn" type="submit">Request Private Tour &rarr;</button>
+      <div id="formMsg"></div>
+    </form>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-copy">Listed by <a href="/florostone">FloroStone Realty</a> &middot; Marketing powered by <a href="https://abrevo.co">Abrevo</a></div>
+</footer>
+
+<script>
+async function submitTour(e){
+  e.preventDefault();
+  const form=document.getElementById('tourForm');
+  const btn=form.querySelector('.submit-btn');
+  const msg=document.getElementById('formMsg');
+  btn.disabled=true;
+  btn.textContent='Submitting...';
+  msg.className='';msg.style.display='none';
+
+  const fd=new FormData(form);
+  const payload={
+    full_name:fd.get('full_name'),
+    email:fd.get('email'),
+    phone:fd.get('phone'),
+    type:'422 Faitoute Ave, Roselle Park NJ',
+    property_address:'422 Faitoute Ave, Roselle Park NJ',
+    preferred_date:fd.get('preferred_date'),
+    preferred_time:fd.get('preferred_time'),
+    additional_notes:'Has agent: '+(fd.get('has_agent')||'N/A')+' | Financing: '+(fd.get('financing')||'N/A')+' | Notes: '+(fd.get('notes')||'N/A'),
+    source:'web'
+  };
+
+  try{
+    const res=await fetch('/.netlify/functions/book?client=florostone',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    if(!res.ok){
+      const data=await res.json().catch(()=>({}));
+      throw new Error(data.error||'Booking failed');
+    }
+    msg.textContent='Tour requested! FloroStone Realty will confirm within 1 hour.';
+    msg.className='success';
+    form.reset();
+  }catch(err){
+    msg.textContent='Something went wrong: '+err.message+'. Please call (908) 445-5339.';
+    msg.className='error';
+  }
+  btn.disabled=false;
+  btn.textContent='Request Private Tour \u2192';
+}
+</script>
+</body>
+</html>

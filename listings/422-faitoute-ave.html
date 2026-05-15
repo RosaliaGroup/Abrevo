@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>422 Faitoute Ave, Roselle Park NJ — FloroStone Realty</title>
+<meta name="description" content="3BR/1.5BA renovated colonial in Roselle Park NJ. Hardwood floors, updated kitchen, full basement, fenced backyard. Listed by FloroStone Realty.">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--black:#07070a;--white:#f4f1ea;--gold:#c9a84c;--gold2:#e2c97e;--gold3:#f0e0a8;--dim:#9a8f78;--panel:#0f0f12;--border:rgba(201,168,76,0.15);--border2:rgba(201,168,76,0.35);--green:#2ecc71;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--black);color:var(--white);font-family:'Instrument Serif',serif;overflow-x:hidden;}
+#nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;justify-content:space-between;align-items:center;padding:1rem 3rem;background:rgba(7,7,10,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+.nav-logo{display:flex;align-items:center;gap:1rem;text-decoration:none;}
+.nav-logo img{height:36px;object-fit:contain;}
+.nav-logo span{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:4px;color:var(--white);}
+.nav-links{display:flex;gap:1.5rem;align-items:center;}
+.nav-links a{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--dim);text-decoration:none;transition:color .2s;}
+.nav-links a:hover{color:var(--gold);}
+.nav-btn{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;background:var(--gold);color:var(--black);padding:.5rem 1.2rem;border:none;cursor:pointer;text-decoration:none;transition:background .2s;}
+.nav-btn:hover{background:var(--gold2);}
+.sec{padding:6rem 4rem;max-width:1280px;margin:0 auto;}
+.sec-tag{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:4px;text-transform:uppercase;color:var(--gold);margin-bottom:1.2rem;display:flex;align-items:center;gap:1rem;}
+.sec-tag::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border2),transparent);}
+.sec-h2{font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,4vw,4rem);letter-spacing:3px;line-height:1;color:var(--white);}
+.sec-h2 i{font-family:'Instrument Serif',serif;font-style:italic;font-size:.7em;color:var(--gold2);letter-spacing:1px;}
+.btn-primary{font-family:'IBM Plex Mono',monospace;font-size:.65rem;letter-spacing:2px;text-transform:uppercase;background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--black);padding:.9rem 2.2rem;border:none;cursor:pointer;text-decoration:none;display:inline-block;transition:transform .25s,box-shadow .25s;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(201,168,76,.35);}
+.btn-ghost{font-family:'IBM Plex Mono',monospace;font-size:.65rem;letter-spacing:2px;text-transform:uppercase;background:transparent;color:var(--white);padding:.9rem 2.2rem;border:1px solid var(--border2);cursor:pointer;text-decoration:none;display:inline-block;transition:all .2s;}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+
+/* Photo gallery placeholder */
+.gallery{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:200px 200px;gap:2px;margin-top:80px;}
+.gallery-slot{background:rgba(201,168,76,.06);display:flex;align-items:center;justify-content:center;font-size:2rem;color:rgba(201,168,76,.2);overflow:hidden;position:relative;}
+.gallery-slot:first-child{grid-row:span 2;}
+.gallery-slot::after{content:'Photo';position:absolute;font-family:'IBM Plex Mono',monospace;font-size:.5rem;letter-spacing:2px;color:rgba(201,168,76,.3);text-transform:uppercase;}
+
+/* At a glance */
+.glance{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin-top:2px;}
+.glance-item{background:var(--panel);padding:2rem;text-align:center;}
+.glance-item .glance-val{font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:var(--gold2);line-height:1;}
+.glance-item .glance-label{font-family:'IBM Plex Mono',monospace;font-size:.5rem;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-top:.3rem;}
+
+/* Open houses */
+.oh-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);margin-top:3rem;}
+.oh-card{background:var(--panel);padding:2rem;transition:background .3s;}
+.oh-card:hover{background:rgba(201,168,76,.04);}
+.oh-date{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:2px;color:var(--white);}
+.oh-time{font-size:.95rem;color:var(--gold);margin-top:.3rem;}
+.oh-agents{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:1px;color:var(--dim);margin-top:.8rem;}
+
+/* Features */
+.features-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);margin-top:3rem;}
+.feature-item{background:var(--panel);padding:1rem 1.5rem;font-size:.9rem;color:var(--dim);display:flex;align-items:center;gap:.8rem;}
+.feature-item::before{content:'✓';color:var(--green);flex-shrink:0;font-size:.8rem;}
+
+/* Agent card */
+.agent-contact{background:var(--panel);border:1px solid var(--border2);padding:2.5rem;margin-top:3rem;display:flex;gap:2rem;align-items:center;}
+.agent-contact-avatar{width:70px;height:70px;border-radius:50%;background:rgba(201,168,76,.1);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--gold);flex-shrink:0;}
+.agent-contact-info h3{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:2px;color:var(--white);}
+.agent-contact-info p{font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--dim);letter-spacing:1px;margin-top:.2rem;}
+.agent-contact-btns{margin-left:auto;display:flex;gap:1rem;flex-shrink:0;}
+
+/* Chatbot widget */
+.chat-widget{position:fixed;bottom:24px;right:24px;z-index:600;}
+.chat-toggle{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 8px 30px rgba(201,168,76,.4);transition:transform .2s;}
+.chat-toggle:hover{transform:scale(1.05);}
+.chat-label{position:absolute;bottom:68px;right:0;background:var(--panel);border:1px solid var(--border2);padding:.5rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:1px;color:var(--gold);white-space:nowrap;text-transform:uppercase;}
+.chat-panel{display:none;position:absolute;bottom:70px;right:0;width:360px;max-height:500px;background:var(--panel);border:1px solid var(--border2);overflow:hidden;flex-direction:column;}
+.chat-panel.open{display:flex;}
+.chat-panel-header{padding:1rem;background:rgba(201,168,76,.08);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.chat-panel-header span{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold);}
+.chat-panel-close{background:none;border:none;color:var(--dim);font-size:1.2rem;cursor:pointer;}
+.chat-panel-body{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.8rem;min-height:280px;}
+.chat-msg{max-width:85%;padding:.7rem .9rem;font-size:.85rem;line-height:1.6;}
+.chat-msg.ai{background:rgba(201,168,76,.08);border:1px solid var(--border);align-self:flex-start;color:var(--white);}
+.chat-msg.user{background:rgba(201,168,76,.15);border:1px solid var(--border2);align-self:flex-end;color:var(--white);}
+.chat-panel-input{display:flex;border-top:1px solid var(--border);}
+.chat-panel-input input{flex:1;background:transparent;border:none;color:var(--white);padding:.8rem;font-family:'Instrument Serif',serif;font-size:.85rem;outline:none;}
+.chat-panel-input input::placeholder{color:var(--dim);}
+.chat-panel-input button{background:var(--gold);color:var(--black);border:none;padding:.8rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:.5rem;letter-spacing:1px;cursor:pointer;}
+
+/* Footer */
+footer{border-top:1px solid var(--border);padding:2rem 4rem;display:flex;justify-content:space-between;align-items:center;background:var(--panel);}
+.footer-credit{font-family:'IBM Plex Mono',monospace;font-size:.5rem;color:var(--dim);letter-spacing:1px;}
+.footer-credit a{color:var(--gold);text-decoration:none;}
+
+@media(max-width:900px){
+  #nav{padding:.8rem 1.5rem;}
+  .nav-links{display:none;}
+  .sec{padding:4rem 1.5rem;}
+  .gallery{grid-template-columns:1fr;grid-template-rows:250px;}
+  .gallery-slot:first-child{grid-row:auto;}
+  .gallery-slot:not(:first-child){display:none;}
+  .glance{grid-template-columns:1fr 1fr;}
+  .oh-grid,.features-grid{grid-template-columns:1fr;}
+  .agent-contact{flex-direction:column;text-align:center;}
+  .agent-contact-btns{margin-left:0;flex-direction:column;width:100%;}
+  .agent-contact-btns a{width:100%;text-align:center;}
+  .chat-panel{width:calc(100vw - 48px);right:-12px;}
+  footer{flex-direction:column;gap:1rem;text-align:center;padding:2rem 1.5rem;}
+}
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <a class="nav-logo" href="/florostone">
+    <img src="https://media-production.lp-cdn.com/media/rvkdlcd2xkiwxzcsv58t" alt="FloroStone">
+    <span>FLOROSTONE</span>
+  </a>
+  <div class="nav-links">
+    <a href="/florostone#team">Team</a>
+    <a href="/florostone#listings">Listings</a>
+    <a href="/tour/422-faitoute-ave" class="nav-btn">Schedule Tour</a>
+  </div>
+</nav>
+
+<!-- PHOTO GALLERY -->
+<div class="gallery">
+  <div class="gallery-slot">🏠</div>
+  <div class="gallery-slot"></div>
+  <div class="gallery-slot"></div>
+  <div class="gallery-slot"></div>
+  <div class="gallery-slot"></div>
+</div>
+
+<!-- AT A GLANCE -->
+<div class="glance">
+  <div class="glance-item">
+    <div class="glance-val">3</div>
+    <div class="glance-label">Bedrooms</div>
+  </div>
+  <div class="glance-item">
+    <div class="glance-val">1.5</div>
+    <div class="glance-label">Bathrooms</div>
+  </div>
+  <div class="glance-item">
+    <div class="glance-val">TBD</div>
+    <div class="glance-label">Square Feet</div>
+  </div>
+  <div class="glance-item">
+    <div class="glance-val" style="font-size:1.8rem;">Contact</div>
+    <div class="glance-label">For Price</div>
+  </div>
+</div>
+
+<!-- OPEN HOUSES -->
+<section class="sec">
+  <div class="sec-tag">Open Houses</div>
+  <h2 class="sec-h2">Come See It<br><i>In Person.</i></h2>
+  <div class="oh-grid">
+    <div class="oh-card">
+      <div class="oh-date">Saturday, May 16</div>
+      <div class="oh-time">1:00 PM &mdash; 4:00 PM</div>
+      <div class="oh-agents">With Daiane Santos &amp; Mara Branco</div>
+    </div>
+    <div class="oh-card">
+      <div class="oh-date">Sunday, May 17</div>
+      <div class="oh-time">12:00 PM &mdash; 3:00 PM</div>
+      <div class="oh-agents">With Victoria DoSantos</div>
+    </div>
+  </div>
+  <div style="margin-top:2rem;text-align:center;">
+    <a class="btn-primary" href="/tour/422-faitoute-ave">Schedule a Private Tour &rarr;</a>
+  </div>
+</section>
+
+<!-- DESCRIPTION -->
+<section class="sec" style="padding-top:0;">
+  <div class="sec-tag">About This Home</div>
+  <h2 class="sec-h2">422 Faitoute Ave<br><i>Roselle Park, NJ 07204</i></h2>
+  <p style="font-size:1rem;color:var(--dim);line-height:1.9;margin-top:1.5rem;max-width:700px;">
+    This beautifully renovated colonial in the heart of Roselle Park offers the perfect blend of classic charm and modern updates. Featuring hardwood floors throughout, an updated kitchen with stainless steel appliances and pantry, and 1.5 bathrooms across three bedrooms.
+  </p>
+  <p style="font-size:1rem;color:var(--dim);line-height:1.9;margin-top:1rem;max-width:700px;">
+    The full basement provides ample storage and additional living potential. Step outside to an enclosed front porch, a large fenced backyard with a spacious deck and garden area — perfect for entertaining. Walking distance to NJ Transit and downtown Roselle Park.
+  </p>
+
+  <div class="features-grid">
+    <div class="feature-item">Hardwood floors throughout</div>
+    <div class="feature-item">Updated kitchen with stainless steel</div>
+    <div class="feature-item">Kitchen pantry</div>
+    <div class="feature-item">Full basement</div>
+    <div class="feature-item">Enclosed front porch</div>
+    <div class="feature-item">Large fenced backyard</div>
+    <div class="feature-item">Deck and garden area</div>
+    <div class="feature-item">Walking distance to NJ Transit</div>
+    <div class="feature-item">Near downtown Roselle Park</div>
+    <div class="feature-item">Renovated colonial style</div>
+  </div>
+</section>
+
+<!-- NEIGHBORHOOD -->
+<section class="sec" style="padding-top:0;">
+  <div class="sec-tag">Neighborhood</div>
+  <h2 class="sec-h2">Roselle Park<br><i>Commuter-Friendly Living.</i></h2>
+  <p style="font-size:1rem;color:var(--dim);line-height:1.9;margin-top:1.5rem;max-width:700px;">
+    Roselle Park is a commuter's dream — NJ Transit's Raritan Valley Line is minutes away with direct service to Penn Station NYC. A tight-knit community with tree-lined streets, local shops, restaurants, and excellent schools. Close to the Garden State Parkway and major highways for easy access anywhere in New Jersey.
+  </p>
+</section>
+
+<!-- CONTACT AGENT -->
+<section class="sec" style="padding-top:0;">
+  <div class="sec-tag">Listing Agent</div>
+  <div class="agent-contact">
+    <div class="agent-contact-avatar">GF</div>
+    <div class="agent-contact-info">
+      <h3>Grisela Flores</h3>
+      <p>Broker of Record &mdash; CEO &middot; FloroStone Realty &middot; License #792631</p>
+      <p style="margin-top:.3rem;"><a href="mailto:grisela@florostone.com" style="color:var(--gold);text-decoration:none;">grisela@florostone.com</a> &middot; Office: (908) 445-5339</p>
+    </div>
+    <div class="agent-contact-btns">
+      <a class="btn-primary" href="/tour/422-faitoute-ave" style="font-size:.55rem;padding:.7rem 1.5rem;">Schedule Tour</a>
+      <a class="btn-ghost" href="mailto:grisela@florostone.com" style="font-size:.55rem;padding:.7rem 1.5rem;">Request Info</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-credit">Listed by <a href="/florostone">FloroStone Realty</a> &middot; Marketing powered by <a href="https://abrevo.co">Abrevo</a></div>
+  <div class="footer-credit">&copy; 2026 FloroStone Realty</div>
+</footer>
+
+<!-- CHATBOT WIDGET -->
+<div class="chat-widget">
+  <div class="chat-label" id="chatLabel">Ask About This Home</div>
+  <button class="chat-toggle" id="chatToggle" onclick="toggleChat()">💬</button>
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-panel-header">
+      <span>422 Faitoute Ave &middot; AI Assistant</span>
+      <button class="chat-panel-close" onclick="toggleChat()">&times;</button>
+    </div>
+    <div class="chat-panel-body" id="chatBody">
+      <div class="chat-msg ai">Hi! I can answer questions about 422 Faitoute Ave — bedrooms, price, open houses, neighborhood, anything. What would you like to know?</div>
+    </div>
+    <div class="chat-panel-input">
+      <input id="chatInput" placeholder="Ask about this property..." onkeydown="if(event.key==='Enter')sendMsg()">
+      <button onclick="sendMsg()">SEND</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleChat(){
+  const p=document.getElementById('chatPanel');
+  const l=document.getElementById('chatLabel');
+  p.classList.toggle('open');
+  l.style.display=p.classList.contains('open')?'none':'block';
+}
+
+async function sendMsg(){
+  const input=document.getElementById('chatInput');
+  const body=document.getElementById('chatBody');
+  const msg=input.value.trim();
+  if(!msg)return;
+  body.insertAdjacentHTML('beforeend','<div class="chat-msg user">'+escHtml(msg)+'</div>');
+  input.value='';
+  body.scrollTop=body.scrollHeight;
+
+  // Collect history
+  const msgs=body.querySelectorAll('.chat-msg');
+  const history=[];
+  msgs.forEach(m=>{
+    history.push({role:m.classList.contains('user')?'user':'assistant',content:m.textContent});
+  });
+
+  body.insertAdjacentHTML('beforeend','<div class="chat-msg ai" id="typing" style="opacity:.5;">Thinking...</div>');
+  body.scrollTop=body.scrollHeight;
+
+  try{
+    const res=await fetch('/.netlify/functions/listing-chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:msg,propertyId:'422-faitoute-ave',history:history.slice(-10)})
+    });
+    const data=await res.json();
+    document.getElementById('typing').remove();
+    body.insertAdjacentHTML('beforeend','<div class="chat-msg ai">'+escHtml(data.reply||'Sorry, I had trouble with that. Try again?')+'</div>');
+  }catch(e){
+    document.getElementById('typing').remove();
+    body.insertAdjacentHTML('beforeend','<div class="chat-msg ai">Sorry, I\'m having trouble connecting. Please try again or call (908) 445-5339.</div>');
+  }
+  body.scrollTop=body.scrollHeight;
+}
+
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>
