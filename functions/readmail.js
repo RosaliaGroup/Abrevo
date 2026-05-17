@@ -1090,51 +1090,73 @@ async function processGoogleVoice(gv, fromEmail) {
       });
     }
 
-    // AI reply via Google Voice — conversation-aware SMS with booking link
+    // AI reply via Google Voice — conversation-aware REPLY/WAIT decision
     try {
-      if (gv.replyTo) {
-        const isIron65msg = /iron.?65|mcwhorter/i.test(gv.message||'') || /iron.?65|mcwhorter/i.test(lead?.property||'');
-        const bookingLink = isIron65msg ? 'https://book.rosaliagroup.com/iron65' : 'https://book.rosaliagroup.com/book';
-
-        // Get conversation history for this phone number
-        let conversationHistory = '';
+        // Read full conversation history (both inbound and outbound)
+        const callerDigits = gv.callerPhone.replace(/\D/g,'');
+        let fullHistory = [];
         try {
-          const histRes = await fetch(`${SUPABASE_URL}/rest/v1/activities?lead_id=eq.${lead?.id || '00000000-0000-0000-0000-000000000000'}&type=in.(sms)&order=created_at.asc&limit=10&select=direction,summary,body,created_at`, { headers: SB_H });
-          const history = await histRes.json();
-          if (Array.isArray(history) && history.length > 0) {
-            conversationHistory = '\n\nCONVERSATION HISTORY (oldest first):\n' + history.map(h => {
-              const who = h.direction === 'inbound' ? 'Lead' : 'Ana';
-              const msg = (h.body || h.summary || '').replace(/^Text from[^:]+:\s*/i,'').replace(/<https[^>]+>/g,'').trim().slice(0,200);
-              return `${who}: ${msg}`;
-            }).filter(h => h.length > 6).join('\n');
+          // Get all activities for this lead
+          if (lead) {
+            const histR = await fetch(
+              `${SUPABASE_URL}/rest/v1/activities?lead_id=eq.${lead.id}&type=eq.sms&order=created_at.asc&limit=20&select=direction,body,summary,created_at`,
+              { headers: SB_H }
+            );
+            fullHistory = await histR.json() || [];
           }
-        } catch(e) { console.error('History fetch error:', e.message); }
+        } catch(e) {}
 
-        const smsRes = await fetch('https://api.anthropic.com/v1/messages', {
+        // Build conversation string
+        const convHistory = fullHistory.map(h => {
+          const who = h.direction === 'outbound' ? 'Ana' : 'Lead';
+          const msg = (h.body || h.summary || '').replace(/<https[^>]+>/g,'').replace(/To respond.*/s,'').trim().slice(0,200);
+          return msg ? `${who}: ${msg}` : null;
+        }).filter(Boolean).join('\n');
+
+        const lastOutbound = fullHistory.filter(h => h.direction === 'outbound').pop();
+        const lastOutboundTime = lastOutbound ? new Date(lastOutbound.created_at) : null;
+        const minutesSinceReply = lastOutboundTime ? (Date.now() - lastOutboundTime.getTime()) / 60000 : 999;
+
+        // Ask AI: should I respond, and if so what should I say?
+        const decisionRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150,
-            messages: [{ role: 'user', content: `You are Ana from Rosalia Group replying to a rental lead by SMS. Be brief and direct.
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 250,
+            messages: [{ role: 'user', content: `You are Ana from Rosalia Group managing a rental lead conversation via SMS.
 
-Lead message: "${gv.message}"
-${conversationHistory}
+CONVERSATION SO FAR:
+${convHistory || 'No previous messages'}
 
-Rules:
-- NEVER ask the lead any questions — just answer and send the link
-- Max 1 sentence reply — no more
-- Do NOT mention amenities, laundry, pets, or anything you are not 100% sure about
-- Just confirm you have what they need and invite them to book
-- Example good reply: "Yes, we have 2BR options in Newark in that range — here is the link to book a tour:"
-- Example bad reply: anything more than 1 sentence or mentioning specific features or asking questions
-- Do NOT add sign-off, phone number, or links — those are added automatically
+NEW MESSAGE FROM LEAD: "${gv.message}"
+Minutes since last reply was sent: ${minutesSinceReply.toFixed(0)}
 
-Reply with ONLY the 1 sentence.` }]
+RULES:
+- If the last reply already addressed this message — respond with ACTION: WAIT
+- If the lead is asking for something not yet addressed (application, tour, pricing, availability) — respond with ACTION: REPLY
+- If lead asks for application link: send https://liveiron65.com/apply (Iron 65) or ask for email to send full application details
+- If lead credit score mentioned below 625: explain minimum is 625, offer co-signer/guarantor option
+- If lead confirmed they found the link or booked — respond ACTION: WAIT
+- If lead says "thank you" or "ok" with nothing actionable — ACTION: WAIT
+- Never send fake URLs. Only use: https://book.rosaliagroup.com/book or https://book.rosaliagroup.com/iron65 or https://liveiron65.com/apply
+- Keep reply under 160 chars
+- Sign off: — Ana, Rosalia Group
+
+Respond in this exact format:
+ACTION: REPLY or WAIT
+MESSAGE: [your SMS reply if ACTION is REPLY, otherwise leave blank]` }]
           })
         });
-        const smsData = await smsRes.json();
-        let smsReply = (smsData.content?.[0]?.text || '').trim();
 
-        if (smsReply) {
+        const decisionData = await decisionRes.json();
+        const decisionText = decisionData.content?.[0]?.text || '';
+        const shouldReply = decisionText.includes('ACTION: REPLY');
+        const messageMatch = decisionText.match(/MESSAGE:\s*(.+)/s);
+        let smsReply = messageMatch ? messageMatch[1].trim() : '';
+
+        console.log(`GV decision for ${gv.callerPhone}: ${shouldReply ? 'REPLY' : 'WAIT'}`);
+
+        if (shouldReply && smsReply && gv.replyTo) {
+          // Send main reply
           const nodemailer = require('nodemailer');
           const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
           await t.sendMail({
@@ -1143,12 +1165,12 @@ Reply with ONLY the 1 sentence.` }]
             subject: `Re: New text message from ${gv.callerPhone}`,
             text: smsReply
           });
-          console.log(`GV SMS reply sent: "${smsReply.slice(0,100)}"`);
 
-          // Send booking link as separate SMS if not already in reply
-          if (!smsReply.includes('book.rosaliagroup.com')) {
-            const nodemailer2 = require('nodemailer');
-            const t2 = nodemailer2.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+          // Send booking link as separate message if not already in reply
+          if (!smsReply.includes('book.rosaliagroup.com') && !smsReply.includes('liveiron65.com') && !smsReply.toLowerCase().includes('application')) {
+            const isIron65msg = /iron.?65|mcwhorter/i.test(gv.message||'') || /iron.?65|mcwhorter/i.test(lead?.property||'');
+            const bookingLink = isIron65msg ? 'https://book.rosaliagroup.com/iron65' : 'https://book.rosaliagroup.com/book';
+            const t2 = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
             await t2.sendMail({
               from: `"Rosalia Group" <${GMAIL_USER}>`,
               to: gv.replyTo,
@@ -1157,17 +1179,15 @@ Reply with ONLY the 1 sentence.` }]
             });
           }
 
-          // Log outbound reply to activities
+          // Log outbound reply
           if (lead) {
             await fetch(`${SUPABASE_URL}/rest/v1/activities`, {
               method: 'POST', headers: { ...SB_H, Prefer: 'return=minimal' },
-              body: JSON.stringify({ lead_id: lead.id, agent_id: agent?.id||null, type: 'sms', direction: 'outbound', summary: `GV SMS reply: "${smsReply.slice(0,80)}"`, body: smsReply })
+              body: JSON.stringify({ lead_id: lead.id, agent_id: agent?.id||null, type: 'sms', direction: 'outbound', summary: `GV SMS: "${smsReply.slice(0,80)}"`, body: smsReply })
             });
           }
+          console.log(`GV SMS sent: "${smsReply.slice(0,80)}"`);
         }
-      } else {
-        console.log('GV SMS reply skipped — no replyTo');
-      }
     } catch(e) { console.error('GV AI reply error:', e.message); }
   }
   // Missed call — create task + immediately call back + SMS
