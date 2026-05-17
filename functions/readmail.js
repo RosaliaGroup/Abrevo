@@ -675,6 +675,192 @@ function parseZillowEmail(body, from) {
   return lead;
 }
 
+function isGoogleVoice(from) {
+  const f = (from || '').toLowerCase();
+  return f.includes('voice.google.com') || f.includes('txt.voice.google');
+}
+
+function parseGoogleVoiceEmail(body) {
+  const gv = { callerPhone: null, message: null };
+  // Extract phone number from GV email body
+  const phoneMatch = (body || '').match(/(\+?1?\s*\(?\d{3}\)?[\s\-.]?\d{3}[\s\-.]?\d{4})/);
+  if (phoneMatch) {
+    let p = phoneMatch[1].replace(/\D/g, '');
+    if (p.length === 10) p = '+1' + p;
+    else if (p.length === 11 && p.startsWith('1')) p = '+' + p;
+    gv.callerPhone = p;
+  }
+  // Extract the actual text message — GV emails typically have the message after the phone line
+  const lines = (body || '').split(/[\n\r]+/).map(l => l.trim()).filter(Boolean);
+  // Skip header lines (phone, timestamp, etc) and grab the message content
+  const msgLines = [];
+  let foundPhone = false;
+  for (const line of lines) {
+    if (!foundPhone && phoneMatch && line.includes(phoneMatch[1])) { foundPhone = true; continue; }
+    if (foundPhone || !phoneMatch) {
+      // Skip common GV footer lines
+      if (/^(YOUR GOOGLE VOICE|To respond|Get the app|https:\/\/voice)/i.test(line)) break;
+      if (line.length > 0) msgLines.push(line);
+    }
+  }
+  gv.message = msgLines.join(' ').trim() || (body || '').slice(0, 500).trim();
+  return gv;
+}
+
+const SB_H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+
+async function processGoogleVoice(from, body) {
+  const gv = parseGoogleVoiceEmail(body);
+  if (!gv.callerPhone) {
+    console.log('GV: no phone number found, skipping');
+    return;
+  }
+  console.log(`GV SMS from ${gv.callerPhone}: "${(gv.message || '').slice(0, 80)}"`);
+
+  // Look up lead by phone
+  const digits = gv.callerPhone.replace(/\D/g, '').slice(-10);
+  const leadR = await fetch(
+    `${SUPABASE_URL}/rest/v1/leads?phone=ilike.*${digits}&limit=1`,
+    { headers: SB_H }
+  );
+  let lead = null;
+  const leadData = await leadR.json();
+  if (Array.isArray(leadData) && leadData.length > 0) lead = leadData[0];
+
+  // Fetch conversation history
+  let fullHistory = [];
+  if (lead) {
+    const histR = await fetch(
+      `${SUPABASE_URL}/rest/v1/activities?lead_id=eq.${lead.id}&type=eq.sms&order=created_at.asc&limit=20&select=direction,body,summary,created_at`,
+      { headers: SB_H }
+    );
+    fullHistory = await histR.json() || [];
+  } else {
+    // No lead record — search activities by phone number in summary
+    const histR = await fetch(
+      `${SUPABASE_URL}/rest/v1/activities?type=eq.sms&summary=ilike.*${digits}*&order=created_at.asc&limit=20&select=direction,body,summary,created_at`,
+      { headers: SB_H }
+    );
+    fullHistory = await histR.json() || [];
+  }
+
+  // Auto-create lead if not found
+  if (!lead && gv.callerPhone) {
+    const newLeadR = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+      method: 'POST',
+      headers: { ...SB_H, Prefer: 'return=representation' },
+      body: JSON.stringify({ phone: gv.callerPhone, source: 'google_voice_sms', status: 'new', client: 'rosalia' })
+    });
+    const newLeadData = await newLeadR.json();
+    lead = Array.isArray(newLeadData) ? newLeadData[0] : newLeadData;
+    console.log(`Auto-created lead for ${gv.callerPhone}: ${lead?.id}`);
+  }
+
+  // Add current inbound message to history if not already last item
+  const lastMsg = fullHistory[fullHistory.length - 1];
+  if (!lastMsg || lastMsg.direction !== 'inbound' || !(lastMsg.body || '').includes((gv.message || '').slice(0, 20))) {
+    fullHistory.push({ direction: 'inbound', body: gv.message, created_at: new Date().toISOString() });
+  }
+
+  // Build conversation history string
+  const convHistory = fullHistory.map(h => {
+    const dir = h.direction === 'inbound' ? 'LEAD' : 'ANA';
+    return `${dir}: ${h.body || h.summary || '(no content)'}`;
+  }).join('\n');
+
+  // AI decision: how to respond
+  const prompt = `You are Ana Haynes, leasing agent at Rosalia Group in New Jersey. You are responding to an SMS conversation via Google Voice.
+
+CONVERSATION SO FAR:
+${convHistory}
+
+CURRENT MESSAGE: "${gv.message}"
+CALLER PHONE: ${gv.callerPhone}
+
+RULES:
+- If Ana (agent) has already responded to this specific message — choose WAIT, do not repeat the same reply
+- If the lead mentioned their email — update your reply to acknowledge you will send details to that email
+- Read ALL previous messages carefully before deciding — never treat a continuing conversation as a new inquiry
+- Keep replies SHORT (1-2 sentences max) — this is SMS not email
+- Always push toward booking a tour: https://book.rosaliagroup.com/book
+- Sign off as: Ana | Rosalia Group
+
+Decide ONE action. Reply with EXACTLY one of:
+REPLY: <your SMS text here>
+WAIT (if already responded or no action needed)`;
+
+  console.log('GV: calling Claude for SMS response...');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  const data = await res.json();
+  const aiText = data.content?.[0]?.text || '';
+  console.log('GV AI decision:', aiText.slice(0, 100));
+
+  if (aiText.startsWith('WAIT')) {
+    console.log('GV: AI chose WAIT, no reply needed');
+    return;
+  }
+
+  const replyMatch = aiText.match(/^REPLY:\s*(.+)/s);
+  if (!replyMatch) {
+    console.log('GV: unexpected AI response format, skipping');
+    return;
+  }
+
+  const smsReply = replyMatch[1].trim();
+  console.log(`GV: sending SMS reply to ${gv.callerPhone}: "${smsReply.slice(0, 80)}"`);
+
+  // Send SMS via Textbelt
+  if (TEXTBELT_KEY) {
+    await fetch('https://textbelt.com/text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: gv.callerPhone, message: smsReply, key: TEXTBELT_KEY }),
+    });
+    console.log('GV: SMS reply sent');
+  }
+
+  // Log activity
+  if (lead?.id) {
+    await fetch(`${SUPABASE_URL}/rest/v1/activities`, {
+      method: 'POST',
+      headers: { ...SB_H, Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        lead_id: lead.id,
+        type: 'sms',
+        direction: 'outbound',
+        body: smsReply,
+        summary: `SMS to ${gv.callerPhone}: ${smsReply.slice(0, 100)}`,
+        created_at: new Date().toISOString()
+      })
+    });
+    // Also log the inbound message
+    await fetch(`${SUPABASE_URL}/rest/v1/activities`, {
+      method: 'POST',
+      headers: { ...SB_H, Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        lead_id: lead.id,
+        type: 'sms',
+        direction: 'inbound',
+        body: gv.message,
+        summary: `SMS from ${gv.callerPhone}: ${(gv.message || '').slice(0, 100)}`,
+        created_at: new Date().toISOString()
+      })
+    });
+  }
+}
+
 function fetchUnreadEmails(forceDays) {
   return new Promise((resolve, reject) => {
     const imap = new Imap({
@@ -1451,6 +1637,14 @@ exports.handler = async (event) => {
           console.log('Listing alert detected:', from, subject);
           await saveListingAlert(from, subject, body);
           results.skipped++;
+          continue;
+        }
+
+        // Google Voice SMS — process separately
+        if (isGoogleVoice(from)) {
+          console.log('Google Voice SMS detected:', from);
+          await processGoogleVoice(from, body);
+          results.processed++;
           continue;
         }
 
