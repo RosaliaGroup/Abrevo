@@ -10,6 +10,76 @@ const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
 const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
+
+const APPLICATION_TEMPLATES = {
+  iron65: {
+    applyLink: 'https://apply.weimark.com/ifw/b0f05d8828bbaf86e049a659c4fe1171/5965/new/',
+    emailSubject: 'Iron 65 — Application Details & Next Steps',
+    emailBody: `Hello,
+
+Here are the details for your Iron 65 application.
+
+CURRENT PROMOTIONS:
+- 1st month free on a 12-month lease
+- Apply within 24 hours of touring: 2 months free on an 18-month lease
+- Amenities fee waived for 12 months
+- Apply within 24 hours of touring: Complimentary High-Speed Internet ($800 value / 1 year)
+
+INITIAL PAYMENT:
+- Security Deposit: $1,000 (if you qualify)
+- 1st month's rent
+
+UTILITIES:
+- Electricity: tenant pays directly through PSEG
+- Renters insurance required
+- Water billed in arrears via tenant portal
+
+APPLICATION PROCESS:
+Submit your application here: https://apply.weimark.com/ifw/b0f05d8828bbaf86e049a659c4fe1171/5965/new/
+Every occupant must apply. Application fee: $50 per person.
+
+REQUIRED DOCUMENTS:
+- Government-issued photo ID
+- Last 2 bank statements
+- Last 3 pay stubs
+- Owner reference or proof of rent (previous year)
+- Tax documents (last tax return, W2, 1099, etc.)
+
+Feel free to reach out with any questions or to schedule a tour.
+
+Best regards,
+Ana Haynes | Rosalia Group
+(862) 333-1681 | inquiries@rosaliagroup.com`,
+  },
+  rosalia: {
+    applyLink: 'https://book.rosaliagroup.com/book',
+    emailSubject: 'Rosalia Group — Application Details',
+    emailBody: `Hello,
+
+Thank you for your interest in Rosalia Group apartments.
+
+To get started, please schedule a tour using the link below. After your tour, we will send you the full application details.
+
+Book your tour: https://book.rosaliagroup.com/book
+
+GENERAL REQUIREMENTS:
+- 625+ credit score
+- Income ~3x monthly rent
+- Co-signers and TheGuarantors.com accepted
+
+DOCUMENTS NEEDED:
+- Government-issued photo ID
+- Last 2 bank statements
+- Last 3 pay stubs
+- Proof of previous rent or owner reference
+
+Feel free to reach out with any questions.
+
+Best regards,
+Ana Haynes | Rosalia Group
+(862) 333-1681 | inquiries@rosaliagroup.com`,
+  },
+};
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 
 const VAPI_KEY = process.env.VAPI_KEY || '064f441d-a388-4404-8b6c-05e91e90f1ff';
@@ -1133,11 +1203,13 @@ Minutes since last reply was sent: ${minutesSinceReply.toFixed(0)}
 RULES:
 - If the last reply already addressed this message — respond with ACTION: WAIT
 - If the lead is asking for something not yet addressed (application, tour, pricing, availability) — respond with ACTION: REPLY
-- If lead asks for application link: send https://liveiron65.com/apply (Iron 65) or ask for email to send full application details
+- If lead asks for application: reply with the apply link for their property. Iron 65: https://apply.weimark.com/ifw/b0f05d8828bbaf86e049a659c4fe1171/5965/new/ — All others: https://book.rosaliagroup.com/book (tour first, then application)
+- If you send the application link and lead has provided email — mention you are sending full details to their email
+- After sending application link, ask: 'Did you receive the email with the full application details?' if email was known
 - If lead credit score mentioned below 625: explain minimum is 625, offer co-signer/guarantor option
 - If lead confirmed they found the link or booked — respond ACTION: WAIT
 - If lead says "thank you" or "ok" with nothing actionable — ACTION: WAIT
-- Never send fake URLs. Only use: https://book.rosaliagroup.com/book or https://book.rosaliagroup.com/iron65 or https://liveiron65.com/apply
+- Never send fake URLs. Only use: https://book.rosaliagroup.com/book or https://book.rosaliagroup.com/iron65 or https://apply.weimark.com/ifw/b0f05d8828bbaf86e049a659c4fe1171/5965/new/
 - Keep reply under 160 chars
 - Sign off: — Ana, Rosalia Group
 
@@ -1177,6 +1249,33 @@ MESSAGE: [your SMS reply if ACTION is REPLY, otherwise leave blank]` }]
               subject: `Re: New text message from ${gv.callerPhone}`,
               text: `${bookingLink}\n— Ana, Rosalia Group (201) 497-0225`
             });
+          }
+
+          // If application requested and lead has email — send full application email
+          const isAppRequest = /application|apply|how do i apply|submit/i.test(gv.message||'');
+          const isIron65app = /iron.?65|mcwhorter/i.test(gv.message||'') || /iron.?65|mcwhorter/i.test(lead?.property||'');
+          const appTemplate = APPLICATION_TEMPLATES[isIron65app ? 'iron65' : 'rosalia'];
+
+          if (isAppRequest && lead?.email) {
+            try {
+              const emailTrans = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+              await emailTrans.sendMail({
+                from: `"Rosalia Group" <${GMAIL_USER}>`,
+                to: lead.email,
+                cc: 'inquiries@rosaliagroup.com',
+                subject: appTemplate.emailSubject,
+                text: appTemplate.emailBody
+              });
+              console.log(`Application email sent to ${lead.email}`);
+              // Follow up SMS confirming email sent
+              const t3 = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
+              await t3.sendMail({
+                from: `"Rosalia Group" <${GMAIL_USER}>`,
+                to: gv.replyTo,
+                subject: `Re: New text message from ${gv.callerPhone}`,
+                text: `I just sent the full application details to ${lead.email} — please check your inbox (and spam folder). Let me know if you have any questions! — Ana`
+              });
+            } catch(e) { console.error('Application email error:', e.message); }
           }
 
           // Log outbound reply
