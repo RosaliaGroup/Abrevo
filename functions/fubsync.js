@@ -1,16 +1,16 @@
 const nodemailer = require('nodemailer');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY || '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
+const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/iron65';
 const FUB_BASE = 'https://api.followupboss.com/v1';
 const FUB_AUTH = 'Basic ' + Buffer.from((process.env.FUB_API_KEY || '') + ':').toString('base64');
 
-const VAPI_KEY = process.env.VAPI_KEY || '064f441d-a388-4404-8b6c-05e91e90f1ff';
+const VAPI_KEY = process.env.VAPI_KEY;
 const JESSICA_PHONE_ID = '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 const JESSICA_OUTBOUND_ASSISTANT_ID = '35f4e4a2-aabc-47be-abfc-630cf6a85d58';
 

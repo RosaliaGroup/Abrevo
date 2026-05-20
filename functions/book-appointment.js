@@ -82,7 +82,7 @@ ${additional_notes}
       body: JSON.stringify({
         phone: "ANA_PHONE_NUMBER_HERE", // Replace with Ana's number e.g. +12015551234
         message: smsBody,
-        key: "0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW",
+        key: process.env.TEXTBELT_KEY_2,
       }),
     });
     const smsResult = await textbeltRes.json();

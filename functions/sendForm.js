@@ -1,4 +1,4 @@
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY || '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
+const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 const SITE_URL = 'https://book.rosaliagroup.com';
 
 async function sendSMS(phone, message) {

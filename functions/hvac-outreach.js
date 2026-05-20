@@ -8,8 +8,8 @@ const nodemailer = require('nodemailer');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const VAPI_KEY = process.env.VAPI_KEY || '064f441d-a388-4404-8b6c-05e91e90f1ff';
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY || '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
+const VAPI_KEY = process.env.VAPI_KEY;
+const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
 // HVAC-specific Vapi config — uses Jessica assistant (CINC outbound)

@@ -87,7 +87,7 @@ const CLIENTS = {
   }
 };
 
-const TEXTBELT_KEY = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
+const TEXTBELT_KEY = process.env.TEXTBELT_KEY_2;
 
 // Email transporter
 const transporter = nodemailer.createTransport({

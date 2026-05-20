@@ -7,7 +7,7 @@
 //   node sms-campaign-hvac.js --limit 20        (send first 20)
 //   node sms-campaign-hvac.js                   (send all 'new')
 //
-// TEXTBELT KEY: 06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr
+// TEXTBELT KEY: stored in TEXTBELT_KEY env var
 // NOTE: ~42 credits remaining — top up before full run at https://textbelt.com
 //       1,100 texts ≈ $55 at $0.05/text (bulk pricing available)
 //
@@ -21,7 +21,7 @@ const fs    = require('fs');
 
 // ─── CONFIG ────────────────────────────────────────────────
 const CONFIG = {
-  TEXTBELT_KEY:  process.env.TEXTBELT_KEY || '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr',
+  TEXTBELT_KEY:  process.env.TEXTBELT_KEY,
   SUPABASE_URL:  process.env.SUPABASE_URL || 'YOUR_SUPABASE_URL',
   SUPABASE_KEY:  process.env.SUPABASE_KEY || 'YOUR_SUPABASE_SERVICE_KEY',
   SOURCE:        'hvac-list-07105',

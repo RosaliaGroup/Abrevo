@@ -3,7 +3,7 @@ const { simpleParser } = require('mailparser');
 const nodemailer = require('nodemailer');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const INBOX_EMAIL = 'inquiries@rosaliagroup.com';
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
@@ -82,7 +82,7 @@ Ana Haynes | Rosalia Group
 };
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 
-const VAPI_KEY = process.env.VAPI_KEY || '064f441d-a388-4404-8b6c-05e91e90f1ff';
+const VAPI_KEY = process.env.VAPI_KEY;
 const VAPI_ASSISTANT_ID = '1cae5323-6b83-4434-8461-6330472da140';
 const VAPI_PHONE_ID = process.env.VAPI_PHONE_ID || '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 
@@ -1291,7 +1291,7 @@ async function notifyAna(fromName, subject, phone, callAllowed) {
 
 async function processGoogleVoice(gv, fromEmail) {
   const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
   const SB_H = { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
   console.log(`GV ${gv.type} from ${gv.callerPhone}`);
@@ -1499,7 +1499,7 @@ MESSAGE: [your SMS reply if ACTION is REPLY, otherwise leave blank]` }]
       try {
         await fetch('https://api.vapi.ai/call/phone', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 064f441d-a388-4404-8b6c-05e91e90f1ff' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${VAPI_KEY}` },
           body: JSON.stringify({
             phoneNumberId: '2e2b6713-f631-4e9e-95fa-3418ecc77c0a',
             assistantId: '1cae5323-6b83-4434-8461-6330472da140',
@@ -1571,7 +1571,7 @@ MESSAGE: [your SMS reply if ACTION is REPLY, otherwise leave blank]` }]
       try {
         await fetch('https://api.vapi.ai/call/phone', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 064f441d-a388-4404-8b6c-05e91e90f1ff' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${VAPI_KEY}` },
           body: JSON.stringify({
             phoneNumberId: '2e2b6713-f631-4e9e-95fa-3418ecc77c0a',
             assistantId: '1cae5323-6b83-4434-8461-6330472da140',

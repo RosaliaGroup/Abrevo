@@ -1,6 +1,6 @@
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const TEXTBELT_KEY = '06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr';
+const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 const ANA_PHONE = '+16462269189';
 
 // -- PARSE FUB EMAIL BODY --
