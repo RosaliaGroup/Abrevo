@@ -502,47 +502,77 @@ function parseAvailEmail(body) {
   return lead;
 }
 
-function parseWebflowEmail(body) {
+function parseWebflowEmail(body, subject) {
   const lead = {};
+
+  // Normalize: strip HTML tags, decode entities, collapse whitespace for inline parsing
+  const normalized = (body || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:p|div|tr|td|li)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n))
+    .replace(/\s+/g, ' ')
+    .trim();
 
   // Resipointe uses numbered fields: "Name 3:", "Email 3:", "Phone 2:"
   // Also handle original format: "Full Name:", "Email Address:", "Cell Phone:"
+  // Iron 65 contact form: "Name:", "Email:", "Phone:", "select:", "Your Message:"
   const nameMatch = body.match(/(?:Full Name|(?<!\w\s)Name\s*\d*):\s*(.+)/i)
-    || body.match(/\bName\b\s*\n([^\n]+)/i);
+    || body.match(/\bName\b\s*\n([^\n]+)/i)
+    || normalized.match(/\bName\b\s*:\s*([^E\n]+?)(?=\s*Email|\s*Phone|\s*$)/i);
   const emailMatch = body.match(/(?:Email Address|Email\s*\d*):\s*([^\s\n]+@[^\s\n]+)/i)
-    || body.match(/\bEmail\b\s*\n([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
+    || body.match(/\bEmail\b\s*\n([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i)
+    || normalized.match(/\bEmail\b\s*:?\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
   const phoneMatch = body.match(/(?:Cell Phone|Phone\s*\d*):\s*([\d\s\(\)\-\.]+)/i)
-    || body.match(/\bPhone\b\s*\n([\d\s\(\)\-\.]+)/i);
+    || body.match(/\bPhone\b\s*\n([\d\s\(\)\-\.]+)/i)
+    || normalized.match(/\bPhone\b\s*:?\s*([\d\s\(\)\-\.]{7,})/i);
   const buildingMatch = body.match(/Building:\s*(.+)/i);
   const bedroomsMatch = body.match(/Bedrooms:\s*(.+)/i);
+  // Iron 65 contact form: "select" = unit type, "Your Message" = lead's message
+  const selectMatch = body.match(/\bselect\b\s*:?\s*(.+)/i)
+    || normalized.match(/\bselect\b\s*:?\s*([^\n]+?)(?=\s*Your Message|\s*Message|\s*$)/i);
+  const messageMatch = body.match(/Your Message\s*:?\s*([\s\S]+?)(?=\s*--|\s*$)/i)
+    || body.match(/\bMessage\b\s*:?\s*([\s\S]+?)(?=\s*--|\s*$)/i)
+    || normalized.match(/Your Message\s*:?\s*(.+?)(?=\s*--|\s*$)/i);
+
   if (nameMatch) lead.name = nameMatch[1].trim();
   if (emailMatch) lead.email = emailMatch[1].trim();
   if (phoneMatch) {
     let p = phoneMatch[1].replace(/\D/g, '');
     if (p.length === 10) p = '+1' + p;
     else if (p.length === 11) p = '+' + p;
-    lead.phone = p;
+    if (p.length >= 11) lead.phone = p;
   }
   if (buildingMatch) lead.property = buildingMatch[1].split('--')[0].trim();
   if (bedroomsMatch) lead.bedrooms = bedroomsMatch[1].split('--')[0].trim();
+  if (selectMatch) lead.unitType = selectMatch[1].trim();
+  if (messageMatch) lead.message = messageMatch[1].trim();
 
-  // Handle single-line format: "Full Name: X Email Address: Y Cell Phone: Z"
+  // Fallback: extract name from subject "You've got new message from [Name]"
+  if (!lead.name && subject) {
+    const subjName = subject.match(/new message from\s+(.+)/i);
+    if (subjName) lead.name = subjName[1].trim();
+  }
+
+  // Fallback: inline single-line format "Full Name: X Email Address: Y Cell Phone: Z"
   if (!lead.email) {
-    const inlineEmail = body.match(/(?:Email Address|Email\s*\d*):\s*([^\s]+@[^\s]+)/i);
+    const inlineEmail = normalized.match(/(?:Email Address|Email\s*\d*)\s*:?\s*([^\s]+@[^\s]+)/i);
     if (inlineEmail) lead.email = inlineEmail[1].trim();
   }
-  if (!lead.name || !lead.phone) {
-    if (!lead.name) {
-      const inlineName = body.match(/(?:Full Name|(?<!\w\s)Name\s*\d*):\s*([^E]+?)(?=Email|$)/i);
-      if (inlineName) lead.name = inlineName[1].trim();
-    }
-    if (!lead.phone) {
-      const inlinePhone = body.match(/(?:Cell Phone|Phone\s*\d*):\s*([\d\s\(\)\-\.]+?)(?=Current|Building|Bedrooms|Company|$)/i);
-      if (inlinePhone) {
-        let p = inlinePhone[1].replace(/\D/g, '');
-        if (p.length === 10) p = '+1' + p;
-        lead.phone = p;
-      }
+  if (!lead.name) {
+    const inlineName = normalized.match(/(?:Full Name|(?<!\w\s)Name\s*\d*)\s*:?\s*([^E]+?)(?=Email|$)/i);
+    if (inlineName) lead.name = inlineName[1].trim();
+  }
+  if (!lead.phone) {
+    const inlinePhone = normalized.match(/(?:Cell Phone|Phone\s*\d*)\s*:?\s*([\d\s\(\)\-\.]+?)(?=Current|Building|Bedrooms|Company|select|Your Message|$)/i);
+    if (inlinePhone) {
+      let p = inlinePhone[1].replace(/\D/g, '');
+      if (p.length === 10) p = '+1' + p;
+      if (p.length >= 11) lead.phone = p;
     }
   }
 
@@ -1099,7 +1129,7 @@ ${contextStr}${threadContext}`;
 
 You are ${role}.
 
-${previousReply ? 'A lead is REPLYING to your previous email. Read their reply carefully and answer EXACTLY what they asked — do not reintroduce yourself or repeat anything already said.' : `A new inquiry came in. ${nameGreeting}${detectedCity}${/Name:.*\n.*(?:Email|Phone|Message|Your Message):/is.test(body) ? '\nIMPORTANT: This is a CONTACT FORM SUBMISSION from a website — the fields (Name, Email, Phone, Message) are the lead\'s info. Treat it as a new lead inquiry. If "Your Message" or "Message" is empty or short, the lead is interested but didn\'t write a specific question — respond warmly and invite them to book a tour. NEVER say you don\'t have a message from them.' : ''}`}
+${previousReply ? 'A lead is REPLYING to your previous email. Read their reply carefully and answer EXACTLY what they asked — do not reintroduce yourself or repeat anything already said.' : `A new inquiry came in. ${nameGreeting}${detectedCity}${/Name\s*:/.test(body) && /(?:Email|Phone|Message|Your Message)\s*:/i.test(body) ? '\nIMPORTANT: This is a CONTACT FORM SUBMISSION from a website — the fields (Name, Email, Phone, select, Your Message) are the lead\'s info. The "Your Message" field contains what they wrote. If their message mentions availability or preferred times, acknowledge those times and send the booking link so they can pick a slot. If "Your Message" is empty or short, the lead is interested but didn\'t write a specific question — respond warmly and invite them to book a tour. NEVER say "I don\'t have a message" or "I\'m not sure what you\'re asking" — this is always a new lead contacting you.' : ''}`}
 
 ${userMessage}
 
@@ -1637,9 +1667,10 @@ exports.handler = async (event) => {
         // Use text body, fall back to HTML with tags stripped
         const rawHtml = parsed.html || '';
         const strippedHtml = rawHtml.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
-        // For Avail emails, prefer HTML (has structured Name/Email/Phone labels)
+        // For Avail and Iron65/Brevo form emails, prefer HTML (has structured Name/Email/Phone labels)
         // For others, prefer plain text
-        const body = (isAvailLead(from) && strippedHtml) ? strippedHtml : (parsed.text || strippedHtml || '');
+        const preferHtml = (isAvailLead(from) || isWebflowLead(from, subject)) && strippedHtml;
+        const body = preferHtml ? strippedHtml : (parsed.text || strippedHtml || '');
         const replyTo = parsed.replyTo?.text || from;
 
         const emailMatch = from.match(/<([^>]+)>/) || from.match(/([^\s]+@[^\s]+)/);
@@ -1734,9 +1765,9 @@ exports.handler = async (event) => {
           }
           console.log('Avail lead - Name:', realName, 'Email:', realEmail, 'Client:', leadClient || 'rosalia');
         } else if (isWebflowLead(from, subject)) {
-          console.log('Resipointe lead detected - from:', from, 'subject:', subject);
-          const p = parseWebflowEmail(body);
-          console.log('Parsed Resipointe lead:', JSON.stringify(p));
+          console.log('Webflow/Iron65 lead detected - from:', from, 'subject:', subject);
+          const p = parseWebflowEmail(body, subject);
+          console.log('Parsed lead:', JSON.stringify(p));
           if (p.phone) phone = p.phone;
           if (p.email) realEmail = p.email;
           if (p.name) realName = p.name;
@@ -1748,7 +1779,10 @@ exports.handler = async (event) => {
               bl2.includes('iron 65') || bl2.includes('mcwhorter') || bl2.includes('iron65')) {
             leadClient = 'iron65';
           }
-          console.log('Resipointe realEmail:', realEmail, 'phone:', phone, 'name:', realName, 'Client:', leadClient || 'rosalia');
+          if (!realEmail) {
+            console.error('WARNING: Webflow/Iron65 lead but no email extracted from body! from:', from, 'subject:', subject, 'body snippet:', body.substring(0, 300));
+          }
+          console.log('Webflow lead - Email:', realEmail, 'Phone:', phone, 'Name:', realName, 'Client:', leadClient || 'rosalia');
         } else if (isZillowLead(from)) {
           const p = parseZillowEmail(body, from);
           // Zillow Group Rentals sets Reply-To to lead's real email — most reliable source
@@ -1893,6 +1927,13 @@ exports.handler = async (event) => {
         }
 
         const replyTarget = avail ? fromEmail : realEmail || effectiveReplyTo;
+        // Safety: never reply to the notification sender (iron65.com, brevo, etc) — only to the lead
+        if (isWebflowLead(from, subject) && !realEmail) {
+          console.error('ABORT: Webflow/Iron65 lead but no lead email extracted — would reply to notification sender:', from);
+          await syslog('error', `Webflow lead with no extracted email — reply aborted`, { from, subject, body: body.substring(0, 500) });
+          results.errors++;
+          continue;
+        }
         const ccEmail = avail && realEmail && realEmail !== fromEmail ? realEmail : null;
         await sendReply(replyTarget, subject, replyText, ccEmail);
         await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone, leadClient);
