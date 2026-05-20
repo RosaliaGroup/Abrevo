@@ -467,8 +467,8 @@ function isWebflowLead(from, subject) {
   if ((f.includes('webflow.com') || f.includes('resipointe')) &&
       (s.includes('submission') || s.includes('application') || s.includes('new form') || s.includes('new lead'))) return true;
   // Brevo/Iron65 form emails
-  if ((f.includes('brevo') || f.includes('liveiron65') || f.includes('sendinblue')) &&
-      (s.includes('tour') || s.includes('lead') || s.includes('inquiry') || s.includes('request') || s.includes('interested'))) return true;
+  if ((f.includes('brevo') || f.includes('liveiron65') || f.includes('sendinblue') || f.includes('iron65.com')) &&
+      (s.includes('tour') || s.includes('lead') || s.includes('inquiry') || s.includes('request') || s.includes('interested') || s.includes("you've got new message"))) return true;
   return false;
 }
 
@@ -1099,7 +1099,7 @@ ${contextStr}${threadContext}`;
 
 You are ${role}.
 
-${previousReply ? 'A lead is REPLYING to your previous email. Read their reply carefully and answer EXACTLY what they asked — do not reintroduce yourself or repeat anything already said.' : `A new inquiry came in. ${nameGreeting}${detectedCity}`}
+${previousReply ? 'A lead is REPLYING to your previous email. Read their reply carefully and answer EXACTLY what they asked — do not reintroduce yourself or repeat anything already said.' : `A new inquiry came in. ${nameGreeting}${detectedCity}${/Name:.*\n.*(?:Email|Phone|Message|Your Message):/is.test(body) ? '\nIMPORTANT: This is a CONTACT FORM SUBMISSION from a website — the fields (Name, Email, Phone, Message) are the lead\'s info. Treat it as a new lead inquiry. If "Your Message" or "Message" is empty or short, the lead is interested but didn\'t write a specific question — respond warmly and invite them to book a tour. NEVER say you don\'t have a message from them.' : ''}`}
 
 ${userMessage}
 
@@ -1740,7 +1740,15 @@ exports.handler = async (event) => {
           if (p.phone) phone = p.phone;
           if (p.email) realEmail = p.email;
           if (p.name) realName = p.name;
-          console.log('Resipointe realEmail:', realEmail, 'phone:', phone, 'name:', realName);
+          // Detect Iron 65 from sender or subject/body
+          const fl = from.toLowerCase();
+          const sl2 = subject.toLowerCase();
+          const bl2 = (body || '').toLowerCase();
+          if (fl.includes('iron65') || fl.includes('liveiron65') || sl2.includes('iron 65') || sl2.includes('mcwhorter') ||
+              bl2.includes('iron 65') || bl2.includes('mcwhorter') || bl2.includes('iron65')) {
+            leadClient = 'iron65';
+          }
+          console.log('Resipointe realEmail:', realEmail, 'phone:', phone, 'name:', realName, 'Client:', leadClient || 'rosalia');
         } else if (isZillowLead(from)) {
           const p = parseZillowEmail(body, from);
           // Zillow Group Rentals sets Reply-To to lead's real email — most reliable source
