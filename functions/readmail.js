@@ -1110,32 +1110,40 @@ Write ONLY the email body.`;
     return '';
   }
 
-  let res;
-  try {
-    res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 400,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-  } catch (fetchErr) {
-    console.error('Claude API fetch failed:', fetchErr.message);
-    return '';
-  }
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let res;
+    try {
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 400,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+    } catch (fetchErr) {
+      console.error(`Claude API fetch failed (attempt ${attempt + 1}):`, fetchErr.message);
+      if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; }
+      return '';
+    }
 
-  const data = await res.json();
-  if (!res.ok || data.type === 'error') {
-    console.error('Claude API error:', res.status, data.error?.message || JSON.stringify(data));
-    return '';
+    const data = await res.json();
+    if (!res.ok || data.type === 'error') {
+      console.error(`Claude API error (attempt ${attempt + 1}):`, res.status, data.error?.message || JSON.stringify(data));
+      if (attempt === 0 && (res.status === 429 || res.status === 529 || res.status >= 500)) {
+        await new Promise(r => setTimeout(r, 2000));
+        continue;
+      }
+      return '';
+    }
+    return data.content?.[0]?.text || '';
   }
-  return data.content?.[0]?.text || '';
+  return '';
 }
 
 const sendReplyTracker = {};
