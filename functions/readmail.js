@@ -83,6 +83,17 @@ Ana Haynes | Rosalia Group
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 
 const VAPI_KEY = process.env.VAPI_KEY;
+
+async function syslog(level, message, metadata = {}) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/system_logs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Prefer: 'return=minimal' },
+      body: JSON.stringify({ level, function_name: 'readmail', message, metadata }),
+    });
+  } catch (_) {}
+}
+
 const VAPI_ASSISTANT_ID = '1cae5323-6b83-4434-8461-6330472da140';
 const VAPI_PHONE_ID = process.env.VAPI_PHONE_ID || '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 
@@ -1107,6 +1118,7 @@ Write ONLY the email body.`;
   console.log('Calling Claude API...');
   if (!ANTHROPIC_KEY) {
     console.error('ANTHROPIC_API_KEY is not set — cannot generate reply');
+    await syslog('error', 'ANTHROPIC_API_KEY not set', { from });
     return '';
   }
 
@@ -1129,12 +1141,17 @@ Write ONLY the email body.`;
     } catch (fetchErr) {
       console.error(`Claude API fetch failed (attempt ${attempt + 1}):`, fetchErr.message);
       if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; }
+      await syslog('error', `Claude API fetch failed after retry: ${fetchErr.message}`, { from });
       return '';
     }
 
     const data = await res.json();
     if (!res.ok || data.type === 'error') {
-      console.error(`Claude API error (attempt ${attempt + 1}):`, res.status, data.error?.message || JSON.stringify(data));
+      const errMsg = data.error?.message || JSON.stringify(data);
+      console.error(`Claude API error (attempt ${attempt + 1}):`, res.status, errMsg);
+      if (attempt === 1 || (res.status !== 429 && res.status !== 529 && res.status < 500)) {
+        await syslog('error', `Claude API error ${res.status}: ${errMsg}`, { from, status: res.status });
+      }
       if (attempt === 0 && (res.status === 429 || res.status === 529 || res.status >= 500)) {
         await new Promise(r => setTimeout(r, 2000));
         continue;
@@ -1834,6 +1851,7 @@ exports.handler = async (event) => {
         const replyText = await generateReply(from, subject, body, previousReply, leadContext, calendarAppt, realName, leadClient);
         if (!replyText) {
           console.error('generateReply returned empty for:', fromEmail, '| subject:', subject);
+          await syslog('warn', `Empty AI reply for ${fromEmail}`, { email: fromEmail, subject });
           results.errors++;
           results.aiFailures++;
           continue;
@@ -1910,6 +1928,7 @@ exports.handler = async (event) => {
 
       } catch (err) {
         console.error('Error processing email:', err.message);
+        await syslog('error', `Error processing email: ${err.message}`, { from: raw?.from });
         results.errors++;
       }
     }
@@ -1930,10 +1949,15 @@ exports.handler = async (event) => {
       } catch (err) { console.error('AI alert SMS error:', err.message); }
     }
 
+    if (results.errors > 0) {
+      await syslog('warn', `Run completed with ${results.errors} errors`, { total: rawEmails.length, ...results });
+    }
+
     return { statusCode: 200, headers, body: JSON.stringify({ success: true, total_unread: rawEmails.length, results }) };
 
   } catch (err) {
     console.error('readmail error:', err.message);
+    await syslog('error', `readmail crash: ${err.message}`, { stack: err.stack?.slice(0, 500) });
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };
