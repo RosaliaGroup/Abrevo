@@ -1961,3 +1961,25 @@ exports.handler = async (event) => {
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };
+
+// Shared exports for recovery script and other consumers
+exports.parseZillowEmail = parseZillowEmail;
+exports.parseAvailEmail = parseAvailEmail;
+exports.parseWebflowEmail = parseWebflowEmail;
+exports.parseFUBEmail = parseFUBEmail;
+exports.isZillowLead = isZillowLead;
+exports.isAvailLead = isAvailLead;
+exports.isWebflowLead = isWebflowLead;
+exports.isFUBLead = isFUBLead;
+exports.extractPhone = extractPhone;
+exports.generateReply = generateReply;
+exports.sendReply = sendReply;
+exports.saveLead = saveLead;
+exports.sendSMS = sendSMS;
+exports.triggerCall = triggerCall;
+exports.notifyAna = notifyAna;
+exports.syslog = syslog;
+exports.repliedRecently = repliedRecently;
+exports.getLeadData = getLeadData;
+exports.getLeadContext = getLeadContext;
+exports.createTask = createTask;
