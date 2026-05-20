@@ -1601,7 +1601,7 @@ exports.handler = async (event) => {
     console.log(`readmail: fetching ${forceDays ? `emails from last ${forceDays} days` : 'unread emails'} via IMAP...`);
     const rawEmails = await fetchUnreadEmails(forceDays);
     console.log(`Found ${rawEmails.length} unread emails`);
-    const results = { processed: 0, skipped: 0, not_lead: 0, errors: 0 };
+    const results = { processed: 0, skipped: 0, not_lead: 0, errors: 0, aiFailures: 0 };
     const processedEmails = new Set(); // Prevent processing same sender+subject twice per run
 
     for (const raw of rawEmails) {
@@ -1820,6 +1820,7 @@ exports.handler = async (event) => {
         if (!replyText) {
           console.error('generateReply returned empty for:', fromEmail, '| subject:', subject);
           results.errors++;
+          results.aiFailures++;
           continue;
         }
 
@@ -1896,6 +1897,22 @@ exports.handler = async (event) => {
         console.error('Error processing email:', err.message);
         results.errors++;
       }
+    }
+
+    // Alert Ana if AI replies are failing (likely dead API key or rate limit)
+    if (results.aiFailures >= 3 && TEXTBELT_KEY) {
+      try {
+        await fetch('https://textbelt.com/text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: '+16462269189',
+            message: `⚠️ Rosalia AI Alert: ${results.aiFailures} emails got empty AI replies this run. Check ANTHROPIC_API_KEY or API status.`,
+            key: TEXTBELT_KEY,
+          }),
+        });
+        console.log('AI failure alert SMS sent to Ana');
+      } catch (err) { console.error('AI alert SMS error:', err.message); }
     }
 
     return { statusCode: 200, headers, body: JSON.stringify({ success: true, total_unread: rawEmails.length, results }) };
