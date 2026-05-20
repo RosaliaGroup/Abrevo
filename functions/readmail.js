@@ -1812,6 +1812,13 @@ exports.handler = async (event) => {
           }
         }
 
+        // Cross-run dedup: if another cron run already replied in the last 10 min, skip
+        if (!isReply && await repliedRecently(checkEmail, 10/60)) {
+          console.log('Skipping (cross-run duplicate, replied <10min ago):', checkEmail);
+          results.skipped++;
+          continue;
+        }
+
         const calendarAppt = await getCalendarAppointment(realName || fromName);
         if (calendarAppt) console.log('Calendar appointment found:', calendarAppt.date, calendarAppt.time);
         if (leadContext) console.log('Lead context found:', leadContext.status);
