@@ -518,6 +518,18 @@ function parseWebflowEmail(body, subject) {
     .replace(/\s+/g, ' ')
     .trim();
 
+  // Iron 65 tour confirmation format: "Thank you Willie j, Bethea for requesting a tour...at email or phone"
+  const tourConfirmMatch = normalized.match(/Thank you ([^,]+),?\s*(\S+)?\s+for requesting a tour.*?at\s+([^\s]+@[^\s]+)\s+or\s+([\d]+)/i);
+  if (tourConfirmMatch) {
+    lead.name = (tourConfirmMatch[1] + ' ' + (tourConfirmMatch[2] || '')).trim();
+    lead.email = tourConfirmMatch[3];
+    let p = tourConfirmMatch[4].replace(/\D/g, '');
+    if (p.length === 10) p = '+1' + p;
+    lead.phone = p;
+    lead.message = 'Requested a tour at Iron 65';
+    return lead;
+  }
+
   // Resipointe uses numbered fields: "Name 3:", "Email 3:", "Phone 2:"
   // Also handle original format: "Full Name:", "Email Address:", "Cell Phone:"
   // Iron 65 contact form: "Name:", "Email:", "Phone:", "select:", "Your Message:"
@@ -1926,6 +1938,7 @@ exports.handler = async (event) => {
           continue;
         }
 
+        console.log('Reply routing — from:', from, '| realEmail:', realEmail, '| effectiveReplyTo:', effectiveReplyTo, '| replyTo:', replyTo);
         const replyTarget = avail ? fromEmail : realEmail || effectiveReplyTo;
         // Safety: never reply to the notification sender (iron65.com, brevo, etc) — only to the lead
         if (isWebflowLead(from, subject) && !realEmail) {
