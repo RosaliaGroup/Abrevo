@@ -116,24 +116,15 @@ async function getSMSGateway(phone) {
     if (!apiKey) return null;
     const res = await fetch(`https://phoneintelligence.abstractapi.com/v1/?api_key=${apiKey}&phone=1${digits}`);
     const data = await res.json();
-    // AbstractAPI returns sms_email directly
     const smsEmail = data?.phone_messaging?.sms_email;
-    if (smsEmail) {
-      console.log(`SMS gateway from AbstractAPI: ${smsEmail}`);
-      return smsEmail;
-    }
-    // Fallback to carrier name mapping
+    if (smsEmail) { console.log(`SMS gateway: ${smsEmail}`); return smsEmail; }
     const carrier = (data?.phone_carrier?.name || '').toLowerCase();
-    const lineType = data?.phone_carrier?.line_type;
-    if (lineType !== 'mobile') return null;
+    if (data?.phone_carrier?.line_type !== 'mobile') return null;
     for (const [k, gateway] of Object.entries(CARRIER_GATEWAYS)) {
       if (carrier.includes(k)) return `${digits}@${gateway}`;
     }
     return null;
-  } catch(e) {
-    console.error('AbstractAPI phone error:', e.message);
-    return null;
-  }
+  } catch(e) { console.error('AbstractAPI error:', e.message); return null; }
 }
 
 const VAPI_ASSISTANT_ID = '1cae5323-6b83-4434-8461-6330472da140';
