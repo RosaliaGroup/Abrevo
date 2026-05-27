@@ -94,6 +94,38 @@ async function syslog(level, message, metadata = {}) {
   } catch (_) {}
 }
 
+const CARRIER_GATEWAYS = {
+  'att': 'txt.att.net',
+  'at&t': 'txt.att.net',
+  'verizon': 'vtext.com',
+  'tmobile': 'tmomail.net',
+  't-mobile': 'tmomail.net',
+  'sprint': 'messaging.sprintpcs.com',
+  'metro': 'mymetropcs.com',
+  'metropcs': 'mymetropcs.com',
+  'boost': 'sms.myboostmobile.com',
+  'cricket': 'sms.cricketwireless.net',
+  'us cellular': 'email.uscc.net',
+  'google': 'msg.fi.google.com',
+};
+
+async function getSMSGateway(phone) {
+  try {
+    const digits = phone.replace(/\D/g,'').slice(-10);
+    const res = await fetch(`https://api.carrierlookup.com/v2/lookup?number=${digits}&apikey=${process.env.CARRIER_LOOKUP_KEY}`);
+    const data = await res.json();
+    const carrier = (data.carrier || data.result?.carrier || '').toLowerCase();
+    console.log(`Carrier for ${digits}: ${carrier}`);
+    for (const [key, gateway] of Object.entries(CARRIER_GATEWAYS)) {
+      if (carrier.includes(key)) return `${digits}@${gateway}`;
+    }
+    return null;
+  } catch(e) {
+    console.error('Carrier lookup error:', e.message);
+    return null;
+  }
+}
+
 const VAPI_ASSISTANT_ID = '1cae5323-6b83-4434-8461-6330472da140';
 const VAPI_PHONE_ID = process.env.VAPI_PHONE_ID || '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 
@@ -1375,6 +1407,13 @@ async function processGoogleVoice(gv, fromEmail) {
     const data = await r.json();
     if (Array.isArray(data) && data.length > 0) agent = data[0];
   }
+
+  // Resolve SMS target: prefer GV replyTo, fall back to carrier gateway
+  let smsTarget = gv.replyTo;
+  if (!smsTarget && gv.callerPhone) {
+    smsTarget = await getSMSGateway(gv.callerPhone);
+    if (smsTarget) console.log(`Using carrier gateway: ${smsTarget}`);
+  }
   const activitySummary = gv.type === 'sms'
     ? `Text from ${gv.callerPhone}: "${(gv.message||'').slice(0,80)}"`
     : gv.type === 'missed_call' ? `Missed call from ${gv.callerPhone}`
@@ -1480,13 +1519,13 @@ MESSAGE: [your SMS reply if ACTION is REPLY, otherwise leave blank]` }]
 
         console.log(`GV decision for ${gv.callerPhone}: ${shouldReply ? 'REPLY' : 'WAIT'}`);
 
-        if (shouldReply && smsReply && gv.replyTo) {
+        if (shouldReply && smsReply && smsTarget) {
           // Send main reply
           const nodemailer = require('nodemailer');
           const t = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
           await t.sendMail({
             from: `"Rosalia Group" <${GMAIL_USER}>`,
-            to: gv.replyTo,
+            to: smsTarget,
             subject: `Re: New text message from ${gv.callerPhone}`,
             text: smsReply
           });
@@ -1498,7 +1537,7 @@ MESSAGE: [your SMS reply if ACTION is REPLY, otherwise leave blank]` }]
             const t2 = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
             await t2.sendMail({
               from: `"Rosalia Group" <${GMAIL_USER}>`,
-              to: gv.replyTo,
+              to: smsTarget,
               subject: `Re: New text message from ${gv.callerPhone}`,
               text: `${bookingLink}\n— Ana, Rosalia Group (201) 497-0225`
             });
@@ -1524,7 +1563,7 @@ MESSAGE: [your SMS reply if ACTION is REPLY, otherwise leave blank]` }]
               const t3 = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
               await t3.sendMail({
                 from: `"Rosalia Group" <${GMAIL_USER}>`,
-                to: gv.replyTo,
+                to: smsTarget,
                 subject: `Re: New text message from ${gv.callerPhone}`,
                 text: `I just sent the full application details to ${lead.email} — please check your inbox (and spam folder). Let me know if you have any questions! — Ana`
               });
@@ -1578,16 +1617,16 @@ MESSAGE: [your SMS reply if ACTION is REPLY, otherwise leave blank]` }]
       } catch(e) { console.error('GV callback call error:', e.message); }
 
       // SMS via Google Voice reply-to (threads in GV conversation)
-      if (gv.replyTo) {
+      if (smsTarget) {
         try {
           const smsMsg = `Hi${lead?.name ? ' ' + lead.name.split(' ')[0] : ''}! This is Ana from Rosalia Group — sorry we missed your call. Calling you back now. Feel free to call or text (201) 497-0225 anytime.`;
           const nodemailer = require('nodemailer');
           const smsTrans = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
-          await smsTrans.sendMail({ from: `"Rosalia Group" <${GMAIL_USER}>`, to: gv.replyTo, subject: smsMsg, text: smsMsg });
-          console.log(`GV missed call SMS sent to ${gv.replyTo}`);
+          await smsTrans.sendMail({ from: `"Rosalia Group" <${GMAIL_USER}>`, to: smsTarget, subject: smsMsg, text: smsMsg });
+          console.log(`GV missed call SMS sent to ${smsTarget}`);
         } catch(e) { console.error('GV callback SMS error:', e.message); }
       } else {
-        console.log('GV missed call SMS skipped — no replyTo address');
+        console.log('GV missed call SMS skipped — no replyTo or carrier gateway');
       }
     } else {
       console.log('GV missed call outside business hours — task created, no auto-call');
@@ -1623,15 +1662,15 @@ MESSAGE: [your SMS reply if ACTION is REPLY, otherwise leave blank]` }]
       const vmReply = (vmData.content?.[0]?.text||'').slice(0,160);
 
       // Send SMS reply via GV replyTo
-      if (vmReply && gv.replyTo) {
+      if (vmReply && smsTarget) {
         try {
           const nodemailer = require('nodemailer');
           const vmTrans = nodemailer.createTransport({ service:'gmail', auth:{ user: GMAIL_USER, pass: GMAIL_PASS }});
-          await vmTrans.sendMail({ from: `"Rosalia Group" <${GMAIL_USER}>`, to: gv.replyTo, subject: vmReply, text: vmReply });
-          console.log(`GV voicemail SMS reply sent to ${gv.replyTo}: "${vmReply.slice(0,60)}"`);
+          await vmTrans.sendMail({ from: `"Rosalia Group" <${GMAIL_USER}>`, to: smsTarget, subject: vmReply, text: vmReply });
+          console.log(`GV voicemail SMS reply sent to ${smsTarget}: "${vmReply.slice(0,60)}"`);
         } catch(e) { console.error('GV voicemail SMS error:', e.message); }
       } else if (vmReply) {
-        console.log('GV voicemail SMS skipped — no replyTo address');
+        console.log('GV voicemail SMS skipped — no replyTo or carrier gateway');
       }
 
       // Call back via Vapi
