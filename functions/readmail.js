@@ -112,16 +112,26 @@ const CARRIER_GATEWAYS = {
 async function getSMSGateway(phone) {
   try {
     const digits = phone.replace(/\D/g,'').slice(-10);
-    const res = await fetch(`https://api.carrierlookup.com/v2/lookup?number=${digits}&apikey=${process.env.CARRIER_LOOKUP_KEY}`);
+    const apiKey = process.env.ABSTRACT_PHONE_KEY;
+    if (!apiKey) return null;
+    const res = await fetch(`https://phoneintelligence.abstractapi.com/v1/?api_key=${apiKey}&phone=1${digits}`);
     const data = await res.json();
-    const carrier = (data.carrier || data.result?.carrier || '').toLowerCase();
-    console.log(`Carrier for ${digits}: ${carrier}`);
-    for (const [key, gateway] of Object.entries(CARRIER_GATEWAYS)) {
-      if (carrier.includes(key)) return `${digits}@${gateway}`;
+    // AbstractAPI returns sms_email directly
+    const smsEmail = data?.phone_messaging?.sms_email;
+    if (smsEmail) {
+      console.log(`SMS gateway from AbstractAPI: ${smsEmail}`);
+      return smsEmail;
+    }
+    // Fallback to carrier name mapping
+    const carrier = (data?.phone_carrier?.name || '').toLowerCase();
+    const lineType = data?.phone_carrier?.line_type;
+    if (lineType !== 'mobile') return null;
+    for (const [k, gateway] of Object.entries(CARRIER_GATEWAYS)) {
+      if (carrier.includes(k)) return `${digits}@${gateway}`;
     }
     return null;
   } catch(e) {
-    console.error('Carrier lookup error:', e.message);
+    console.error('AbstractAPI phone error:', e.message);
     return null;
   }
 }
