@@ -20,10 +20,9 @@ const APPLICATION_TEMPLATES = {
 Here are the details for your Iron 65 application.
 
 CURRENT PROMOTIONS:
-- 1st month free on a 12-month lease
-- Apply within 24 hours of touring: 2 months free on an 18-month lease
+- 2 months free on a 14-month lease
+- Apply within 24 hours of touring for an additional month free
 - Amenities fee waived for 12 months
-- Apply within 24 hours of touring: Complimentary High-Speed Internet ($800 value / 1 year)
 
 INITIAL PAYMENT:
 - Security Deposit: $1,000 (if you qualify)
@@ -152,16 +151,24 @@ CRITICAL RULES:
   - Do NOT volunteer pricing unprompted
   - When a lead ASKS about price, rent, cost, or how much — answer directly with the correct pricing for the property they mentioned
   - Use ONLY these verified prices (always mention incentives when sharing pricing):
-    502 Market St: 1BR from $1,999/mo, 2BR from $2,950/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 security deposit
-    486 Market St (River Pointe): 1BR from $2,350/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 security deposit. ONLY 6 UNITS LEFT — mention urgency
+    502 Market St: 1BR from $2,300/mo, 2BR from $2,499/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 security deposit
+    486 Market St (River Pointe): 1BR from $2,350/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 security deposit. ONLY 4 UNITS LEFT — mention urgency
     39 Madison St (Iron Pointe): 1BR from $2,400/mo, 1BR backyard from $2,750/mo, 2BR from $3,300/mo. Incentives: 18 units available, rooftop gym lounge, 8 min walk to Penn Station
     475 Main St Orange (The Elks): Studios from $1,955/mo, 1BR from $2,145/mo, 2BR from $3,095/mo, 3BR from $3,775/mo. No current promotions
     80 Freeman St (The Ballantine): Studios from $2,065/mo, 1BR from $2,375/mo, 2BR from $3,340/mo. No current promotions
-    556 Market St: from $2,199/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 security deposit
+    556 Market St: 1BR from $2,100/mo, 3BR Duplex $3,100/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 security deposit
     289 Halsey St: from $2,250/mo. Incentives: 1 month free on 13mo lease, 6 months free parking on 18mo lease
     276 Duncan St Jersey City: 2BR at $2,850/mo. Incentives: rooftop access, in-unit laundry
     1369 South Ave Plainfield: 2BR from $2,775/mo. Incentives: free parking, gym, in-unit washer/dryer
-    Iron 65 (65 Mcwhorter): Studios from $2,200/mo, 1BR from $2,724/mo, 2BR from $3,288/mo, Lofts from $3,488/mo. Incentives: 1 month free on 12mo lease OR $4,000 rent credit on 18mo lease. Rooftop, gym, yoga, cold plunge, sauna, NYC views
+    74 Webster St Newark: 1BR from $1,900/mo, 2BR from $2,700/mo, 3BR from $3,400/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 SD
+    11 Thomas St Newark: Studio $1,450/mo, 1BR $1,675/mo. Incentives: 1 month free on 12mo lease, 2 months free on 24mo lease
+    164 University Ave Newark: Studio $1,870/mo utilities included. Incentives: 1 month free on 13mo lease, 2 months free on 18mo lease, $500 SD
+    53 Bleeker St Newark: 3BR $2,800/mo. Incentives: 1 month free on 13mo lease, $500 SD
+    176 Garfield Jersey City: 3BR $2,350/mo. Private backyard
+    136 S 7th St Newark: 3BR $2,250/mo. Backyard
+    86 Wilson Pl Orange: 2BR $1,850/mo. Private entrance + backyard
+    883 Springfield Ave Irvington: 3BR $1,950/mo
+    Iron 65 (65 Mcwhorter): Studios from $2,200/mo, 1BR from $2,724/mo, 2BR from $3,288/mo, Lofts from $3,488/mo. Incentives: 2 months free on 14-month lease | Amenities fee waived 12 months | Apply within 24hrs of tour for additional month free. Rooftop, gym, yoga, cold plunge, sauna, NYC views
   - When sharing pricing, always mention the incentives for that property in the same reply. Example: "1BR units at 502 Market start at $1,999/month — and we currently offer 1 month free on a 13-month lease, which brings your effective monthly rent down. Prices subject to change."
   - When sharing pricing always add: 'Prices are subject to change — our leasing agent will confirm current availability at your tour.'
   - FLOOR PLANS: If asked for floor plans, say: 'I am sending your request to our leasing team who will email you the floor plans directly. Can I also schedule a tour so you can see the layout in person?'
@@ -175,7 +182,7 @@ CRITICAL RULES:
 
 PROPERTY KNOWLEDGE BASE:
 # ROSALIA GROUP  KNOWLEDGE BASE
-# Last updated: March 15, 2026
+# Last updated: June 15, 2026
 # NOTE: Only mention prices if the lead's message contains words like: price, cost, rent, how much, affordable, budget. Otherwise focus on features and booking a tour.
 
 ## BOOKING LINKS
@@ -188,7 +195,7 @@ PROPERTY KNOWLEDGE BASE:
 - Electric: tenant pays (all buildings use electric  no gas)
 - Water & trash: INCLUDED at River Pointe (486 Market), 502 Market, Iron Pointe (39 Madison), 556 Market
 - Water & trash: tenant pays at 289 Halsey, 77 Christie, 1369 South Ave, The Elks, Iron 65
-- Internet: tenant pays (except Iron 65  1 year free if applied within 24hrs of tour)
+- Internet: tenant pays
 
 ## CREDIT & QUALIFICATION POLICY
 - Anyone can schedule a tour regardless of credit score  no minimum to tour
@@ -203,7 +210,7 @@ PROPERTY KNOWLEDGE BASE:
 Utilities included: water, trash | Tenant pays: electric
 PROMOTIONS: 1 month free on 13 month lease | 2 months free on 24 month lease | $500 security deposit
 Pet: $65/month + $500 security | Storage: $300/month | In-unit laundry
-Staged unit: 401 (4th floor, balcony) | ONLY 6 UNITS LEFT
+Staged unit: 401 (4th floor, balcony) | ONLY 4 UNITS LEFT
 Available units:
 - Unit 301: 1BR/1BTH, balcony, 642 sqft  $2,350/mo
 - Unit 302: 1BR/1BTH, balcony, 627 sqft  $2,350/mo
@@ -217,15 +224,9 @@ Utilities included: water, trash | Tenant pays: electric
 PROMOTIONS: 1 month free on 13 month lease | 2 months free on 24 month lease | $500 security deposit
 Pet: $65/month + $500 security | Bike storage included | In-unit laundry | ONLY 9 UNITS LEFT
 Available units:
-- Unit 1D: 1BR, 465 sqft  $1,999/mo
-- Unit 3D: 1BR, 541 sqft  $2,250/mo
-- Unit 4A: 2BR, 809 sqft  $2,950/mo
-- Unit 4D: 1BR, 541 sqft  $2,275/mo
-- Unit 4E: 1BR, 474 sqft  $2,199/mo
-- Unit 4F: 1BR, 480 sqft  $2,199/mo
-- Unit 5A: 2BR, 809 sqft  $3,050/mo
-- Unit 5D: 1BR, 541 sqft  $2,300/mo
-- Unit 5E: 1BR, 474 sqft  $2,250/mo
+- Unit 1C: 2BR  $2,499/mo
+- Unit 4A: 2BR  $2,900/mo
+- Unit 5B: 1BR  $2,300/mo
 
 ### 39 MADISON STREET  IRON POINTE, NEWARK NJ
 Utilities included: water, trash | Tenant pays: electric
@@ -257,11 +258,9 @@ Utilities included: water, trash | Tenant pays: electric
 PROMOTIONS: 1 month free on 13 month lease | 2 months free on 24 month lease | $500 security deposit
 In-unit laundry | Access: ring front door bell
 Available units:
-- Unit 2B: 1BR/1BTH  $2,199/mo
-- Unit 3A: 1BR/1BTH  $2,199/mo
-- Unit 4A: 1BR/1BTH  $2,199/mo
-- Unit 5A: 1BR/1BTH  $2,199/mo
-- Unit 5B: 1BR/1BTH  $2,299/mo
+- Unit 1C: 3BR Duplex  $3,100/mo
+- Unit 3A: 1BR/1BTH  $2,200/mo
+- Unit 5E: 1BR/1BTH  $2,100/mo
 
 ### 289 HALSEY STREET, NEWARK NJ
 Utilities included: none | Tenant pays: electric, water, trash
@@ -302,12 +301,66 @@ Brand new luxury building in Ironbound District
 Studios from $2,199/mo | Studio Plus from $2,499/mo
 1BR from $2,724/mo | 1BR Plus from $2,914/mo
 Flex 1.5BR from $3,288/mo | Lofts from $3,488/mo | Duplexes from $3,600/mo
-PROMOTIONS: 1 month free on 12 month lease | $4,000 rent credit on 18 month lease | 2 months free on 24 month lease
+PROMOTIONS: 2 months free on 14-month lease | Amenities fee waived 12 months | Apply within 24hrs of tour for additional month free | Security deposit: $1,000
 NOTE: Only share pricing details below if the lead specifically asks about price, cost, rent, or budget.
-Free internet 1 year (apply within 24hrs of tour) | Amenities fee waived 12 months | Security deposit: $1,000
 Amenities: Rooftop with NYC skyline views | Fitness center | Yoga studio | Cold plunge | Saunas | Outdoor kitchen | Game room | Business center | Pet park | Bike storage | Front desk 7 days | Doorman | Security | In-unit W/D
 Tours: Tue-Fri 12pm-6pm | Sat-Sun 12pm-4pm
 Tour booking: https://book.rosaliagroup.com/iron65
+
+### 74 WEBSTER ST, NEWARK NJ
+Building code: 2580
+PROMOTIONS: 1 month free on 13 month lease | 2 months free on 24 month lease | $500 security deposit
+Available units:
+- 1BR from $1,900/mo
+- 2BR from $2,700/mo
+- 3BR from $3,400-$3,500/mo
+Tour booking: https://book.rosaliagroup.com/book
+
+### 11 THOMAS ST, NEWARK NJ
+Building code: 4351 | Apt door unlocked
+PROMOTIONS: 1 month free on 12 month lease | 2 months free on 24 month lease
+Available units:
+- Studio  $1,450/mo
+- 1BR  $1,675/mo
+Tour booking: https://book.rosaliagroup.com/book
+
+### 164 UNIVERSITY AVE, NEWARK NJ
+Lockbox: 3766 | Utilities included in rent
+PROMOTIONS: 1 month free on 13 month lease | 2 months free on 18 month lease | $500 security deposit
+Available units:
+- Studio  $1,870/mo (utilities included)
+Tour booking: https://book.rosaliagroup.com/book
+
+### 53 BLEEKER ST, NEWARK NJ
+Lockbox: 3766
+PROMOTIONS: 1 month free on 13 month lease | $500 security deposit
+Available units:
+- 3BR  $2,800/mo
+Tour booking: https://book.rosaliagroup.com/book
+
+### 176 GARFIELD, JERSEY CITY NJ
+Lockbox: 3766 | Private backyard
+Available units:
+- 3BR  $2,350/mo
+Tour booking: https://book.rosaliagroup.com/book
+
+### 136 S 7TH ST, NEWARK NJ
+Lockbox: 8120 | Backyard
+Available units:
+- 3BR  $2,250/mo
+Tour booking: https://book.rosaliagroup.com/book
+
+### 86 WILSON PL, ORANGE NJ
+Lockbox: 3766 | Private entrance + backyard
+Available units:
+- 2BR  $1,850/mo
+Tour booking: https://book.rosaliagroup.com/book
+
+### 883 SPRINGFIELD AVE, IRVINGTON NJ
+Lockbox: 3766
+Available units:
+- 3BR  $1,950/mo
+Tour booking: https://book.rosaliagroup.com/book
 
 ### 276 DUNCAN STREET, JERSEY CITY NJ
 Utilities included: none | Tenant pays: electric, water, trash
