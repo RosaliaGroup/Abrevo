@@ -1931,10 +1931,17 @@ exports.handler = async (event) => {
         const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject) || isZillowLead(from)) ? realEmail : fromEmail;
         const skipRecentCheck = isAvailLead(from) || from.includes('reply.avail.co') || from.includes('@avail.co') || isFUBLead(from, subject);
 
-        // Thread replies (Re:) always get a response — no throttle. New emails get 4h throttle.
+        // New emails get 4h throttle
         const receivedAt = parsed.date || null;
         if (!skipRecentCheck && !isReply && await repliedRecently(checkEmail, 4, receivedAt)) {
           console.log('Skipping (replied recently):', checkEmail, '(new email, 4h window)');
+          results.skipped++;
+          continue;
+        }
+
+        // Reply threads (Re:) — skip if we already replied within 24hrs
+        if (isReply && await repliedRecently(checkEmail, 24, receivedAt)) {
+          console.log('Skipping reply thread — already replied to', checkEmail, 'within 24hrs');
           results.skipped++;
           continue;
         }
