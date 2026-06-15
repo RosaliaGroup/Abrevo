@@ -566,16 +566,18 @@ function parseWebflowEmail(body, subject) {
   // Resipointe uses numbered fields: "Name 3:", "Email 3:", "Phone 2:"
   // Also handle original format: "Full Name:", "Email Address:", "Cell Phone:"
   // Iron 65 contact form: "Name:", "Email:", "Phone:", "select:", "Your Message:"
-  const nameMatch = body.match(/(?:Full Name|(?<!\w\s)Name\s*\d*):\s*(.+)/i)
+  const nameMatch = body.match(/Full\s+Name\s*[:\-]\s*([^\n\r]+)/i)
+    || body.match(/(?:(?<!\w\s)Name\s*\d*):\s*([^\n\r]+)/i)
     || body.match(/\bName\b\s*\n([^\n]+)/i)
     || normalized.match(/\bName\b\s*:\s*([^E\n]+?)(?=\s*Email|\s*Phone|\s*$)/i);
   const emailMatch = body.match(/(?:Email Address|Email\s*\d*):\s*([^\s\n]+@[^\s\n]+)/i)
     || body.match(/\bEmail\b\s*\n([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i)
     || normalized.match(/\bEmail\b\s*:?\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
-  const phoneMatch = body.match(/(?:Cell Phone|Phone\s*\d*):\s*([\d\s\(\)\-\.]+)/i)
+  const phoneMatch = body.match(/Cell\s+Phone\s*[:\-]\s*([\d\s\(\)\-\+]+)/i)
+    || body.match(/(?:Phone\s*\d*):\s*([\d\s\(\)\-\.]+)/i)
     || body.match(/\bPhone\b\s*\n([\d\s\(\)\-\.]+)/i)
     || normalized.match(/\bPhone\b\s*:?\s*([\d\s\(\)\-\.]{7,})/i);
-  const buildingMatch = body.match(/Building:\s*(.+)/i);
+  const buildingMatch = body.match(/Building\s*[:\-]\s*([^\n\r]+)/i);
   const bedroomsMatch = body.match(/Bedrooms:\s*(.+)/i);
   // Iron 65 contact form: "select" = unit type, "Your Message" = lead's message
   const selectMatch = body.match(/\bselect\b\s*:?\s*(.+)/i)
@@ -609,7 +611,7 @@ function parseWebflowEmail(body, subject) {
     if (inlineEmail) lead.email = inlineEmail[1].trim();
   }
   if (!lead.name) {
-    const inlineName = normalized.match(/(?:Full Name|(?<!\w\s)Name\s*\d*)\s*:?\s*([^E]+?)(?=Email|$)/i);
+    const inlineName = normalized.match(/(?:Full\s+Name|(?<!\w\s)Name\s*\d*)\s*:?\s*([^E]+?)(?=Email|$)/i);
     if (inlineName) lead.name = inlineName[1].trim();
   }
   if (!lead.phone) {
