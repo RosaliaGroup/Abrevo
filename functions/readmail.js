@@ -2044,6 +2044,16 @@ exports.handler = async (event) => {
           continue;
         }
 
+        // AppFolio sends from guestcards@appfolio.com but real lead email is in reply-to
+        if ((from || '').includes('appfolio.com') || (from || '').includes('guestcards')) {
+          const appfolioReplyTo = parsed.replyTo?.text;
+          if (appfolioReplyTo && !appfolioReplyTo.includes('appfolio.com')) {
+            realEmail = appfolioReplyTo;
+            effectiveReplyTo = appfolioReplyTo;
+          }
+          console.log('AppFolio lead — using reply-to:', effectiveReplyTo);
+        }
+
         console.log('Reply routing — from:', from, '| realEmail:', realEmail, '| effectiveReplyTo:', effectiveReplyTo, '| replyTo:', replyTo);
         const replyTarget = avail ? fromEmail : realEmail || effectiveReplyTo;
         // Safety: never reply to the notification sender (iron65.com, brevo, etc) — only to the lead
