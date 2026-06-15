@@ -79,6 +79,37 @@ Ana Haynes | Rosalia Group
 (862) 333-1681 | inquiries@rosaliagroup.com`,
   },
 };
+
+const PROPERTY_MEDIA = {
+  'iron 65': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
+  'mcwhorter': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
+  '39 madison': 'https://drive.google.com/drive/folders/1My5d_o0U6DUfpkLl0af6xd-puxOFPOWg',
+  'iron pointe': 'https://drive.google.com/drive/folders/1My5d_o0U6DUfpkLl0af6xd-puxOFPOWg',
+  '502 market': 'https://drive.google.com/drive/folders/1eXb5UtI9md7MJzqSAGyPjA5opyiv88hO',
+  '486 market': 'https://drive.google.com/drive/folders/1WdGEkpiYT_cX13qW-OGVsBfuv9lWWEUp',
+  '556 market': 'https://drive.google.com/drive/folders/1kTW7etuGZkD5_g81EDpl1ydOF_9TdnOR',
+  '76 webster': 'https://drive.google.com/drive/folders/1t1cEj0WMOHAwhTkTTfPhMxxDiBwhTLHW',
+  '74 webster': 'https://drive.google.com/drive/folders/1t1cEj0WMOHAwhTkTTfPhMxxDiBwhTLHW',
+  '11 thomas': 'https://drive.google.com/drive/folders/1kX67b4Ap7XIR8drfgRA3ftbSn8Ez22-C',
+  '162 university': 'https://drive.google.com/drive/folders/1H2jyLzFgB3XyqaYU8bAB4lk4TaQ2vL0k',
+  '164 university': 'https://drive.google.com/drive/folders/1H2jyLzFgB3XyqaYU8bAB4lk4TaQ2vL0k',
+  '289 halsey': 'https://drive.google.com/drive/folders/1kev7bJ_fghfiTZMKxfPCVd0OHU6GXRqQ',
+  '136 s 7th': 'https://drive.google.com/drive/folders/1hMtOsq7yD9Am8hoNxayrqS9XvRrYkVGF',
+  '276 duncan': 'https://drive.google.com/drive/folders/1Of1V_qyNadngRyy2croUqDEXoQIaT7QT',
+  '440 elizabeth': 'https://drive.google.com/drive/folders/1Hs2PO3lHQ0S1Pp_9VWO2sWXdFsyQCbv8',
+  'the elks': 'https://drive.google.com/drive/folders/1EZHwoZwuZtBMXPe_SuytMVmTC0ujcJB9',
+  '180 ferry': 'https://drive.google.com/drive/folders/1C4u8bniEiZlecCxl1dCJLE4fhgYXz0SE',
+  '80 freeman': 'https://drive.google.com/drive/folders/1R5lzPHPkbtncNt6XPjTZ7D57J6FYQhXe',
+};
+
+function getPropertyMedia(property, message) {
+  const text = ((property || '') + ' ' + (message || '')).toLowerCase();
+  for (const [key, url] of Object.entries(PROPERTY_MEDIA)) {
+    if (text.includes(key)) return url;
+  }
+  return null;
+}
+
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 
 const VAPI_KEY = process.env.VAPI_KEY;
@@ -2008,13 +2039,19 @@ exports.handler = async (event) => {
         if (calendarAppt) console.log('Calendar appointment found:', calendarAppt.date, calendarAppt.time);
         if (leadContext) console.log('Lead context found:', leadContext.status);
 
-        const replyText = await generateReply(from, subject, body, previousReply, leadContext, calendarAppt, realName, leadClient);
+        let replyText = await generateReply(from, subject, body, previousReply, leadContext, calendarAppt, realName, leadClient);
         if (!replyText) {
           console.error('generateReply returned empty for:', fromEmail, '| subject:', subject);
           await syslog('warn', `Empty AI reply for ${fromEmail}`, { email: fromEmail, subject });
           results.errors++;
           results.aiFailures++;
           continue;
+        }
+
+        // Append property photos/videos link if available
+        const mediaLink = getPropertyMedia(leadContext?.property, body);
+        if (mediaLink) {
+          replyText = replyText + '\n\nView photos and videos of the unit:\n' + mediaLink;
         }
 
         const effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : replyTo;
