@@ -1280,16 +1280,20 @@ async function sendReply(replyTo, subject, replyText, ccEmail) {
     return `<a href="${url}" style="color:#C9A84C;text-decoration:underline;">Book Your Tour Here</a>`;
   });
   const htmlBody = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">${replyHtml}</div>`;
+  // Always CC inquiries@ so Ana sees every reply; merge with any extra ccEmail
+  const ccAddresses = new Set();
+  ccAddresses.add('inquiries@rosaliagroup.com');
+  if (ccEmail && ccEmail !== replyTo) ccAddresses.add(ccEmail);
+  // Don't CC the lead's own address
+  ccAddresses.delete(replyTo);
   const mailOptions = {
     from: `"Rosalia Group Inquiries" <${INBOX_EMAIL}>`,
     to: replyTo,
+    cc: [...ccAddresses].join(', ') || undefined,
     subject: replySubject,
     text: plainText,
     html: htmlBody,
   };
-  if (ccEmail && ccEmail !== replyTo) {
-    mailOptions.cc = ccEmail;
-  }
   await transporter.sendMail(mailOptions);
   console.log('Email reply sent to:', replyTo, ccEmail ? `(cc: ${ccEmail})` : '');
 }
