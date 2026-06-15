@@ -2126,8 +2126,12 @@ exports.handler = async (event) => {
         const unitMatch = body.match(/unit\s*#?\s*(\d{3}[A-Z]?)/i) || body.match(/apt\.?\s*#?\s*(\d{3}[A-Z]?)/i);
         const unitNumber = unitMatch ? unitMatch[1] : null;
 
+        // Extract property from AppFolio subject ("New Lead for 486 Market Street")
+        const appfolioPropertyMatch = subject.match(/New Lead for (.+?)(?:\s*-|\s*$)/i);
+        const appfolioProperty = appfolioPropertyMatch ? appfolioPropertyMatch[1].trim() : null;
+
         // Append property photos/videos link if available
-        const mediaLink = getPropertyMedia(leadContext?.property, body, unitNumber);
+        const mediaLink = getPropertyMedia(appfolioProperty || leadContext?.property, body, unitNumber);
         if (mediaLink) {
           replyText = replyText + '\n\nView photos and videos of the unit:\n' + mediaLink;
         }
@@ -2183,15 +2187,20 @@ exports.handler = async (event) => {
           results.errors++;
           continue;
         }
-        // Skip email reply for Apple private relay (unreachable) — SMS only
+        // Skip email reply for Apple private relay (unreachable) — send booking SMS instead
         const isPrivateRelay = (replyTarget || '').includes('privaterelay.appleid.com') || (effectiveReplyTo || '').includes('privaterelay.appleid.com');
         if (isPrivateRelay) {
-          console.log('Apple private relay — skipping email reply, will send SMS if phone available');
+          const propName = appfolioProperty || leadContext?.property || 'the property';
+          const bookingUrl = (propName.toLowerCase().includes('iron 65') || propName.toLowerCase().includes('mcwhorter'))
+            ? 'https://book.rosaliagroup.com/iron65'
+            : 'https://book.rosaliagroup.com/book';
+          replyText = `Hi ${realName?.split(' ')[0] || 'there'}! This is Ana from Rosalia Group — thanks for your interest in ${propName}. Book your tour here: ${bookingUrl} — (862) 333-1681`;
+          console.log('Apple private relay — SMS with booking link will fire for:', phone);
         } else {
           const ccEmail = avail && realEmail && realEmail !== fromEmail ? realEmail : null;
           await sendReply(replyTarget, subject, replyText, ccEmail);
         }
-        await saveLead(realEmail || fromEmail, realName || fromName, subject, body, isPrivateRelay ? null : replyText, phone, leadClient);
+        await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone, leadClient);
         // Business hours check BEFORE notifying Ana
         let callAllowed = false;
         if (phone) {
