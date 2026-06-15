@@ -2161,10 +2161,15 @@ exports.handler = async (event) => {
 
         // AppFolio sends from guestcards@appfolio.com but real lead email is in reply-to
         if ((from || '').includes('appfolio.com') || (from || '').includes('guestcards')) {
-          const appfolioReplyTo = parsed.replyTo?.text;
-          if (appfolioReplyTo && !appfolioReplyTo.includes('appfolio.com')) {
+          const appfolioReplyTo = parsed.replyTo?.value?.[0]?.address || parsed.replyTo?.text;
+          if (appfolioReplyTo && !appfolioReplyTo.includes('appfolio.com') && !appfolioReplyTo.includes('privaterelay')) {
             realEmail = appfolioReplyTo;
             effectiveReplyTo = appfolioReplyTo;
+          }
+          // Apple private relay emails cannot receive external emails — SMS only
+          if ((realEmail || '').includes('privaterelay.appleid.com')) {
+            console.log('Apple private relay email — skipping email reply, SMS only:', phone);
+            realEmail = null;
           }
           console.log('AppFolio lead — using reply-to:', effectiveReplyTo);
         }
@@ -2178,9 +2183,15 @@ exports.handler = async (event) => {
           results.errors++;
           continue;
         }
-        const ccEmail = avail && realEmail && realEmail !== fromEmail ? realEmail : null;
-        await sendReply(replyTarget, subject, replyText, ccEmail);
-        await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone, leadClient);
+        // Skip email reply for Apple private relay (unreachable) — SMS only
+        const isPrivateRelay = (replyTarget || '').includes('privaterelay.appleid.com') || (effectiveReplyTo || '').includes('privaterelay.appleid.com');
+        if (isPrivateRelay) {
+          console.log('Apple private relay — skipping email reply, will send SMS if phone available');
+        } else {
+          const ccEmail = avail && realEmail && realEmail !== fromEmail ? realEmail : null;
+          await sendReply(replyTarget, subject, replyText, ccEmail);
+        }
+        await saveLead(realEmail || fromEmail, realName || fromName, subject, body, isPrivateRelay ? null : replyText, phone, leadClient);
         // Business hours check BEFORE notifying Ana
         let callAllowed = false;
         if (phone) {
