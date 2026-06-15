@@ -102,12 +102,49 @@ const PROPERTY_MEDIA = {
   '80 freeman': 'https://drive.google.com/drive/folders/1R5lzPHPkbtncNt6XPjTZ7D57J6FYQhXe',
 };
 
-function getPropertyMedia(property, message) {
+function getPropertyMedia(property, message, unitNumber) {
   const text = ((property || '') + ' ' + (message || '')).toLowerCase();
+
+  // Iron 65 — use model-specific folder
+  if (text.includes('iron 65') || text.includes('mcwhorter') || text.includes('iron65')) {
+    return getIron65MediaLink(unitNumber);
+  }
+
   for (const [key, url] of Object.entries(PROPERTY_MEDIA)) {
     if (text.includes(key)) return url;
   }
   return null;
+}
+
+const IRON65_MODELS = {
+  '00': 'https://drive.google.com/drive/folders/1oZe9iypPYM3KMOR3gwXmlyDdqdyT45ov',
+  '01': 'https://drive.google.com/drive/folders/1_B_EDL60g6OpUhUYnHVIQxskINyR-cIl',
+  '02': 'https://drive.google.com/drive/folders/1XXd-DXtk7HmIkpi4wmCF_RtQx-J3UY_G',
+  '03': 'https://drive.google.com/drive/folders/1tmnRsaXEMNTv6Xvbo_7KVIdx_2GEqN6z',
+  '04': 'https://drive.google.com/drive/folders/1nEVrGQtQVmv_U4oH6T4q6hAmKw0r9HG1',
+  '05': 'https://drive.google.com/drive/folders/12HlkVz4mdBAyLH-vzXt6XhWQg3CHPIxC',
+  '06': 'https://drive.google.com/drive/folders/1oSEHRyThSwa5JhKmu_AQqFdf25naUZCn',
+  '07': 'https://drive.google.com/drive/folders/1tOzpWgE3wpkb--puXOgcdLuUO87A2DaT',
+  '08': 'https://drive.google.com/drive/folders/1BTiTvDKkT_IinFq4pp7DVKE655_yaYFg',
+  '09': 'https://drive.google.com/drive/folders/1GlmMtMTecohkKx9rRsAALOX02txl-t1c',
+  '10': 'https://drive.google.com/drive/folders/1RQEKUZe7nyuz9cc5M8KiDBVAPUBuz5Oh',
+  '11': 'https://drive.google.com/drive/folders/1zFV5-jiAzN34Toq9Y_Sv6jU3ASg8JawO',
+  '12': 'https://drive.google.com/drive/folders/14ZKXgjgsy3C4pWAaAJfWDptZmU-xQKGG',
+  'loft': 'https://drive.google.com/drive/folders/1VetphM-E2AghDux37UkGXu5vNkNcefh5',
+  'duplex': 'https://drive.google.com/drive/folders/1T6y7Bv5HV3jOyjtRLkQm7SFZc9cfskfh',
+  'amenities': 'https://drive.google.com/drive/folders/1hhM81AfHpCjph6aBqGzEgW1_O8oac9CY',
+};
+
+function getIron65MediaLink(unitNumber) {
+  if (!unitNumber) return IRON65_MODELS['amenities'];
+  const match = unitNumber.toString().match(/\d*?(\d{2})$/);
+  if (match) {
+    const model = match[1];
+    if (IRON65_MODELS[model]) return IRON65_MODELS[model];
+  }
+  if (/loft/i.test(unitNumber)) return IRON65_MODELS['loft'];
+  if (/duplex/i.test(unitNumber)) return IRON65_MODELS['duplex'];
+  return 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ';
 }
 
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
@@ -1359,8 +1396,11 @@ async function sendReply(replyTo, subject, replyText, ccEmail) {
   cleaned = cleaned.replace(/&/g, '&amp;');
   cleaned = cleaned.replace(/\n/g, '<br>');
   // Restore URLs as clickable links
-  const replyHtml = cleaned.replace(/__URL_(\d+)__/g, (_, i) => {
+  let replyHtml = cleaned.replace(/__URL_(\d+)__/g, (_, i) => {
     const url = urls[parseInt(i)];
+    if (url.includes('drive.google.com')) {
+      return `<br><strong>\u{1F4F8} <a href="${url}" style="color:#C9A84C;text-decoration:underline;">View Photos &amp; Videos</a></strong><br><em style="font-size:12px;color:#888;">*Actual unit may vary. Photos shown are of the same layout/model.</em>`;
+    }
     return `<a href="${url}" style="color:#C9A84C;text-decoration:underline;">Book Your Tour Here</a>`;
   });
   const htmlBody = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">${replyHtml}</div>`;
@@ -2048,8 +2088,12 @@ exports.handler = async (event) => {
           continue;
         }
 
+        // Extract unit number from email body for model-specific media
+        const unitMatch = body.match(/unit\s*#?\s*(\d{3}[A-Z]?)/i) || body.match(/apt\.?\s*#?\s*(\d{3}[A-Z]?)/i);
+        const unitNumber = unitMatch ? unitMatch[1] : null;
+
         // Append property photos/videos link if available
-        const mediaLink = getPropertyMedia(leadContext?.property, body);
+        const mediaLink = getPropertyMedia(leadContext?.property, body, unitNumber);
         if (mediaLink) {
           replyText = replyText + '\n\nView photos and videos of the unit:\n' + mediaLink;
         }
