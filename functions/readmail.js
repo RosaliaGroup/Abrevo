@@ -100,14 +100,40 @@ const PROPERTY_MEDIA = {
   'the elks': 'https://drive.google.com/drive/folders/1EZHwoZwuZtBMXPe_SuytMVmTC0ujcJB9',
   '180 ferry': 'https://drive.google.com/drive/folders/1C4u8bniEiZlecCxl1dCJLE4fhgYXz0SE',
   '80 freeman': 'https://drive.google.com/drive/folders/1R5lzPHPkbtncNt6XPjTZ7D57J6FYQhXe',
+  // Address aliases
+  '28 jefferson': 'https://drive.google.com/drive/folders/1My5d_o0U6DUfpkLl0af6xd-puxOFPOWg',
+  '6 madison': 'https://drive.google.com/drive/folders/1WdGEkpiYT_cX13qW-OGVsBfuv9lWWEUp',
+  '500 market': 'https://drive.google.com/drive/folders/1eXb5UtI9md7MJzqSAGyPjA5opyiv88hO',
+  '554 market': 'https://drive.google.com/drive/folders/1kTW7etuGZkD5_g81EDpl1ydOF_9TdnOR',
+  '65a mcwhorter': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
+  '65 mcwhorter': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
 };
 
 function getPropertyMedia(property, message, unitNumber) {
-  const text = ((property || '') + ' ' + (message || '')).toLowerCase();
+  const raw = ((property || '') + ' ' + (message || '')).toLowerCase();
 
-  // Iron 65 — use model-specific folder
+  // Normalize address aliases
+  const text = raw
+    .replace(/28\s*jefferson/g, 'iron pointe')
+    .replace(/6\s*madison\b/g, '486 market')
+    .replace(/500\s*market/g, '502 market')
+    .replace(/554\s*market/g, '556 market')
+    .replace(/65a?\s*mcwhorter/g, 'iron 65')
+    .replace(/65\s*iron\b/g, 'iron 65')
+    .replace(/#?var\d*/g, ''); // strip Zillow VAR unit codes
+
+  // Iron 65 — unit-specific or bed-type specific folder
   if (text.includes('iron 65') || text.includes('mcwhorter') || text.includes('iron65')) {
-    return getIron65MediaLink(unitNumber);
+    // Specific unit number takes priority
+    if (unitNumber) return getIron65MediaLink(unitNumber);
+    // Fall back to bed type
+    if (/studio|0\s*bed/i.test(raw)) return IRON65_MODELS['00'];
+    if (/loft/i.test(raw)) return IRON65_MODELS['loft'];
+    if (/duplex/i.test(raw)) return IRON65_MODELS['duplex'];
+    if (/2\s*b[re]d|2br|two\s*bed/i.test(raw)) return IRON65_MODELS['02'];
+    if (/1\s*b[re]d|1br|one\s*bed/i.test(raw)) return IRON65_MODELS['07'];
+    // No match — general Iron 65 folder
+    return 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ';
   }
 
   for (const [key, url] of Object.entries(PROPERTY_MEDIA)) {
@@ -252,6 +278,14 @@ PROPERTY KNOWLEDGE BASE:
 # ROSALIA GROUP  KNOWLEDGE BASE
 # Last updated: June 15, 2026
 # NOTE: Only mention prices if the lead's message contains words like: price, cost, rent, how much, affordable, budget. Otherwise focus on features and booking a tour.
+
+ADDRESS ALIASES (same property, different names):
+- "28 Jefferson St" = 39 Madison St (Iron Pointe)
+- "500 Market St" = 502 Market St Newark
+- "554 Market St" = 556 Market St Newark
+- "6 Madison" = 486 Market St (River Pointe)
+- "65A McWhorter" or "65 Iron" = Iron 65 (65 McWhorter St Newark)
+- Zillow VAR listings (e.g. "Unit VAR7") = read bedrooms from listing and send matching model photos
 
 ## BOOKING LINKS
 - All Rosalia properties (general): https://book.rosaliagroup.com/book
