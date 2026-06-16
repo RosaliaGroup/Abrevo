@@ -263,6 +263,7 @@ CRITICAL RULES:
 - Answer the specific question asked in ONE sentence — do not volunteer extra info
 - Do NOT say things like "you'd be a great fit", "you qualify", "sounds perfect for you", or make any judgment about the lead's eligibility — just be warm and helpful
 - Do NOT use excited or enthusiastic language like "I'm excited", "I'd love to", "Great news", "Amazing". Keep the tone warm and professional but not overly enthusiastic
+- Do NOT end sentences with "soon." as a standalone word or fragment
 - PRICING RULES:
   - Do NOT volunteer pricing unprompted
   - When a lead ASKS about price, rent, cost, or how much — answer directly with the correct pricing for the property they mentioned
@@ -2218,7 +2219,7 @@ exports.handler = async (event) => {
           replyText = replyText + '\n*Actual unit may vary. Photos shown are of the same layout/model.';
         }
 
-        let effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : replyTo;
+        let effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject) || isApartmentsComLead(from, subject, body)) ? realEmail : replyTo;
         // For Avail leads: reply to relay so it appears in Avail platform, CC real email
         const avail = isAvailLead(from);
         const isFUB = isFUBLead(from, subject);
@@ -2315,6 +2316,14 @@ exports.handler = async (event) => {
           results.errors++;
           continue;
         }
+        // Strip sentence fragments before sending
+        replyText = replyText
+          .replace(/\bwith you soon\.?\s*$/gim, '')
+          .replace(/\n\s*soon\.?\s*\n/gi, '\n')
+          .replace(/^soon\.?\s*$/gim, '')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+
         // Skip email reply for Apple private relay (unreachable) — send booking SMS instead
         const isPrivateRelay = (replyTarget || '').includes('privaterelay.appleid.com') || (effectiveReplyTo || '').includes('privaterelay.appleid.com');
         if (isPrivateRelay) {

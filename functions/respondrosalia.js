@@ -352,6 +352,9 @@ exports.handler = async (event) => {
         .replace(/Looking forward to (connecting|meeting you|hearing from you|speaking with you|connecting with you)[.!]?/gi, '')
         .replace(/Don't hesitate to reach out.*$/gim, '')
         .replace(/Feel free to reach out.*$/gim, '')
+        .replace(/\bwith you soon\.?\s*$/gim, '')
+        .replace(/\n\s*soon\.?\s*\n/gi, '\n')
+        .replace(/^soon\.?\s*$/gim, '')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 
