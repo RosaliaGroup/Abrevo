@@ -71,7 +71,7 @@ A new BUYER lead came in. Write a SHORT personalized email reply that:
 1. Greets them by first name: "${firstName}"
 2. Thanks them for their interest in real estate in New Jersey
 3. Mentions you specialize in the area and would love to help them find the right home
-4. Invites them to schedule a quick call or meeting: ${bookingLink}
+4. Invites them to schedule a quick call or meeting (say 'use the link below' or 'click below to book' — do NOT write out any URL)
 5. Signs off as: Ana Haynes | Rosalia Group | (862) 333-1681 | inquiries@rosaliagroup.com
 
 Source: ${lead.source || 'online inquiry'}
@@ -91,7 +91,7 @@ Do NOT reference or repeat any details the lead mentioned (pets, lease length, b
 ${isApplication ? 'A renter has COMPLETED A RENTAL APPLICATION.' : 'A new rental inquiry came in.'} Write a SHORT personalized email reply that:
 1. Greets them by first name: "${firstName}"
 2. ${isApplication ? 'Thanks them for completing their application, says you will review within 24 hours' : `Thanks them for their interest in ${building}`}
-3. ${isApplication ? 'Explains next steps: review, possible interview, lease signing' : `Invites them to schedule a tour: ${bookingLink}`}
+3. ${isApplication ? 'Explains next steps: review, possible interview, lease signing' : `Invites them to schedule a tour (say 'use the link below' or 'click below to book' — do NOT write out any URL)`}
 4. ${lead.budget ? `Acknowledges their budget of ${lead.budget}` : ''}
 5. Signs off as: Ana Haynes | Rosalia Group | (862) 333-1681 | inquiries@rosaliagroup.com
 
