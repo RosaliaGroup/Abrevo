@@ -79,7 +79,7 @@ Message: ${lead.message || 'Interested in properties'}
 Price range: ${lead.price ? '$' + Number(lead.price).toLocaleString() : 'not specified'}
 Timeframe: ${lead.timeframe || 'not specified'}
 
-Under 120 words. Warm, professional, not salesy. No bullet points. Do NOT say things like 'you'd be a great fit', 'you qualify', 'sounds perfect for you', or make any judgment about the lead's eligibility. Just be warm and helpful. Reply with ONLY the email body.`;
+Do NOT reference or repeat any details the lead mentioned (pets, lease length, budget, income, etc). Do NOT say things like 'you'd be a great fit', 'you qualify', 'sounds perfect', 'no pets noted', 'noted on 12 months'. Just greet them, thank them for their interest, and invite them to book a tour. Under 80 words. Warm, professional, not salesy. No bullet points. Reply with ONLY the email body.`;
 
   } else {
     const isIronPointe = /iron.?pointe|resipointe|madison/i.test(lead.property || '');
@@ -100,7 +100,7 @@ Message: ${lead.message || 'Interested in renting'}
 ${lead.bedrooms ? 'Bedrooms: ' + lead.bedrooms : ''}
 ${lead.budget ? 'Budget: ' + lead.budget : ''}
 
-Under 120 words. Warm, professional, not salesy. No bullet points. Do NOT say things like 'you'd be a great fit', 'you qualify', 'sounds perfect for you', or make any judgment about the lead's eligibility. Just be warm and helpful. Reply with ONLY the email body.`;
+Do NOT reference or repeat any details the lead mentioned (pets, lease length, budget, income, etc). Do NOT say things like 'you'd be a great fit', 'you qualify', 'sounds perfect', 'no pets noted', 'noted on 12 months'. Just greet them, thank them for their interest, and invite them to book a tour. Under 80 words. Warm, professional, not salesy. No bullet points. Reply with ONLY the email body.`;
   }
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -292,16 +292,20 @@ exports.handler = async (event) => {
         if (propText.includes(key)) { mediaLink = url; break; }
       }
 
-      // Build clean HTML email with labeled links
-      const htmlEmail = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">${emailReply.replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<>"]+)/g, (match) => {
-        if (match.includes('properties.rosaliagroup.com') || match.includes('drive.google.com') || match.includes('abrevo.co/properties')) {
-          return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4F8} View Photos &amp; Videos</a>';
-        }
-        if (match.includes('book.rosaliagroup.com')) {
-          return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4C5} Book a Tour</a>';
-        }
-        return '<a href="' + match + '" style="color:#C9A84C;text-decoration:none;">' + match + '</a>';
-      })}${mediaLink ? '<br><br><strong><a href="' + mediaLink + '" style="color:#C9A84C;text-decoration:none;">\u{1F4F8} View Photos &amp; Videos</a></strong><br><em style="font-size:12px;color:#999;">*Actual unit may vary. Photos shown are of the same layout/model.</em>' : ''}</div>`;
+      // Build clean HTML email with labeled links + explicit photos/booking blocks
+      const bookingLinkUrl = getBookingLink(parsedLead);
+      const htmlEmail = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">
+        ${emailReply.replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<>"]+)/g, (match) => {
+          if (match.includes('properties.rosaliagroup.com') || match.includes('drive.google.com') || match.includes('abrevo.co/properties')) {
+            return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4F8} View Photos &amp; Videos</a>';
+          }
+          if (match.includes('book.rosaliagroup.com')) {
+            return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4C5} Book a Tour</a>';
+          }
+          return '<a href="' + match + '" style="color:#C9A84C;text-decoration:none;">' + match + '</a>';
+        })}
+        ${mediaLink ? '<br><br><div style="margin:16px 0;"><a href="' + mediaLink + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;font-size:15px;">\u{1F4F8} View Photos &amp; Videos</a><br><em style="font-size:12px;color:#999;">*Actual unit may vary. Photos shown are of the same layout/model.</em></div><div style="margin:8px 0;"><a href="' + bookingLinkUrl + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;font-size:15px;">\u{1F4C5} Book a Tour</a></div>' : ''}
+      </div>`;
 
       const savedLead = await saveOrUpdateLead(parsedLead, emailReply);
       console.log('Lead saved/merged, id:', savedLead?.id);
