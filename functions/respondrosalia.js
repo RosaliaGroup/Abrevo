@@ -293,8 +293,18 @@ exports.handler = async (event) => {
         if (propText.includes(key)) { mediaLink = url; break; }
       }
 
-      // Iron 65 special case — send studio + 1BR links if no specific unit type mentioned
+      // Iron Pointe / 39 Madison — floor plans and 2BR video
       const msg = (parsedLead.message || '').toLowerCase();
+      const isIronPointe = /iron.?pointe|39.?madison|28.?jefferson/i.test(propText);
+      if (isIronPointe) {
+        if (/floor.?plan|blueprint|layout/i.test(msg)) {
+          mediaLink = 'https://drive.google.com/file/d/1XKjfX9SNN8Gf7yvP_w3VKhGHM79_FlLU/view';
+        } else if (/2\s*b(?:ed|r)|two\s*bed/i.test(msg)) {
+          mediaLink = 'https://drive.google.com/file/d/1WmD2LsDCbjE26LBv-qAxodSpK40NcWqi/view';
+        }
+      }
+
+      // Iron 65 special case — send studio + 1BR links if no specific unit type mentioned
       const isIron65Lead = propText.includes('iron 65') || propText.includes('mcwhorter') || propText.includes('iron65');
       if (isIron65Lead) {
         const wantsStudio = /studio|st\b|485|465|560|607/.test(msg);

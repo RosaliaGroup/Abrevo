@@ -140,6 +140,13 @@ function getPropertyMedia(property, message, unitNumber) {
     return 'https://drive.google.com/file/d/1Ufb0l-4L-uNxpzIBKIA2g2upR2YsWMI-/view';
   }
 
+  // Iron Pointe / 39 Madison — floor plans and 2BR video
+  if (/iron.?pointe|39.?madison|28.?jefferson/i.test(text)) {
+    if (/floor.?plan|blueprint|layout/i.test(raw)) return 'https://drive.google.com/file/d/1XKjfX9SNN8Gf7yvP_w3VKhGHM79_FlLU/view';
+    if (/2\s*b(?:ed|r)|two\s*bed/i.test(raw)) return 'https://drive.google.com/file/d/1WmD2LsDCbjE26LBv-qAxodSpK40NcWqi/view';
+    return 'https://properties.rosaliagroup.com/properties/39-madison.html';
+  }
+
   for (const [key, url] of Object.entries(PROPERTY_MEDIA)) {
     if (text.includes(key)) return url;
   }
