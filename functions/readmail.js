@@ -81,36 +81,36 @@ Ana Haynes | Rosalia Group
 };
 
 const PROPERTY_MEDIA = {
-  'iron 65': 'https://abrevo.co/properties/iron65.html',
-  'mcwhorter': 'https://abrevo.co/properties/iron65.html',
-  '39 madison': 'https://abrevo.co/properties/39-madison.html',
-  'iron pointe': 'https://abrevo.co/properties/39-madison.html',
-  '502 market': 'https://abrevo.co/properties/502-market.html',
-  '486 market': 'https://abrevo.co/properties/486-market.html',
-  '556 market': 'https://abrevo.co/properties/556-market.html',
-  '76 webster': 'https://abrevo.co/properties/74-webster.html',
-  '74 webster': 'https://abrevo.co/properties/74-webster.html',
-  '11 thomas': 'https://abrevo.co/properties/11-thomas.html',
-  '162 university': 'https://abrevo.co/properties/164-university.html',
-  '164 university': 'https://abrevo.co/properties/164-university.html',
+  'iron 65': 'https://properties.rosaliagroup.com/properties/iron65.html',
+  'mcwhorter': 'https://properties.rosaliagroup.com/properties/iron65.html',
+  '39 madison': 'https://properties.rosaliagroup.com/properties/39-madison.html',
+  'iron pointe': 'https://properties.rosaliagroup.com/properties/39-madison.html',
+  '502 market': 'https://properties.rosaliagroup.com/properties/502-market.html',
+  '486 market': 'https://properties.rosaliagroup.com/properties/486-market.html',
+  '556 market': 'https://properties.rosaliagroup.com/properties/556-market.html',
+  '76 webster': 'https://properties.rosaliagroup.com/properties/74-webster.html',
+  '74 webster': 'https://properties.rosaliagroup.com/properties/74-webster.html',
+  '11 thomas': 'https://properties.rosaliagroup.com/properties/11-thomas.html',
+  '162 university': 'https://properties.rosaliagroup.com/properties/164-university.html',
+  '164 university': 'https://properties.rosaliagroup.com/properties/164-university.html',
   '289 halsey': 'https://drive.google.com/drive/folders/1kev7bJ_fghfiTZMKxfPCVd0OHU6GXRqQ',
-  '136 s 7th': 'https://abrevo.co/properties/other-listings.html',
+  '136 s 7th': 'https://properties.rosaliagroup.com/properties/other-listings.html',
   '276 duncan': 'https://drive.google.com/drive/folders/1Of1V_qyNadngRyy2croUqDEXoQIaT7QT',
   '440 elizabeth': 'https://drive.google.com/drive/folders/1Hs2PO3lHQ0S1Pp_9VWO2sWXdFsyQCbv8',
   'the elks': 'https://drive.google.com/drive/folders/1EZHwoZwuZtBMXPe_SuytMVmTC0ujcJB9',
   '180 ferry': 'https://drive.google.com/drive/folders/1C4u8bniEiZlecCxl1dCJLE4fhgYXz0SE',
   '80 freeman': 'https://drive.google.com/drive/folders/1R5lzPHPkbtncNt6XPjTZ7D57J6FYQhXe',
   // Address aliases
-  '28 jefferson': 'https://abrevo.co/properties/39-madison.html',
-  '6 madison': 'https://abrevo.co/properties/486-market.html',
-  '500 market': 'https://abrevo.co/properties/502-market.html',
-  '554 market': 'https://abrevo.co/properties/556-market.html',
-  '65a mcwhorter': 'https://abrevo.co/properties/iron65.html',
-  '65 mcwhorter': 'https://abrevo.co/properties/iron65.html',
-  '176 garfield': 'https://abrevo.co/properties/other-listings.html',
-  '86 wilson': 'https://abrevo.co/properties/other-listings.html',
-  '883 springfield': 'https://abrevo.co/properties/other-listings.html',
-  '53 bleeker': 'https://abrevo.co/properties/other-listings.html',
+  '28 jefferson': 'https://properties.rosaliagroup.com/properties/39-madison.html',
+  '6 madison': 'https://properties.rosaliagroup.com/properties/486-market.html',
+  '500 market': 'https://properties.rosaliagroup.com/properties/502-market.html',
+  '554 market': 'https://properties.rosaliagroup.com/properties/556-market.html',
+  '65a mcwhorter': 'https://properties.rosaliagroup.com/properties/iron65.html',
+  '65 mcwhorter': 'https://properties.rosaliagroup.com/properties/iron65.html',
+  '176 garfield': 'https://properties.rosaliagroup.com/properties/other-listings.html',
+  '86 wilson': 'https://properties.rosaliagroup.com/properties/other-listings.html',
+  '883 springfield': 'https://properties.rosaliagroup.com/properties/other-listings.html',
+  '53 bleeker': 'https://properties.rosaliagroup.com/properties/other-listings.html',
 };
 
 function getPropertyMedia(property, message, unitNumber) {
@@ -137,7 +137,7 @@ function getPropertyMedia(property, message, unitNumber) {
     if (/2\s*b[re]d|2br|two\s*bed/i.test(raw)) return IRON65_MODELS['02'];
     if (/1\s*b[re]d|1br|one\s*bed/i.test(raw)) return IRON65_MODELS['07'];
     // No match — general Iron 65 folder
-    return 'https://abrevo.co/properties/iron65.html';
+    return 'https://properties.rosaliagroup.com/properties/iron65.html';
   }
 
   for (const [key, url] of Object.entries(PROPERTY_MEDIA)) {
@@ -174,7 +174,7 @@ function getIron65MediaLink(unitNumber) {
   }
   if (/loft/i.test(unitNumber)) return IRON65_MODELS['loft'];
   if (/duplex/i.test(unitNumber)) return IRON65_MODELS['duplex'];
-  return 'https://abrevo.co/properties/iron65.html';
+  return 'https://properties.rosaliagroup.com/properties/iron65.html';
 }
 
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
@@ -1443,7 +1443,7 @@ async function sendReply(replyTo, subject, replyText, ccEmail) {
   // Restore URLs as clickable links
   let replyHtml = cleaned.replace(/__URL_(\d+)__/g, (_, i) => {
     const url = urls[parseInt(i)];
-    if (url.includes('drive.google.com') || url.includes('abrevo.co/properties')) {
+    if (url.includes('drive.google.com') || url.includes('abrevo.co/properties') || url.includes('properties.rosaliagroup.com')) {
       return `<br><strong>\u{1F4F8} <a href="${url}" style="color:#C9A84C;text-decoration:underline;">View Photos &amp; Videos</a></strong><br><em style="font-size:12px;color:#888;">*Actual unit may vary. Photos shown are of the same layout/model.</em>`;
     }
     return `<a href="${url}" style="color:#C9A84C;text-decoration:underline;">Book Your Tour Here</a>`;
