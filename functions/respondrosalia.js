@@ -10,19 +10,28 @@ const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
 const GMAIL_USER = process.env.GMAIL_USER || 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES || process.env.GMAIL_PASS;
 
-async function sendEmail(to, subject, htmlBody) {
+async function sendEmail(to, subject, textBody, htmlOverride) {
   if (!to || to.includes('privaterelay') || to.includes('appfolio.com')) return;
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: GMAIL_USER, pass: GMAIL_PASS },
   });
+  const fallbackHtml = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">${(textBody || '').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<>"]+)/g, (match) => {
+    if (match.includes('properties.rosaliagroup.com') || match.includes('drive.google.com') || match.includes('abrevo.co/properties')) {
+      return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4F8} View Photos &amp; Videos</a>';
+    }
+    if (match.includes('book.rosaliagroup.com')) {
+      return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4C5} Book a Tour</a>';
+    }
+    return '<a href="' + match + '" style="color:#C9A84C;text-decoration:none;">' + match + '</a>';
+  })}</div>`;
   await transporter.sendMail({
     from: `"Rosalia Group Inquiries" <${GMAIL_USER}>`,
     to,
     cc: 'inquiries@rosaliagroup.com',
     subject,
-    html: `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">${(htmlBody || '').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<>"]+)/g, '<a href="$1" style="color:#C9A84C;text-decoration:none;">$1</a>')}</div>`,
-    text: htmlBody,
+    html: htmlOverride || fallbackHtml,
+    text: textBody,
   });
 }
 
@@ -283,15 +292,16 @@ exports.handler = async (event) => {
         if (propText.includes(key)) { mediaLink = url; break; }
       }
 
-      if (mediaLink && emailReply) {
-        const bookingPattern = /(https?:\/\/book\.rosaliagroup\.com[^\s]*)/;
-        if (bookingPattern.test(emailReply)) {
-          emailReply = emailReply.replace(bookingPattern, `${mediaLink}\n\n$1`);
-        } else {
-          emailReply = emailReply + `\n\n${mediaLink}`;
+      // Build clean HTML email with labeled links
+      const htmlEmail = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">${emailReply.replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<>"]+)/g, (match) => {
+        if (match.includes('properties.rosaliagroup.com') || match.includes('drive.google.com') || match.includes('abrevo.co/properties')) {
+          return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4F8} View Photos &amp; Videos</a>';
         }
-        emailReply = emailReply + '\n*Actual unit may vary. Photos shown are of the same layout/model.';
-      }
+        if (match.includes('book.rosaliagroup.com')) {
+          return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4C5} Book a Tour</a>';
+        }
+        return '<a href="' + match + '" style="color:#C9A84C;text-decoration:none;">' + match + '</a>';
+      })}${mediaLink ? '<br><br><strong><a href="' + mediaLink + '" style="color:#C9A84C;text-decoration:none;">\u{1F4F8} View Photos &amp; Videos</a></strong><br><em style="font-size:12px;color:#999;">*Actual unit may vary. Photos shown are of the same layout/model.</em>' : ''}</div>`;
 
       const savedLead = await saveOrUpdateLead(parsedLead, emailReply);
       console.log('Lead saved/merged, id:', savedLead?.id);
@@ -319,7 +329,7 @@ exports.handler = async (event) => {
       // Actually send the email
       if (parsedLead.email && emailReply) {
         try {
-          await sendEmail(parsedLead.email, subject, emailReply);
+          await sendEmail(parsedLead.email, subject, emailReply, htmlEmail);
           console.log('Email sent to:', parsedLead.email);
         } catch (err) {
           console.error('Email send error:', err.message);
