@@ -2179,7 +2179,7 @@ exports.handler = async (event) => {
           replyText = replyText + '\n*Actual unit may vary. Photos shown are of the same layout/model.';
         }
 
-        const effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : replyTo;
+        let effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : replyTo;
         // For Avail leads: reply to relay so it appears in Avail platform, CC real email
         const avail = isAvailLead(from);
         const isFUB = isFUBLead(from, subject);
