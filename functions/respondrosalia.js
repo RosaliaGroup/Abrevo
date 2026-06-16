@@ -43,7 +43,7 @@ function detectCategory(lead) {
 
 async function generateReply(lead) {
   const category = lead.category || detectCategory(lead);
-  const bookingLink = `${BOOKING_FORM_URL}${lead.phone ? '?phone=' + encodeURIComponent(lead.phone) : ''}`;
+  const bookingLink = BOOKING_FORM_URL;
   const firstName = lead.name?.split(' ')[0] || 'there';
 
   let prompt;
@@ -56,7 +56,7 @@ A new BUYER lead came in. Write a SHORT personalized email reply that:
 2. Thanks them for their interest in real estate in New Jersey
 3. Mentions you specialize in the area and would love to help them find the right home
 4. Invites them to schedule a quick call or meeting: ${bookingLink}
-5. Signs off as: Ana Haynes | Rosalia Group | (551) 249-9795 | inquiries@rosaliagroup.com
+5. Signs off as: Ana Haynes | Rosalia Group | (862) 333-1681 | inquiries@rosaliagroup.com
 
 Source: ${lead.source || 'online inquiry'}
 Message: ${lead.message || 'Interested in properties'}
@@ -77,7 +77,7 @@ ${isApplication ? 'A renter has COMPLETED A RENTAL APPLICATION.' : 'A new rental
 2. ${isApplication ? 'Thanks them for completing their application, says you will review within 24 hours' : `Thanks them for their interest in ${building}`}
 3. ${isApplication ? 'Explains next steps: review, possible interview, lease signing' : `Invites them to schedule a tour: ${bookingLink}`}
 4. ${lead.budget ? `Acknowledges their budget of ${lead.budget}` : ''}
-5. Signs off as: Ana Haynes | Rosalia Group | (551) 249-9795 | inquiries@rosaliagroup.com
+5. Signs off as: Ana Haynes | Rosalia Group | (862) 333-1681 | inquiries@rosaliagroup.com
 
 Property: ${building}
 Message: ${lead.message || 'Interested in renting'}
@@ -104,17 +104,17 @@ async function generateFollowUp(lead, followUpNumber) {
   const category = lead.category || detectCategory(lead);
   const first = lead.name?.split(' ')[0] || 'there';
   const prop = lead.property || (category === 'buyer' ? 'your dream home' : 'the property');
-  const bookingLink = `${BOOKING_FORM_URL}${lead.phone ? '?phone=' + encodeURIComponent(lead.phone) : ''}`;
+  const bookingLink = BOOKING_FORM_URL;
 
   if (category === 'buyer') {
     const msgs = {
-      1: `Hi ${first}, just following up from Ana at Rosalia Group! Are you still looking for a home in NJ? I'd love to help -- schedule a quick call: ${bookingLink} -- (551) 249-9795`,
+      1: `Hi ${first}, just following up from Ana at Rosalia Group! Are you still looking for a home in NJ? I'd love to help -- schedule a quick call: ${bookingLink} -- (862) 333-1681`,
       2: `Hi ${first}, last follow up from Ana at Rosalia Group. The market is moving fast -- if you're still looking, I'm here to help: ${bookingLink}`,
     };
     return msgs[followUpNumber] || msgs[1];
   } else {
     const msgs = {
-      1: `Hi ${first}, just following up on your inquiry about ${prop}! We still have availability. Schedule a tour: ${bookingLink} -- Ana, Rosalia Group (551) 249-9795`,
+      1: `Hi ${first}, just following up on your inquiry about ${prop}! We still have availability. Schedule a tour: ${bookingLink} -- Ana, Rosalia Group (862) 333-1681`,
       2: `Hi ${first}, last follow up from Ana at Rosalia Group -- ${prop} is still available but going fast. Book a tour: ${bookingLink}`,
     };
     return msgs[followUpNumber] || msgs[1];
@@ -251,8 +251,8 @@ exports.handler = async (event) => {
       // SMS to lead -- no URLs (Textbelt whitelist pending)
       if (parsedLead.phone) {
         const smsText = parsedLead.category === 'buyer'
-          ? `Hi ${parsedLead.name?.split(' ')[0] || 'there'}! This is Ana from Rosalia Group following up on your real estate inquiry. I'll reach out shortly -- (551) 249-9795.`
-          : `Hi ${parsedLead.name?.split(' ')[0] || 'there'}! This is Ana from Rosalia Group following up on your rental inquiry. I'll reach out shortly -- (551) 249-9795.`;
+          ? `Hi ${parsedLead.name?.split(' ')[0] || 'there'}! This is Ana from Rosalia Group following up on your real estate inquiry. I'll reach out shortly -- (862) 333-1681.`
+          : `Hi ${parsedLead.name?.split(' ')[0] || 'there'}! This is Ana from Rosalia Group following up on your rental inquiry. I'll reach out shortly -- (862) 333-1681.`;
         const smsResult = await sendSMS(parsedLead.phone, smsText);
         console.log('Lead SMS:', JSON.stringify(smsResult));
       }
