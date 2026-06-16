@@ -147,6 +147,15 @@ function getPropertyMedia(property, message, unitNumber) {
     return 'https://properties.rosaliagroup.com/properties/39-madison.html';
   }
 
+  // 502 Market — unit-specific folders
+  if (/502\s*market|500\s*market/i.test(raw)) {
+    const wants1BR = /1\s*b(?:ed|r)|one\s*bed|1bed/i.test(raw);
+    const wants2BR = /2\s*b(?:ed|r)|two\s*bed|2bed/i.test(raw);
+    if (wants1BR && !wants2BR) return 'https://drive.google.com/drive/folders/1g0v-wXqjGRPwyd_0ZMW4e9DV-4-bDFS0';
+    if (wants2BR && !wants1BR) return 'https://drive.google.com/drive/folders/1Q_dfJG97uFZHCC_4fuGZt0o1M0qZmD_B';
+    return 'https://drive.google.com/drive/folders/1g0v-wXqjGRPwyd_0ZMW4e9DV-4-bDFS0';
+  }
+
   for (const [key, url] of Object.entries(PROPERTY_MEDIA)) {
     if (text.includes(key)) return url;
   }
@@ -1456,6 +1465,8 @@ async function sendReply(replyTo, subject, replyText, ccEmail) {
       let linkLabel = 'View Photos &amp; Videos';
       if (url.includes('1Ufb0l-4L-uNxpzIBKIA2g2upR2YsWMI-')) linkLabel = 'Studio \u2014 View Photos &amp; Videos';
       else if (url.includes('15QalYV80cwWyJ6W8r0DGmmHXV7121yoe')) linkLabel = '1 Bedroom \u2014 View Photos &amp; Videos';
+      else if (url.includes('1g0v-wXqjGRPwyd_0ZMW4e9DV-4-bDFS0')) linkLabel = '1 Bedroom \u2014 View Photos &amp; Videos';
+      else if (url.includes('1Q_dfJG97uFZHCC_4fuGZt0o1M0qZmD_B')) linkLabel = '2 Bedroom \u2014 View Photos &amp; Videos';
       return `<br><strong>\u{1F4F8} <a href="${url}" style="color:#C9A84C;text-decoration:underline;">${linkLabel}</a></strong>`;
     }
     return `<a href="${url}" style="color:#C9A84C;font-weight:bold;text-decoration:none;font-size:17px;">\u{1F4C5} Book a Tour</a>`;
@@ -2168,7 +2179,13 @@ exports.handler = async (event) => {
         const propForMedia = (appfolioProperty || leadContext?.property || body || '').toLowerCase();
         const isIron65Media = propForMedia.includes('iron 65') || propForMedia.includes('mcwhorter') || propForMedia.includes('iron65');
         const hasSpecificType = /studio|0\s*bed|1\s*b(?:ed|r)|one\s*bed|2\s*b(?:ed|r)|two\s*bed|loft|duplex/i.test(body);
-        const mediaLink2 = (isIron65Media && !hasSpecificType && !unitNumber) ? 'https://drive.google.com/file/d/15QalYV80cwWyJ6W8r0DGmmHXV7121yoe/view' : null;
+        const is502Market = /502\s*market|500\s*market/i.test(propForMedia);
+        const has502BedType = /1\s*b(?:ed|r)|one\s*bed|2\s*b(?:ed|r)|two\s*bed/i.test(body);
+        const mediaLink2 = (isIron65Media && !hasSpecificType && !unitNumber)
+          ? 'https://drive.google.com/file/d/15QalYV80cwWyJ6W8r0DGmmHXV7121yoe/view'
+          : (is502Market && !has502BedType)
+          ? 'https://drive.google.com/drive/folders/1Q_dfJG97uFZHCC_4fuGZt0o1M0qZmD_B'
+          : null;
         if (mediaLink) {
           const bookingPattern = /(https?:\/\/book\.rosaliagroup\.com[^\s]*)/;
           const mediaBlock = mediaLink2 ? `${mediaLink}\n${mediaLink2}` : mediaLink;

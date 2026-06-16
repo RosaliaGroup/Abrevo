@@ -18,7 +18,12 @@ async function sendEmail(to, subject, textBody, htmlOverride) {
   });
   const fallbackHtml = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">${(textBody || '').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<>"]+)/g, (match) => {
     if (match.includes('properties.rosaliagroup.com') || match.includes('drive.google.com') || match.includes('abrevo.co/properties')) {
-      return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4F8} View Photos &amp; Videos</a>';
+      var lbl = 'View Photos &amp; Videos';
+      if (match.includes('1Ufb0l-4L')) lbl = 'Studio \u2014 View Photos &amp; Videos';
+      else if (match.includes('15QalYV80cwWyJ6')) lbl = '1 Bedroom \u2014 View Photos &amp; Videos';
+      else if (match.includes('1g0v-wXqjGRPwyd')) lbl = '1 Bedroom \u2014 View Photos &amp; Videos';
+      else if (match.includes('1Q_dfJG97uFZHCC')) lbl = '2 Bedroom \u2014 View Photos &amp; Videos';
+      return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4F8} ' + lbl + '</a>';
     }
     if (match.includes('book.rosaliagroup.com')) {
       return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4C5} Book a Tour</a>';
@@ -304,6 +309,20 @@ exports.handler = async (event) => {
         }
       }
 
+      // 502 Market — unit-specific folders
+      if (propText.includes('502 market') || propText.includes('500 market')) {
+        const wants1BR = /1\s*b(?:ed|r)|one\s*bed/i.test(msg);
+        const wants2BR = /2\s*b(?:ed|r)|two\s*bed/i.test(msg);
+        if (wants1BR && !wants2BR) {
+          mediaLink = 'https://drive.google.com/drive/folders/1g0v-wXqjGRPwyd_0ZMW4e9DV-4-bDFS0';
+        } else if (wants2BR && !wants1BR) {
+          mediaLink = 'https://drive.google.com/drive/folders/1Q_dfJG97uFZHCC_4fuGZt0o1M0qZmD_B';
+        } else {
+          mediaLink = 'https://drive.google.com/drive/folders/1g0v-wXqjGRPwyd_0ZMW4e9DV-4-bDFS0';
+          mediaLink2 = 'https://drive.google.com/drive/folders/1Q_dfJG97uFZHCC_4fuGZt0o1M0qZmD_B';
+        }
+      }
+
       // Iron 65 special case — send studio + 1BR links if no specific unit type mentioned
       const isIron65Lead = propText.includes('iron 65') || propText.includes('mcwhorter') || propText.includes('iron65');
       if (isIron65Lead) {
@@ -341,14 +360,27 @@ exports.handler = async (event) => {
       const htmlEmail = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">
         ${cleanReply.replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<>"]+)/g, (match) => {
           if (match.includes('properties.rosaliagroup.com') || match.includes('drive.google.com') || match.includes('abrevo.co/properties')) {
-            return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4F8} View Photos &amp; Videos</a>';
+            var lbl2 = 'View Photos &amp; Videos';
+            if (match.includes('1Ufb0l-4L')) lbl2 = 'Studio \u2014 View Photos &amp; Videos';
+            else if (match.includes('15QalYV80cwWyJ6')) lbl2 = '1 Bedroom \u2014 View Photos &amp; Videos';
+            else if (match.includes('1g0v-wXqjGRPwyd')) lbl2 = '1 Bedroom \u2014 View Photos &amp; Videos';
+            else if (match.includes('1Q_dfJG97uFZHCC')) lbl2 = '2 Bedroom \u2014 View Photos &amp; Videos';
+            return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4F8} ' + lbl2 + '</a>';
           }
           return '<a href="' + match + '" style="color:#C9A84C;text-decoration:none;">' + match + '</a>';
         })}
         ${mediaLink ? `
         <br><br>
-        <a href="${mediaLink}" style="color:#C9A84C;font-weight:bold;text-decoration:none;display:block;margin:8px 0;">\u{1F4F8} ${mediaLink2 ? 'Studio \u2014 ' : ''}View Photos &amp; Videos</a>
-        ${mediaLink2 ? `<a href="${mediaLink2}" style="color:#C9A84C;font-weight:bold;text-decoration:none;display:block;margin:8px 0;">\u{1F4F8} 1 Bedroom \u2014 View Photos &amp; Videos</a>` : ''}
+        <a href="${mediaLink}" style="color:#C9A84C;font-weight:bold;text-decoration:none;display:block;margin:8px 0;">\u{1F4F8} ${
+          mediaLink.includes('1Ufb0l-4L') ? 'Studio \u2014 ' :
+          mediaLink.includes('1g0v-wXqjGRPwyd') ? '1 Bedroom \u2014 ' :
+          mediaLink2 ? '' : ''
+        }View Photos &amp; Videos</a>
+        ${mediaLink2 ? `<a href="${mediaLink2}" style="color:#C9A84C;font-weight:bold;text-decoration:none;display:block;margin:8px 0;">\u{1F4F8} ${
+          mediaLink2.includes('15QalYV80cwWyJ6') ? '1 Bedroom' :
+          mediaLink2.includes('1Q_dfJG97uFZHCC') ? '2 Bedroom' :
+          'Additional'
+        } \u2014 View Photos &amp; Videos</a>` : ''}
         <em style="font-size:12px;color:#999;">*Actual unit may vary. Photos shown are of the same layout/model.</em>
         ` : ''}
         <br>
