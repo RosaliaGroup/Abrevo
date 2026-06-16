@@ -263,13 +263,18 @@ exports.handler = async (event) => {
         '500 market': 'https://abrevo.co/properties/502-market.html',
         '486 market': 'https://abrevo.co/properties/486-market.html',
         '6 madison': 'https://abrevo.co/properties/486-market.html',
-        '556 market': 'https://drive.google.com/drive/folders/1kTW7etuGZkD5_g81EDpl1ydOF_9TdnOR',
-        '554 market': 'https://drive.google.com/drive/folders/1kTW7etuGZkD5_g81EDpl1ydOF_9TdnOR',
+        '556 market': 'https://abrevo.co/properties/556-market.html',
+        '554 market': 'https://abrevo.co/properties/556-market.html',
         '74 webster': 'https://abrevo.co/properties/74-webster.html',
         '76 webster': 'https://abrevo.co/properties/74-webster.html',
         '11 thomas': 'https://abrevo.co/properties/11-thomas.html',
-        '164 university': 'https://drive.google.com/drive/folders/1H2jyLzFgB3XyqaYU8bAB4lk4TaQ2vL0k',
-        '162 university': 'https://drive.google.com/drive/folders/1H2jyLzFgB3XyqaYU8bAB4lk4TaQ2vL0k',
+        '164 university': 'https://abrevo.co/properties/164-university.html',
+        '162 university': 'https://abrevo.co/properties/164-university.html',
+        '176 garfield': 'https://abrevo.co/properties/other-listings.html',
+        '136 s 7th': 'https://abrevo.co/properties/other-listings.html',
+        '86 wilson': 'https://abrevo.co/properties/other-listings.html',
+        '883 springfield': 'https://abrevo.co/properties/other-listings.html',
+        '53 bleeker': 'https://abrevo.co/properties/other-listings.html',
       };
 
       const propText = (parsedLead.property || parsedLead.source || '').toLowerCase();
