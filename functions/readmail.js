@@ -2055,7 +2055,7 @@ exports.handler = async (event) => {
 
         console.log('Lead detected! Phone:', phone || 'none found');
 
-        const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject) || isZillowLead(from)) ? realEmail : fromEmail;
+        const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject) || isZillowLead(from) || isAppFolioLead(from, subject, body)) ? realEmail : fromEmail;
         const skipRecentCheck = isAvailLead(from) || from.includes('reply.avail.co') || from.includes('@avail.co') || isFUBLead(from, subject);
 
         // New emails get 4h throttle
