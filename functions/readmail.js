@@ -2044,6 +2044,15 @@ exports.handler = async (event) => {
             phone = extractPhone(body + ' ' + subject);
           }
         }
+        // AppFolio: extract real lead email from reply-to early (before checkEmail)
+        if (isAppFolioLead(from, subject, body)) {
+          const afReplyTo = parsed.replyTo?.value?.[0]?.address || parsed.replyTo?.text;
+          if (afReplyTo && !afReplyTo.includes('appfolio.com') && !afReplyTo.includes('privaterelay')) {
+            realEmail = afReplyTo;
+          }
+          console.log('AppFolio early reply-to extraction:', realEmail);
+        }
+
         // For reply threads: always try to extract phone from body regardless of source
         if (!phone && isReply) {
           const replyPhone = extractPhone(body);
