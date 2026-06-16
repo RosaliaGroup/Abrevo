@@ -4,7 +4,8 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const ANA_PHONE = '+16462269189';
-const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/iron65';
+const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
+const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
 
 const GMAIL_USER = process.env.GMAIL_USER || 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES || process.env.GMAIL_PASS;
@@ -41,9 +42,15 @@ function detectCategory(lead) {
   return price > 0 ? 'buyer' : 'rental';
 }
 
+function getBookingLink(lead) {
+  const prop = (lead.property || lead.source || '').toLowerCase();
+  const isIron65 = prop.includes('iron 65') || prop.includes('iron65') || prop.includes('mcwhorter');
+  return isIron65 ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
+}
+
 async function generateReply(lead) {
   const category = lead.category || detectCategory(lead);
-  const bookingLink = BOOKING_FORM_URL;
+  const bookingLink = getBookingLink(lead);
   const firstName = lead.name?.split(' ')[0] || 'there';
 
   let prompt;
@@ -104,7 +111,7 @@ async function generateFollowUp(lead, followUpNumber) {
   const category = lead.category || detectCategory(lead);
   const first = lead.name?.split(' ')[0] || 'there';
   const prop = lead.property || (category === 'buyer' ? 'your dream home' : 'the property');
-  const bookingLink = BOOKING_FORM_URL;
+  const bookingLink = getBookingLink(lead);
 
   if (category === 'buyer') {
     const msgs = {
