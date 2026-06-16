@@ -827,7 +827,16 @@ function isAppFolioLead(from, subject, body) {
   return false;
 }
 
+function isIron65TourLead(from, subject, body) {
+  if ((from || '').toLowerCase().includes('brevosend.com')) return true;
+  if ((from || '').toLowerCase().includes('liveiron65')) return true;
+  if (/thank you for requesting a tour/i.test(subject || '')) return true;
+  if ((body || '').toLowerCase().includes('thank you') && (body || '').toLowerCase().includes('requesting a tour')) return true;
+  return false;
+}
+
 function shouldSkip(from, subject) {
+  if (isIron65TourLead(from, subject)) return false;
   if (isAppFolioLead(from, subject)) return false;
   if (isGoogleVoiceLead(from, subject)) return false;
   // Known lead sources always pass through
@@ -860,6 +869,7 @@ function shouldSkip(from, subject) {
 }
 
 function isLead(subject, body, from) {
+  if (isIron65TourLead(from || '', subject || '', body || '')) return true;
   if (isAppFolioLead(from || '', subject || '', body || '')) return true;
   if (isGoogleVoiceLead(from || '', subject || '')) return true;
   // Known lead sources
@@ -2183,6 +2193,18 @@ exports.handler = async (event) => {
           const afPhone = extractPhone(body);
           if (afPhone) phone = afPhone;
           console.log('AppFolio lead parsed:', { realName, phone, property: leadClient });
+        }
+
+        // Iron65 Brevo tour confirmation parsing
+        if (isIron65TourLead(from, subject, body)) {
+          const tourMatch = body.match(/Thank you ([^f]+?) for requesting a tour[\s\S]*?at ([^\s]+@[^\s]+) or ([\d]+)/i);
+          if (tourMatch) {
+            realName = tourMatch[1].trim();
+            realEmail = tourMatch[2].trim();
+            phone = '+1' + tourMatch[3].replace(/\D/g, '');
+          }
+          leadClient = 'Iron 65 - 65 McWhorter St, Newark NJ';
+          console.log('Iron65 Brevo tour lead:', { realName, realEmail, phone });
         }
 
         // AppFolio sends from guestcards@appfolio.com but real lead email is in reply-to
