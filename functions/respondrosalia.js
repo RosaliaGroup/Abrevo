@@ -313,13 +313,17 @@ exports.handler = async (event) => {
         }
       }
 
-      // Strip booking URLs from AI reply — we add them explicitly at the bottom
+      // Strip booking URLs and signature from AI reply — we add them explicitly at the bottom
       const bookingLinkUrl = getBookingLink(parsedLead);
       const cleanReply = emailReply
         .replace(/\u{1F4C5}\s*https?:\/\/book\.rosaliagroup\.com[^\s]*/gu, '')
         .replace(/https?:\/\/book\.rosaliagroup\.com[^\s]*/g, '')
+        .replace(/Ana Haynes[\s\S]*?inquiries@rosaliagroup\.com/g, '')
+        .replace(/Rosalia Group[\s|]+\(862\)[\s\S]*?inquiries@rosaliagroup\.com/g, '')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
+
+      const signature = '<br><br><span style="color:#555;font-size:14px;">Ana Haynes | Rosalia Group | (862) 333-1681 | <a href="mailto:inquiries@rosaliagroup.com" style="color:#C9A84C;">inquiries@rosaliagroup.com</a></span>';
 
       const htmlEmail = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">
         ${cleanReply.replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<>"]+)/g, (match) => {
@@ -339,6 +343,7 @@ exports.handler = async (event) => {
         <br><br>
         <a href="${bookingLinkUrl}" style="color:#C9A84C;font-weight:bold;text-decoration:none;display:block;margin:8px 0;">\u{1F4C5} Book a Tour</a>
         `}
+        ${signature}
       </div>`;
 
       const savedLead = await saveOrUpdateLead(parsedLead, emailReply);
