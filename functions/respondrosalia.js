@@ -73,7 +73,11 @@ Under 120 words. Warm, professional, not salesy. No bullet points. Reply with ON
     body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 400, messages: [{ role: 'user', content: prompt }] }),
   });
   const data = await res.json();
-  return data.content?.[0]?.text || '';
+  const reply = data.content?.[0]?.text || '';
+  if (!reply) {
+    console.error('Anthropic returned empty reply:', JSON.stringify(data).slice(0, 200));
+  }
+  return reply;
 }
 
 async function generateFollowUp(lead, followUpNumber) {
