@@ -1,9 +1,29 @@
+const nodemailer = require('nodemailer');
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const ANA_PHONE = '+16462269189';
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/iron65';
+
+const GMAIL_USER = process.env.GMAIL_USER || 'inquiries@rosaliagroup.com';
+const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES || process.env.GMAIL_PASS;
+
+async function sendEmail(to, subject, htmlBody) {
+  if (!to || to.includes('privaterelay') || to.includes('appfolio.com')) return;
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: GMAIL_USER, pass: GMAIL_PASS },
+  });
+  await transporter.sendMail({
+    from: `"Rosalia Group Inquiries" <${GMAIL_USER}>`,
+    to,
+    cc: 'inquiries@rosaliagroup.com',
+    subject,
+    html: `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">${(htmlBody || '').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" style="color:#C9A84C;">$1</a>')}</div>`,
+    text: htmlBody,
+  });
+}
 
 // -- DETECT BUYER vs RENTAL --
 function detectCategory(lead) {
@@ -247,6 +267,16 @@ exports.handler = async (event) => {
         : parsedLead.type === 'application'
         ? `Application received -- ${parsedLead.property || 'your property'}`
         : `Re: Your inquiry about ${parsedLead.property || 'the property'}`;
+
+      // Actually send the email
+      if (parsedLead.email && emailReply) {
+        try {
+          await sendEmail(parsedLead.email, subject, emailReply);
+          console.log('Email sent to:', parsedLead.email);
+        } catch (err) {
+          console.error('Email send error:', err.message);
+        }
+      }
 
       return {
         statusCode: 200,
