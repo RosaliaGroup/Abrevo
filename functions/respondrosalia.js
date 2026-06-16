@@ -21,7 +21,7 @@ async function sendEmail(to, subject, htmlBody) {
     to,
     cc: 'inquiries@rosaliagroup.com',
     subject,
-    html: `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">${(htmlBody || '').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" style="color:#C9A84C;">$1</a>')}</div>`,
+    html: `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">${(htmlBody || '').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<>"]+)/g, '<a href="$1" style="color:#C9A84C;text-decoration:none;">$1</a>')}</div>`,
     text: htmlBody,
   });
 }
@@ -249,8 +249,44 @@ exports.handler = async (event) => {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'No email or phone found' }) };
       }
 
-      const emailReply = await generateReply(parsedLead);
+      let emailReply = await generateReply(parsedLead);
       console.log('Email reply length:', emailReply.length);
+
+      // Add property photos link
+      const RESP_PROPERTY_MEDIA = {
+        'iron 65': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
+        'mcwhorter': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
+        '39 madison': 'https://drive.google.com/drive/folders/1My5d_o0U6DUfpkLl0af6xd-puxOFPOWg',
+        'iron pointe': 'https://drive.google.com/drive/folders/1My5d_o0U6DUfpkLl0af6xd-puxOFPOWg',
+        '28 jefferson': 'https://drive.google.com/drive/folders/1My5d_o0U6DUfpkLl0af6xd-puxOFPOWg',
+        '502 market': 'https://drive.google.com/drive/folders/1eXb5UtI9md7MJzqSAGyPjA5opyiv88hO',
+        '500 market': 'https://drive.google.com/drive/folders/1eXb5UtI9md7MJzqSAGyPjA5opyiv88hO',
+        '486 market': 'https://drive.google.com/drive/folders/1WdGEkpiYT_cX13qW-OGVsBfuv9lWWEUp',
+        '6 madison': 'https://drive.google.com/drive/folders/1WdGEkpiYT_cX13qW-OGVsBfuv9lWWEUp',
+        '556 market': 'https://drive.google.com/drive/folders/1kTW7etuGZkD5_g81EDpl1ydOF_9TdnOR',
+        '554 market': 'https://drive.google.com/drive/folders/1kTW7etuGZkD5_g81EDpl1ydOF_9TdnOR',
+        '74 webster': 'https://drive.google.com/drive/folders/1t1cEj0WMOHAwhTkTTfPhMxxDiBwhTLHW',
+        '76 webster': 'https://drive.google.com/drive/folders/1t1cEj0WMOHAwhTkTTfPhMxxDiBwhTLHW',
+        '11 thomas': 'https://drive.google.com/drive/folders/1kX67b4Ap7XIR8drfgRA3ftbSn8Ez22-C',
+        '164 university': 'https://drive.google.com/drive/folders/1H2jyLzFgB3XyqaYU8bAB4lk4TaQ2vL0k',
+        '162 university': 'https://drive.google.com/drive/folders/1H2jyLzFgB3XyqaYU8bAB4lk4TaQ2vL0k',
+      };
+
+      const propText = (parsedLead.property || parsedLead.source || '').toLowerCase();
+      let mediaLink = null;
+      for (const [key, url] of Object.entries(RESP_PROPERTY_MEDIA)) {
+        if (propText.includes(key)) { mediaLink = url; break; }
+      }
+
+      if (mediaLink && emailReply) {
+        const bookingPattern = /(https?:\/\/book\.rosaliagroup\.com[^\s]*)/;
+        if (bookingPattern.test(emailReply)) {
+          emailReply = emailReply.replace(bookingPattern, `${mediaLink}\n\n$1`);
+        } else {
+          emailReply = emailReply + `\n\n${mediaLink}`;
+        }
+        emailReply = emailReply + '\n*Actual unit may vary. Photos shown are of the same layout/model.';
+      }
 
       const savedLead = await saveOrUpdateLead(parsedLead, emailReply);
       console.log('Lead saved/merged, id:', savedLead?.id);
