@@ -818,7 +818,17 @@ async function saveListingAlert(from, subject, body) {
   }
 }
 
+function isAppFolioLead(from, subject, body) {
+  if ((from || '').toLowerCase().includes('appfolio.com')) return true;
+  if ((from || '').toLowerCase().includes('guestcards')) return true;
+  if (/^new lead[:\s]/i.test(subject || '')) return true;
+  if ((body || '').toLowerCase().includes('appfolio property manager')) return true;
+  if ((body || '').toLowerCase().includes('view the guest card')) return true;
+  return false;
+}
+
 function shouldSkip(from, subject) {
+  if (isAppFolioLead(from, subject)) return false;
   if (isGoogleVoiceLead(from, subject)) return false;
   // Known lead sources always pass through
   if (isZillowLead(from)) return false;
@@ -850,6 +860,7 @@ function shouldSkip(from, subject) {
 }
 
 function isLead(subject, body, from) {
+  if (isAppFolioLead(from || '', subject || '', body || '')) return true;
   if (isGoogleVoiceLead(from || '', subject || '')) return true;
   // Known lead sources
   if (isZillowLead(from || '')) return true;
@@ -2161,6 +2172,17 @@ exports.handler = async (event) => {
           }
           results.processed++;
           continue;
+        }
+
+        // AppFolio lead parsing — extract name, phone, property from body
+        if (isAppFolioLead(from, subject, body)) {
+          const afNameMatch = body.match(/CONTACT INFO[\s\S]*?\n([A-Z][^\n]+)\n/i);
+          if (afNameMatch) realName = afNameMatch[1].trim();
+          const afPropMatch = body.match(/New Lead for ([^\n]+)/i) || subject.match(/interested in ([^\n]+)/i);
+          if (afPropMatch) leadClient = afPropMatch[1].trim();
+          const afPhone = extractPhone(body);
+          if (afPhone) phone = afPhone;
+          console.log('AppFolio lead parsed:', { realName, phone, property: leadClient });
         }
 
         // AppFolio sends from guestcards@appfolio.com but real lead email is in reply-to
