@@ -1350,15 +1350,25 @@ async function generateReply(from, subject, body, previousReply, leadContext, ca
   const firstName = leadName ? leadName.split(' ')[0] : '';
   const nameGreeting = firstName ? `The lead's name is ${firstName}. Start your reply with "Hi ${firstName},"` : 'Start with a warm greeting.';
 
+  // Strip AppFolio/platform boilerplate before sending to AI
+  const cleanBody = (body || '')
+    .replace(/AppFolio Property Manager[\s\S]*/i, '')
+    .replace(/If you would like to stop receiving[\s\S]*/i, '')
+    .replace(/View the guest card[\s\S]*/i, '')
+    .replace(/LEAD INFO[\s\S]*/i, '')
+    .replace(/70 Castilian Dr[\s\S]*/i, '')
+    .replace(/Powered by AppFolio[\s\S]*/i, '')
+    .trim();
+
   const userMessage = `FROM: ${from}
 SUBJECT: ${subject}
 THEIR EMAIL:
-${body.substring(0, 800)}
+${(cleanBody || body).substring(0, 800)}
 ${contextStr}${threadContext}`;
 
   const prompt = `${ANA_CONTEXT}
 
-You are ${role}.
+IDENTITY: You are Ana Haynes, ${role} at Rosalia Group. You are NOT an AI assistant. You are NOT Claude. You are Ana. Write ONLY the email body as Ana would write it. No meta-commentary, no questions about the conversation, no "I don't see a message". Just reply to the lead directly.
 
 ${previousReply ? 'A lead is REPLYING to your previous email. Read their reply carefully and answer EXACTLY what they asked — do not reintroduce yourself or repeat anything already said.' : `A new inquiry came in. ${nameGreeting}${detectedCity}${/Name\s*:/.test(body) && /(?:Email|Phone|Message|Your Message)\s*:/i.test(body) ? '\nIMPORTANT: This is a CONTACT FORM SUBMISSION from a website — the fields (Name, Email, Phone, select, Your Message) are the lead\'s info. The "Your Message" field contains what they wrote. If their message mentions availability or preferred times, acknowledge those times and send the booking link so they can pick a slot. If "Your Message" is empty or short, the lead is interested but didn\'t write a specific question — respond warmly and invite them to book a tour. NEVER say "I don\'t have a message" or "I\'m not sure what you\'re asking" — this is always a new lead contacting you.' : ''}`}
 
@@ -2230,6 +2240,9 @@ exports.handler = async (event) => {
           if (afNameMatch) realName = afNameMatch[1].trim();
           const afPropMatch = body.match(/New Lead for ([^\n]+)/i) || subject.match(/interested in ([^\n]+)/i);
           if (afPropMatch) leadClient = afPropMatch[1].trim();
+          // Extract specific unit interest (e.g. "Interested in: 11 Thomas St - 2C")
+          const afUnitMatch = body.match(/Interested in:\s*([^\n]+)/i);
+          if (afUnitMatch) leadClient = afUnitMatch[1].trim();
           const afPhone = extractPhone(body);
           if (afPhone) phone = afPhone;
           console.log('AppFolio lead parsed:', { realName, phone, property: leadClient });
