@@ -81,8 +81,8 @@ Ana Haynes | Rosalia Group
 };
 
 const PROPERTY_MEDIA = {
-  'iron 65': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
-  'mcwhorter': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
+  'iron 65': 'https://abrevo.co/properties/iron65.html',
+  'mcwhorter': 'https://abrevo.co/properties/iron65.html',
   '39 madison': 'https://abrevo.co/properties/39-madison.html',
   'iron pointe': 'https://abrevo.co/properties/39-madison.html',
   '502 market': 'https://abrevo.co/properties/502-market.html',
@@ -105,8 +105,8 @@ const PROPERTY_MEDIA = {
   '6 madison': 'https://abrevo.co/properties/486-market.html',
   '500 market': 'https://abrevo.co/properties/502-market.html',
   '554 market': 'https://drive.google.com/drive/folders/1kTW7etuGZkD5_g81EDpl1ydOF_9TdnOR',
-  '65a mcwhorter': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
-  '65 mcwhorter': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
+  '65a mcwhorter': 'https://abrevo.co/properties/iron65.html',
+  '65 mcwhorter': 'https://abrevo.co/properties/iron65.html',
 };
 
 function getPropertyMedia(property, message, unitNumber) {
@@ -133,7 +133,7 @@ function getPropertyMedia(property, message, unitNumber) {
     if (/2\s*b[re]d|2br|two\s*bed/i.test(raw)) return IRON65_MODELS['02'];
     if (/1\s*b[re]d|1br|one\s*bed/i.test(raw)) return IRON65_MODELS['07'];
     // No match — general Iron 65 folder
-    return 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ';
+    return 'https://abrevo.co/properties/iron65.html';
   }
 
   for (const [key, url] of Object.entries(PROPERTY_MEDIA)) {
@@ -170,7 +170,7 @@ function getIron65MediaLink(unitNumber) {
   }
   if (/loft/i.test(unitNumber)) return IRON65_MODELS['loft'];
   if (/duplex/i.test(unitNumber)) return IRON65_MODELS['duplex'];
-  return 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ';
+  return 'https://abrevo.co/properties/iron65.html';
 }
 
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;

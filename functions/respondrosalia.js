@@ -254,8 +254,8 @@ exports.handler = async (event) => {
 
       // Add property photos link
       const RESP_PROPERTY_MEDIA = {
-        'iron 65': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
-        'mcwhorter': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
+        'iron 65': 'https://abrevo.co/properties/iron65.html',
+        'mcwhorter': 'https://abrevo.co/properties/iron65.html',
         '39 madison': 'https://abrevo.co/properties/39-madison.html',
         'iron pointe': 'https://abrevo.co/properties/39-madison.html',
         '28 jefferson': 'https://abrevo.co/properties/39-madison.html',
