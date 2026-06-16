@@ -79,7 +79,7 @@ Message: ${lead.message || 'Interested in properties'}
 Price range: ${lead.price ? '$' + Number(lead.price).toLocaleString() : 'not specified'}
 Timeframe: ${lead.timeframe || 'not specified'}
 
-Do NOT reference or repeat any details the lead mentioned (pets, lease length, budget, income, etc). Do NOT say things like 'you'd be a great fit', 'you qualify', 'sounds perfect', 'no pets noted', 'noted on 12 months'. Just greet them, thank them for their interest, and invite them to book a tour. Under 80 words. Warm, professional, not salesy. No bullet points. Reply with ONLY the email body.`;
+Do NOT reference or repeat any details the lead mentioned (pets, lease length, budget, income, etc). Do NOT say things like 'you'd be a great fit', 'you qualify', 'sounds perfect', 'no pets noted', 'noted on 12 months'. Do NOT use excited or enthusiastic language like 'I'm excited', 'I'd love to', 'Great news', 'Amazing'. Keep the tone warm and professional but not overly enthusiastic. Just greet them, thank them for their interest, and invite them to book a tour. Under 80 words. No bullet points. Reply with ONLY the email body.`;
 
   } else {
     const isIronPointe = /iron.?pointe|resipointe|madison/i.test(lead.property || '');
@@ -100,7 +100,7 @@ Message: ${lead.message || 'Interested in renting'}
 ${lead.bedrooms ? 'Bedrooms: ' + lead.bedrooms : ''}
 ${lead.budget ? 'Budget: ' + lead.budget : ''}
 
-Do NOT reference or repeat any details the lead mentioned (pets, lease length, budget, income, etc). Do NOT say things like 'you'd be a great fit', 'you qualify', 'sounds perfect', 'no pets noted', 'noted on 12 months'. Just greet them, thank them for their interest, and invite them to book a tour. Under 80 words. Warm, professional, not salesy. No bullet points. Reply with ONLY the email body.`;
+Do NOT reference or repeat any details the lead mentioned (pets, lease length, budget, income, etc). Do NOT say things like 'you'd be a great fit', 'you qualify', 'sounds perfect', 'no pets noted', 'noted on 12 months'. Do NOT use excited or enthusiastic language like 'I'm excited', 'I'd love to', 'Great news', 'Amazing'. Keep the tone warm and professional but not overly enthusiastic. Just greet them, thank them for their interest, and invite them to book a tour. Under 80 words. No bullet points. Reply with ONLY the email body.`;
   }
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -336,7 +336,7 @@ exports.handler = async (event) => {
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 
-      const signature = '<br><br><span style="color:#555;font-size:14px;">Ana Haynes | Rosalia Group | (862) 333-1681 | <a href="mailto:inquiries@rosaliagroup.com" style="color:#C9A84C;">inquiries@rosaliagroup.com</a></span>';
+      const signature = '<br><br><span style="color:#555;font-size:14px;">Rosalia Group | Inquiries Team | (862) 333-1681 | <a href="mailto:inquiries@rosaliagroup.com" style="color:#C9A84C;">inquiries@rosaliagroup.com</a></span>';
 
       const htmlEmail = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">
         ${cleanReply.replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<>"]+)/g, (match) => {
