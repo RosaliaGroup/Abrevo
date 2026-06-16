@@ -288,8 +288,29 @@ exports.handler = async (event) => {
 
       const propText = (parsedLead.property || parsedLead.source || '').toLowerCase();
       let mediaLink = null;
+      let mediaLink2 = null;
       for (const [key, url] of Object.entries(RESP_PROPERTY_MEDIA)) {
         if (propText.includes(key)) { mediaLink = url; break; }
+      }
+
+      // Iron 65 special case — send studio + 1BR links if no specific unit type mentioned
+      const msg = (parsedLead.message || '').toLowerCase();
+      const isIron65Lead = propText.includes('iron 65') || propText.includes('mcwhorter') || propText.includes('iron65');
+      if (isIron65Lead) {
+        const wantsStudio = /studio|st\b|485|465|560|607/.test(msg);
+        const wants1BR = /1\s*b(ed|r)|one\s*bed|1bed/.test(msg);
+        const wantsLoft = /loft|den|penthouse/.test(msg);
+
+        if (wantsStudio && !wants1BR) {
+          mediaLink = 'https://drive.google.com/file/d/1Ufb0l-4L-uNxpzIBKIA2g2upR2YsWMI-/view';
+        } else if (wants1BR && !wantsStudio) {
+          mediaLink = 'https://drive.google.com/file/d/15QalYV80cwWyJ6W8r0DGmmHXV7121yoe/view';
+        } else if (wantsLoft) {
+          mediaLink = 'https://drive.google.com/drive/folders/1VetphM-E2AghDux37UkGXu5vNkNcefh5';
+        } else {
+          mediaLink = 'https://drive.google.com/file/d/1Ufb0l-4L-uNxpzIBKIA2g2upR2YsWMI-/view';
+          mediaLink2 = 'https://drive.google.com/file/d/15QalYV80cwWyJ6W8r0DGmmHXV7121yoe/view';
+        }
       }
 
       // Build clean HTML email with labeled links + explicit photos/booking blocks
@@ -304,7 +325,11 @@ exports.handler = async (event) => {
           }
           return '<a href="' + match + '" style="color:#C9A84C;text-decoration:none;">' + match + '</a>';
         })}
-        ${mediaLink ? '<br><br><div style="margin:16px 0;"><a href="' + mediaLink + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;font-size:15px;">\u{1F4F8} View Photos &amp; Videos</a><br><em style="font-size:12px;color:#999;">*Actual unit may vary. Photos shown are of the same layout/model.</em></div><div style="margin:8px 0;"><a href="' + bookingLinkUrl + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;font-size:15px;">\u{1F4C5} Book a Tour</a></div>' : ''}
+        ${mediaLink ? '<br><br><div style="margin:16px 0;">' +
+          (mediaLink2
+            ? '<a href="' + mediaLink + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4F8} Studio \u2014 View Photos &amp; Videos</a><br><a href="' + mediaLink2 + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4F8} 1 Bedroom \u2014 View Photos &amp; Videos</a><br>'
+            : '<a href="' + mediaLink + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;font-size:15px;">\u{1F4F8} View Photos &amp; Videos</a><br>') +
+          '<em style="font-size:12px;color:#999;">*Actual unit may vary. Photos shown are of the same layout/model.</em></div><div style="margin:8px 0;"><a href="' + bookingLinkUrl + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;font-size:15px;">\u{1F4C5} Book a Tour</a></div>' : ''}
       </div>`;
 
       const savedLead = await saveOrUpdateLead(parsedLead, emailReply);

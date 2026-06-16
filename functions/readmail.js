@@ -131,13 +131,13 @@ function getPropertyMedia(property, message, unitNumber) {
     // Specific unit number takes priority
     if (unitNumber) return getIron65MediaLink(unitNumber);
     // Fall back to bed type
-    if (/studio|0\s*bed/i.test(raw)) return IRON65_MODELS['00'];
+    if (/studio|0\s*bed/i.test(raw)) return 'https://drive.google.com/file/d/1Ufb0l-4L-uNxpzIBKIA2g2upR2YsWMI-/view';
     if (/loft/i.test(raw)) return IRON65_MODELS['loft'];
     if (/duplex/i.test(raw)) return IRON65_MODELS['duplex'];
     if (/2\s*b[re]d|2br|two\s*bed/i.test(raw)) return IRON65_MODELS['02'];
-    if (/1\s*b[re]d|1br|one\s*bed/i.test(raw)) return IRON65_MODELS['07'];
-    // No match — general Iron 65 folder
-    return 'https://properties.rosaliagroup.com/properties/iron65.html';
+    if (/1\s*b[re]d|1br|one\s*bed/i.test(raw)) return 'https://drive.google.com/file/d/15QalYV80cwWyJ6W8r0DGmmHXV7121yoe/view';
+    // No match — send studio video (1BR added separately in email builder)
+    return 'https://drive.google.com/file/d/1Ufb0l-4L-uNxpzIBKIA2g2upR2YsWMI-/view';
   }
 
   for (const [key, url] of Object.entries(PROPERTY_MEDIA)) {
@@ -1445,7 +1445,10 @@ async function sendReply(replyTo, subject, replyText, ccEmail) {
   let replyHtml = cleaned.replace(/__URL_(\d+)__/g, (_, i) => {
     const url = urls[parseInt(i)];
     if (url.includes('drive.google.com') || url.includes('abrevo.co/properties') || url.includes('properties.rosaliagroup.com')) {
-      return `<br><strong>\u{1F4F8} <a href="${url}" style="color:#C9A84C;text-decoration:underline;">View Photos &amp; Videos</a></strong><br><em style="font-size:12px;color:#888;">*Actual unit may vary. Photos shown are of the same layout/model.</em>`;
+      let linkLabel = 'View Photos &amp; Videos';
+      if (url.includes('1Ufb0l-4L-uNxpzIBKIA2g2upR2YsWMI-')) linkLabel = 'Studio \u2014 View Photos &amp; Videos';
+      else if (url.includes('15QalYV80cwWyJ6W8r0DGmmHXV7121yoe')) linkLabel = '1 Bedroom \u2014 View Photos &amp; Videos';
+      return `<br><strong>\u{1F4F8} <a href="${url}" style="color:#C9A84C;text-decoration:underline;">${linkLabel}</a></strong>`;
     }
     return `<a href="${url}" style="color:#C9A84C;text-decoration:underline;">Book Your Tour Here</a>`;
   });
@@ -2144,12 +2147,18 @@ exports.handler = async (event) => {
 
         // Insert property photos/videos link before booking link
         const mediaLink = getPropertyMedia(appfolioProperty || leadContext?.property, body, unitNumber);
+        // Iron 65 with no specific bed type — add 1BR link too
+        const propForMedia = (appfolioProperty || leadContext?.property || body || '').toLowerCase();
+        const isIron65Media = propForMedia.includes('iron 65') || propForMedia.includes('mcwhorter') || propForMedia.includes('iron65');
+        const hasSpecificType = /studio|0\s*bed|1\s*b(?:ed|r)|one\s*bed|2\s*b(?:ed|r)|two\s*bed|loft|duplex/i.test(body);
+        const mediaLink2 = (isIron65Media && !hasSpecificType && !unitNumber) ? 'https://drive.google.com/file/d/15QalYV80cwWyJ6W8r0DGmmHXV7121yoe/view' : null;
         if (mediaLink) {
           const bookingPattern = /(https?:\/\/book\.rosaliagroup\.com[^\s]*)/;
+          const mediaBlock = mediaLink2 ? `${mediaLink}\n${mediaLink2}` : mediaLink;
           if (bookingPattern.test(replyText)) {
-            replyText = replyText.replace(bookingPattern, `${mediaLink}\n\n$1`);
+            replyText = replyText.replace(bookingPattern, `${mediaBlock}\n\n$1`);
           } else {
-            replyText = replyText + `\n\n${mediaLink}`;
+            replyText = replyText + `\n\n${mediaBlock}`;
           }
           replyText = replyText + '\n*Actual unit may vary. Photos shown are of the same layout/model.';
         }
