@@ -247,7 +247,7 @@ CRITICAL RULES:
   - Use ONLY these verified prices (always mention incentives when sharing pricing):
     502 Market St: 1BR from $2,300/mo, 2BR from $2,499/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 security deposit
     486 Market St (River Pointe): 1BR from $2,350/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 security deposit. ONLY 4 UNITS LEFT — mention urgency
-    39 Madison St (Iron Pointe): 1BR from $2,400/mo, 1BR backyard from $2,750/mo, 2BR from $3,300/mo. Incentives: 18 units available, rooftop gym lounge, 8 min walk to Penn Station
+    39 Madison St (Iron Pointe): 1BR from $2,400/mo, 2BR from $3,500/mo. Incentives: 1 month free on 12mo lease, $500 security deposit. ONLY 4 UNITS LEFT — mention urgency. Rooftop gym lounge, 8 min walk to Penn Station
     475 Main St Orange (The Elks): Studios from $1,955/mo, 1BR from $2,145/mo, 2BR from $3,095/mo, 3BR from $3,775/mo. No current promotions
     80 Freeman St (The Ballantine): Studios from $2,065/mo, 1BR from $2,375/mo, 2BR from $3,340/mo. No current promotions
     556 Market St: 1BR from $2,100/mo, 3BR Duplex $3,100/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 security deposit
@@ -332,28 +332,14 @@ Available units:
 
 ### 39 MADISON STREET  IRON POINTE, NEWARK NJ
 Utilities included: water, trash | Tenant pays: electric
+PROMOTIONS: 1 month free on 12 month lease | $500 security deposit
 Parking: $300/mo | Pet: $75/mo + $500 security | Bike storage: $25/mo
 Gym: $100/mo full amenity access | Rooftop | Lounge | Office desk | Secure package lockers | In-unit laundry
-8 min walk to Newark Penn Station | Staged unit: 505 (5th floor) | 18 UNITS AVAILABLE
+8 min walk to Newark Penn Station | ONLY 4 UNITS LEFT — mention urgency
 Available units:
-- Unit 101: 1BR/1BTH, 725 sqft, backyard  $2,750/mo
-- Unit 102: 1BR/1BTH, 670 sqft, backyard  $2,750/mo
-- Unit 213: 1BR/1BTH, 680 sqft, terrace  $2,650/mo
-- Unit 301: 1BR/1BTH, 725 sqft  $2,600/mo
-- Unit 303: 2BR/1BTH, 1005 sqft  $3,300/mo
-- Unit 313: 1BR/1BTH, 680 sqft  $2,650/mo
-- Unit 408: 1BR/1BTH, 697 sqft  $2,600/mo
-- Unit 411: 1BR/1BTH, 705 sqft  $2,600/mo
-- Unit 417: 1BR/1BTH, 560 sqft  $2,600/mo
 - Unit 418: 1BR/1BTH, 580 sqft  $2,500/mo
 - Unit 503: 2BR/1BTH, 1005 sqft  $3,500/mo
-- Unit 505: 1BR/1BTH, 538 sqft  $2,500/mo (STAGED)
-- Unit 511: 1BR/1BTH, 705 sqft  $2,600/mo
-- Unit 512: 1BR/1BTH, 640 sqft  $2,600/mo
-- Unit 513: 1BR/1BTH, 680 sqft  $2,700/mo
-- Unit 514: 1BR/1BTH, 735 sqft  $2,700/mo
-- Unit 517: 1BR/1BTH, 560 sqft  $2,500/mo
-- Unit 518: 1BR/1BTH, 580 sqft  $2,400/mo
+- Unit 516: 1BR/1BTH, 450 sqft  $2,400/mo
 
 ### 556 MARKET STREET, NEWARK NJ
 Utilities included: water, trash | Tenant pays: electric
