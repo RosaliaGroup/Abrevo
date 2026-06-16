@@ -83,14 +83,14 @@ Ana Haynes | Rosalia Group
 const PROPERTY_MEDIA = {
   'iron 65': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
   'mcwhorter': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
-  '39 madison': 'https://drive.google.com/drive/folders/1My5d_o0U6DUfpkLl0af6xd-puxOFPOWg',
-  'iron pointe': 'https://drive.google.com/drive/folders/1My5d_o0U6DUfpkLl0af6xd-puxOFPOWg',
-  '502 market': 'https://drive.google.com/drive/folders/1eXb5UtI9md7MJzqSAGyPjA5opyiv88hO',
-  '486 market': 'https://drive.google.com/drive/folders/1WdGEkpiYT_cX13qW-OGVsBfuv9lWWEUp',
+  '39 madison': 'https://abrevo.co/properties/39-madison.html',
+  'iron pointe': 'https://abrevo.co/properties/39-madison.html',
+  '502 market': 'https://abrevo.co/properties/502-market.html',
+  '486 market': 'https://abrevo.co/properties/486-market.html',
   '556 market': 'https://drive.google.com/drive/folders/1kTW7etuGZkD5_g81EDpl1ydOF_9TdnOR',
-  '76 webster': 'https://drive.google.com/drive/folders/1t1cEj0WMOHAwhTkTTfPhMxxDiBwhTLHW',
-  '74 webster': 'https://drive.google.com/drive/folders/1t1cEj0WMOHAwhTkTTfPhMxxDiBwhTLHW',
-  '11 thomas': 'https://drive.google.com/drive/folders/1kX67b4Ap7XIR8drfgRA3ftbSn8Ez22-C',
+  '76 webster': 'https://abrevo.co/properties/74-webster.html',
+  '74 webster': 'https://abrevo.co/properties/74-webster.html',
+  '11 thomas': 'https://abrevo.co/properties/11-thomas.html',
   '162 university': 'https://drive.google.com/drive/folders/1H2jyLzFgB3XyqaYU8bAB4lk4TaQ2vL0k',
   '164 university': 'https://drive.google.com/drive/folders/1H2jyLzFgB3XyqaYU8bAB4lk4TaQ2vL0k',
   '289 halsey': 'https://drive.google.com/drive/folders/1kev7bJ_fghfiTZMKxfPCVd0OHU6GXRqQ',
@@ -101,9 +101,9 @@ const PROPERTY_MEDIA = {
   '180 ferry': 'https://drive.google.com/drive/folders/1C4u8bniEiZlecCxl1dCJLE4fhgYXz0SE',
   '80 freeman': 'https://drive.google.com/drive/folders/1R5lzPHPkbtncNt6XPjTZ7D57J6FYQhXe',
   // Address aliases
-  '28 jefferson': 'https://drive.google.com/drive/folders/1My5d_o0U6DUfpkLl0af6xd-puxOFPOWg',
-  '6 madison': 'https://drive.google.com/drive/folders/1WdGEkpiYT_cX13qW-OGVsBfuv9lWWEUp',
-  '500 market': 'https://drive.google.com/drive/folders/1eXb5UtI9md7MJzqSAGyPjA5opyiv88hO',
+  '28 jefferson': 'https://abrevo.co/properties/39-madison.html',
+  '6 madison': 'https://abrevo.co/properties/486-market.html',
+  '500 market': 'https://abrevo.co/properties/502-market.html',
   '554 market': 'https://drive.google.com/drive/folders/1kTW7etuGZkD5_g81EDpl1ydOF_9TdnOR',
   '65a mcwhorter': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
   '65 mcwhorter': 'https://drive.google.com/drive/folders/16xZ3T4KPWBibAlRESOs181BxstZMDHXJ',
@@ -1453,7 +1453,7 @@ async function sendReply(replyTo, subject, replyText, ccEmail) {
   // Restore URLs as clickable links
   let replyHtml = cleaned.replace(/__URL_(\d+)__/g, (_, i) => {
     const url = urls[parseInt(i)];
-    if (url.includes('drive.google.com')) {
+    if (url.includes('drive.google.com') || url.includes('abrevo.co/properties')) {
       return `<br><strong>\u{1F4F8} <a href="${url}" style="color:#C9A84C;text-decoration:underline;">View Photos &amp; Videos</a></strong><br><em style="font-size:12px;color:#888;">*Actual unit may vary. Photos shown are of the same layout/model.</em>`;
     }
     return `<a href="${url}" style="color:#C9A84C;text-decoration:underline;">Book Your Tour Here</a>`;

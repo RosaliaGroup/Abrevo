@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>502 Market St | Rosalia Group</title>
+<meta name="description" content="Luxury apartments at 502 Market St, Newark NJ. 1BR from $1,999, 2BR from $2,499. 1 month free on 13-month lease.">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--black:#07070a;--white:#f4f1ea;--gold:#c9a84c;--gold2:#e2c97e;--gold3:#f0e0a8;--dim:#9a8f78;--panel:#0f0f12;--border:rgba(201,168,76,0.15);--border2:rgba(201,168,76,0.35);--green:#2ecc71;--red:#e74c3c;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--black);color:var(--white);font-family:'Instrument Serif',serif;overflow-x:hidden;line-height:1.6;}
+a{color:var(--gold);text-decoration:none;}a:hover{color:var(--gold2);}
+#nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;justify-content:space-between;align-items:center;padding:1.2rem 3rem;background:rgba(7,7,10,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:5px;background:linear-gradient(135deg,var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;cursor:pointer;}
+.nav-links{display:flex;gap:2rem;align-items:center;}
+.nav-links a{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--dim);text-decoration:none;transition:color .2s;}
+.nav-links a:hover{color:var(--gold);}
+.nav-btn{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;background:var(--gold);color:var(--black);padding:.6rem 1.5rem;border:none;cursor:pointer;font-weight:500;transition:background .2s,transform .2s;}
+.nav-btn:hover{background:var(--gold2);transform:translateY(-1px);}
+.promo-banner{margin-top:70px;background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.05));border-bottom:1px solid var(--border2);padding:1rem 2rem;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--gold2);letter-spacing:1px;}
+.promo-banner strong{color:var(--gold3);}
+.prop-hero{padding:3rem 2rem 2rem;max-width:1200px;margin:0 auto;text-align:center;}
+.prop-hero h1{font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:4px;background:linear-gradient(135deg,var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem;}
+.prop-hero .subtitle{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:1.5rem;}
+.prop-hero .stats{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.5rem;}
+.prop-hero .stat{text-align:center;}.prop-hero .stat-val{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--gold);}.prop-hero .stat-label{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;}
+.hero-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:2px;text-transform:uppercase;padding:.8rem 2rem;border:none;cursor:pointer;transition:all .2s;display:inline-block;text-decoration:none;text-align:center;}
+.btn-gold{background:var(--gold);color:var(--black);font-weight:500;}.btn-gold:hover{background:var(--gold2);transform:translateY(-1px);color:var(--black);}
+.btn-outline{background:transparent;color:var(--gold);border:1px solid var(--border2);}.btn-outline:hover{background:rgba(201,168,76,0.1);color:var(--gold2);}
+.section-title{max-width:1200px;margin:0 auto;padding:2rem 2rem 1rem;font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:3px;color:var(--gold);border-bottom:1px solid var(--border);}
+.unit-grid{max-width:1200px;margin:0 auto;padding:1rem 2rem 2rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;}
+.unit-card{background:var(--panel);border:1px solid var(--border);padding:1.2rem;transition:border-color .2s,transform .2s;}
+.unit-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.unit-card.available{border-color:var(--green);box-shadow:0 0 15px rgba(46,204,113,0.1);}
+.unit-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;}
+.unit-number{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:2px;color:var(--white);}
+.unit-badge{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:1px;text-transform:uppercase;padding:.2rem .6rem;border-radius:2px;}
+.badge-available{background:rgba(46,204,113,0.15);color:var(--green);}
+.badge-leased{background:rgba(201,168,76,0.1);color:var(--dim);}
+.unit-type{font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--dim);letter-spacing:1px;margin-bottom:.5rem;}
+.unit-price{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--gold);}
+.unit-price small{font-size:.9rem;color:var(--dim);}
+.amenities{max-width:1200px;margin:0 auto;padding:2rem;border-top:1px solid var(--border);}
+.amenities h2{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:3px;color:var(--gold);margin-bottom:1rem;}
+.amenity-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.8rem;}
+.amenity-item{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--dim);padding:.5rem;border:1px solid var(--border);letter-spacing:1px;}
+.prop-footer{text-align:center;padding:3rem 2rem;border-top:1px solid var(--border);margin-top:2rem;}
+.prop-footer p{font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--dim);letter-spacing:1px;}
+.prop-footer a{color:var(--gold);}
+@media(max-width:768px){#nav{padding:1rem 1.5rem;}.nav-links{display:none;}.prop-hero h1{font-size:2rem;}.unit-grid{grid-template-columns:1fr;}.hero-btns{flex-direction:column;align-items:center;}.btn{width:100%;max-width:300px;}}
+</style>
+</head>
+<body>
+<nav id="nav">
+  <a href="/" class="nav-logo">ROSALIA GROUP</a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/crm.html">CRM</a>
+    <a href="https://book.rosaliagroup.com/book" class="nav-btn">Book a Tour</a>
+  </div>
+</nav>
+
+<div class="promo-banner">
+  <strong>1 MONTH FREE</strong> on 13-month lease &bull; <strong>2 MONTHS FREE</strong> on 18-month lease &bull; <strong>$500 Security Deposit</strong>
+</div>
+
+<section class="prop-hero">
+  <h1>502 Market Street</h1>
+  <div class="subtitle">Newark, NJ &bull; Building Code: 505812</div>
+  <div class="stats">
+    <div class="stat"><div class="stat-val">2</div><div class="stat-label">Units Available</div></div>
+    <div class="stat"><div class="stat-val">$1,999</div><div class="stat-label">1BR From</div></div>
+    <div class="stat"><div class="stat-val">$2,499</div><div class="stat-label">2BR From</div></div>
+  </div>
+  <div class="hero-btns">
+    <a href="https://book.rosaliagroup.com/book" class="btn btn-gold">Book a Tour</a>
+    <a href="https://drive.google.com/drive/folders/1eXb5UtI9md7MJzqSAGyPjA5opyiv88hO" target="_blank" class="btn btn-outline">View Photos &amp; Videos</a>
+  </div>
+</section>
+
+<div class="section-title">1 Bedroom Units</div>
+<div class="unit-grid">
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">1A</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$1,999<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">1B</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$1,999<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">1D</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$1,999<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">1E</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$1,999<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">2B</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,200<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">2D</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,099<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">2E</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,099<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">2F</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,099<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">3B</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,250<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">3D</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,175<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">3E</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,100<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">3F</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,099<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">4B</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,299<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">4D</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,200<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">4E</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,199<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">4F</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,199<small>/mo</small></div></div>
+  <div class="unit-card available"><div class="unit-header"><span class="unit-number">5B</span><span class="unit-badge badge-available">Available</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,300<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">5D</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,225<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">5E</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,250<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">5F</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD</div><div class="unit-price">$2,250<small>/mo</small></div></div>
+</div>
+
+<div class="section-title">1 Bedroom + Den</div>
+<div class="unit-grid">
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">2C</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD + Den</div><div class="unit-price">$2,449<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">3C</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD + Den</div><div class="unit-price">$2,499<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">4C</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD + Den</div><div class="unit-price">$2,549<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">5C</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">1BD + Den</div><div class="unit-price">$2,599<small>/mo</small></div></div>
+</div>
+
+<div class="section-title">2 Bedroom Units</div>
+<div class="unit-grid">
+  <div class="unit-card available"><div class="unit-header"><span class="unit-number">1C</span><span class="unit-badge badge-available">Available</span></div><div class="unit-type">2BD</div><div class="unit-price">$2,499<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">2A</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">2BD</div><div class="unit-price">$2,750<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">3A</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">2BD</div><div class="unit-price">$2,850<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">4A</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">2BD</div><div class="unit-price">$2,950<small>/mo</small></div></div>
+  <div class="unit-card"><div class="unit-header"><span class="unit-number">5A</span><span class="unit-badge badge-leased">Leased</span></div><div class="unit-type">2BD</div><div class="unit-price">$3,050<small>/mo</small></div></div>
+</div>
+
+<section class="amenities">
+  <h2>Building Amenities</h2>
+  <div class="amenity-grid">
+    <div class="amenity-item">In-Unit Laundry</div>
+    <div class="amenity-item">Water &amp; Trash Included</div>
+    <div class="amenity-item">Pet Friendly ($65/mo + $500 dep)</div>
+    <div class="amenity-item">Bike Storage Included</div>
+    <div class="amenity-item">$500 Security Deposit</div>
+  </div>
+</section>
+
+<footer class="prop-footer">
+  <p>Rosalia Group | (862) 333-1681 | <a href="mailto:inquiries@rosaliagroup.com">inquiries@rosaliagroup.com</a></p>
+  <p style="margin-top:.5rem;">Prices subject to change. Last updated May 31, 2026.</p>
+</footer>
+</body>
+</html>
