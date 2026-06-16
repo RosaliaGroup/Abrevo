@@ -843,7 +843,17 @@ function isIron65TourLead(from, subject, body) {
   return false;
 }
 
+function isApartmentsComLead(from, subject, body) {
+  if ((from || '').toLowerCase().includes('apartments.com')) return true;
+  if ((from || '').toLowerCase().includes('apartmentlist')) return true;
+  if (/true lead|new lead.*apartments/i.test(subject || '')) return true;
+  if ((body || '').toLowerCase().includes("renter's information")) return true;
+  if ((body || '').toLowerCase().includes('apartments.com network')) return true;
+  return false;
+}
+
 function shouldSkip(from, subject) {
+  if (isApartmentsComLead(from, subject)) return false;
   if (isIron65TourLead(from, subject)) return false;
   if (isAppFolioLead(from, subject)) return false;
   if (isGoogleVoiceLead(from, subject)) return false;
@@ -877,6 +887,7 @@ function shouldSkip(from, subject) {
 }
 
 function isLead(subject, body, from) {
+  if (isApartmentsComLead(from || '', subject || '', body || '')) return true;
   if (isIron65TourLead(from || '', subject || '', body || '')) return true;
   if (isAppFolioLead(from || '', subject || '', body || '')) return true;
   if (isGoogleVoiceLead(from || '', subject || '')) return true;
@@ -2086,7 +2097,7 @@ exports.handler = async (event) => {
 
         console.log('Lead detected! Phone:', phone || 'none found');
 
-        const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject) || isZillowLead(from) || isAppFolioLead(from, subject, body)) ? realEmail : fromEmail;
+        const checkEmail = (isAvailLead(from) || isWebflowLead(from, subject) || isZillowLead(from) || isAppFolioLead(from, subject, body) || isApartmentsComLead(from, subject, body)) ? realEmail : fromEmail;
         const skipRecentCheck = isAvailLead(from) || from.includes('reply.avail.co') || from.includes('@avail.co') || isFUBLead(from, subject);
 
         // New emails get 4h throttle
@@ -2258,6 +2269,26 @@ exports.handler = async (event) => {
           }
           leadClient = 'Iron 65 - 65 McWhorter St, Newark NJ';
           console.log('Iron65 Brevo tour lead:', { realName, realEmail, phone });
+        }
+
+        // Apartments.com lead parsing
+        if (isApartmentsComLead(from, subject, body)) {
+          const aptNameMatch = body.match(/Name:\s*([^\n\r]+)/i);
+          const aptPhoneMatch = body.match(/Phone:\s*([\d]+)/i);
+          const aptEmailMatch = body.match(/Email:\s*([^\s\n\r]+)/i);
+          const aptBedsMatch = body.match(/Beds\/Baths:\s*([^\n\r]+)/i);
+
+          if (aptNameMatch) realName = aptNameMatch[1].trim();
+          if (aptEmailMatch) realEmail = aptEmailMatch[1].trim();
+          if (aptPhoneMatch) {
+            let p = aptPhoneMatch[1].replace(/\D/g, '');
+            if (p.length === 10) p = '+1' + p;
+            phone = p;
+          }
+          if ((body || '').toLowerCase().includes('iron65') || (body || '').toLowerCase().includes('iron 65') || (body || '').toLowerCase().includes('mcwhorter')) {
+            leadClient = 'Iron 65 - 65 McWhorter St, Newark NJ';
+          }
+          console.log('Apartments.com lead:', { realName, realEmail, phone, property: leadClient });
         }
 
         // AppFolio sends from guestcards@appfolio.com but real lead email is in reply-to
