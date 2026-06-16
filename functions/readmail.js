@@ -136,8 +136,8 @@ function getPropertyMedia(property, message, unitNumber) {
     if (/duplex/i.test(raw)) return IRON65_MODELS['duplex'];
     if (/2\s*b[re]d|2br|two\s*bed/i.test(raw)) return IRON65_MODELS['02'];
     if (/1\s*b[re]d|1br|one\s*bed/i.test(raw)) return 'https://drive.google.com/file/d/15QalYV80cwWyJ6W8r0DGmmHXV7121yoe/view';
-    // No match — send studio video (1BR added separately in email builder)
-    return 'https://drive.google.com/file/d/1Ufb0l-4L-uNxpzIBKIA2g2upR2YsWMI-/view';
+    // No match — AI will ask unit type, don't send videos
+    return null;
   }
 
   // Iron Pointe / 39 Madison — floor plans and 2BR video
@@ -264,6 +264,7 @@ CRITICAL RULES:
 - Do NOT say things like "you'd be a great fit", "you qualify", "sounds perfect for you", or make any judgment about the lead's eligibility — just be warm and helpful
 - Do NOT use excited or enthusiastic language like "I'm excited", "I'd love to", "Great news", "Amazing". Keep the tone warm and professional but not overly enthusiastic
 - Do NOT end sentences with "soon." as a standalone word or fragment
+- When a lead inquires about Iron 65 and does NOT mention a specific unit type (studio, 1 bedroom, 2 bedroom, loft), ask them: "What size are you looking for — studio, 1 bedroom, or a loft?" BEFORE sending photo links
 - PRICING RULES:
   - Do NOT volunteer pricing unprompted
   - When a lead ASKS about price, rent, cost, or how much — answer directly with the correct pricing for the property they mentioned
@@ -1988,8 +1989,10 @@ exports.handler = async (event) => {
           continue;
         }
 
-        const previousReply = await getPreviousThread(fromEmail);
-        const isReply = subject.toLowerCase().startsWith('re:') || !!previousReply;
+        // Form submissions from shared sender addresses should never be treated as thread replies
+        const isFormSubmission = isIron65TourLead(from, subject, body) || isWebflowLead(from, subject) || isApartmentsComLead(from, subject, body);
+        const previousReply = isFormSubmission ? null : await getPreviousThread(fromEmail);
+        const isReply = !isFormSubmission && (subject.toLowerCase().startsWith('re:') || !!previousReply);
         if (isReply) console.log('Thread reply detected');
 
         let phone = null;
@@ -2203,9 +2206,7 @@ exports.handler = async (event) => {
         const hasSpecificType = /studio|0\s*bed|1\s*b(?:ed|r)|one\s*bed|2\s*b(?:ed|r)|two\s*bed|loft|duplex/i.test(body);
         const is502Market = /502\s*market|500\s*market/i.test(propForMedia);
         const has502BedType = /1\s*b(?:ed|r)|one\s*bed|2\s*b(?:ed|r)|two\s*bed/i.test(body);
-        const mediaLink2 = (isIron65Media && !hasSpecificType && !unitNumber)
-          ? 'https://drive.google.com/file/d/15QalYV80cwWyJ6W8r0DGmmHXV7121yoe/view'
-          : (is502Market && !has502BedType)
+        const mediaLink2 = (is502Market && !has502BedType)
           ? 'https://drive.google.com/drive/folders/1Q_dfJG97uFZHCC_4fuGZt0o1M0qZmD_B'
           : null;
         if (mediaLink) {

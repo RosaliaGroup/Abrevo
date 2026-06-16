@@ -337,8 +337,9 @@ exports.handler = async (event) => {
         } else if (wantsLoft) {
           mediaLink = 'https://drive.google.com/drive/folders/1VetphM-E2AghDux37UkGXu5vNkNcefh5';
         } else {
-          mediaLink = 'https://drive.google.com/file/d/1Ufb0l-4L-uNxpzIBKIA2g2upR2YsWMI-/view';
-          mediaLink2 = 'https://drive.google.com/file/d/15QalYV80cwWyJ6W8r0DGmmHXV7121yoe/view';
+          // Don't send videos — AI will ask unit type
+          mediaLink = null;
+          mediaLink2 = null;
         }
       }
 
