@@ -320,6 +320,9 @@ exports.handler = async (event) => {
         .replace(/https?:\/\/book\.rosaliagroup\.com[^\s]*/g, '')
         .replace(/Ana Haynes[\s\S]*?inquiries@rosaliagroup\.com/g, '')
         .replace(/Rosalia Group[\s|]+\(862\)[\s\S]*?inquiries@rosaliagroup\.com/g, '')
+        .replace(/Looking forward to (connecting|meeting you|hearing from you|speaking with you|connecting with you)[.!]?/gi, '')
+        .replace(/Don't hesitate to reach out.*$/gim, '')
+        .replace(/Feel free to reach out.*$/gim, '')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 
@@ -337,12 +340,11 @@ exports.handler = async (event) => {
         <a href="${mediaLink}" style="color:#C9A84C;font-weight:bold;text-decoration:none;display:block;margin:8px 0;">\u{1F4F8} ${mediaLink2 ? 'Studio \u2014 ' : ''}View Photos &amp; Videos</a>
         ${mediaLink2 ? `<a href="${mediaLink2}" style="color:#C9A84C;font-weight:bold;text-decoration:none;display:block;margin:8px 0;">\u{1F4F8} 1 Bedroom \u2014 View Photos &amp; Videos</a>` : ''}
         <em style="font-size:12px;color:#999;">*Actual unit may vary. Photos shown are of the same layout/model.</em>
+        ` : ''}
         <br>
-        <a href="${bookingLinkUrl}" style="color:#C9A84C;font-weight:bold;text-decoration:none;display:block;margin:8px 0;">\u{1F4C5} Book a Tour</a>
-        ` : `
+        <a href="${bookingLinkUrl}" style="display:inline-block;margin:16px 0;padding:14px 28px;background-color:#C9A84C;color:#07070a;font-family:Georgia,serif;font-size:17px;font-weight:bold;text-decoration:none;border-radius:4px;">\u{1F4C5} Book a Tour</a>
         <br><br>
-        <a href="${bookingLinkUrl}" style="color:#C9A84C;font-weight:bold;text-decoration:none;display:block;margin:8px 0;">\u{1F4C5} Book a Tour</a>
-        `}
+        <span style="color:#555;">Looking forward to connecting with you!</span>
         ${signature}
       </div>`;
 
