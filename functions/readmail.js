@@ -1457,7 +1457,7 @@ async function sendReply(replyTo, subject, replyText, ccEmail) {
       else if (url.includes('15QalYV80cwWyJ6W8r0DGmmHXV7121yoe')) linkLabel = '1 Bedroom \u2014 View Photos &amp; Videos';
       return `<br><strong>\u{1F4F8} <a href="${url}" style="color:#C9A84C;text-decoration:underline;">${linkLabel}</a></strong>`;
     }
-    return `<a href="${url}" style="color:#C9A84C;text-decoration:underline;">Book Your Tour Here</a>`;
+    return `<a href="${url}" style="color:#C9A84C;font-weight:bold;text-decoration:none;font-size:17px;">\u{1F4C5} Book a Tour</a>`;
   });
   const htmlBody = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">${replyHtml}</div>`;
   // Always CC inquiries@ so Ana sees every reply; merge with any extra ccEmail

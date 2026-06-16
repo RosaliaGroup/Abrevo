@@ -352,7 +352,7 @@ exports.handler = async (event) => {
         <em style="font-size:12px;color:#999;">*Actual unit may vary. Photos shown are of the same layout/model.</em>
         ` : ''}
         <br>
-        <a href="${bookingLinkUrl}" style="display:inline-block;margin:16px 0;padding:14px 28px;background-color:#C9A84C;color:#07070a;font-family:Georgia,serif;font-size:17px;font-weight:bold;text-decoration:none;border-radius:4px;">\u{1F4C5} Book a Tour</a>
+        <a href="${bookingLinkUrl}" style="color:#C9A84C;font-weight:bold;text-decoration:none;font-size:17px;display:block;margin:12px 0;">\u{1F4C5} Book a Tour</a>
         <br><br>
         <span style="color:#555;">Looking forward to connecting with you!</span>
         ${signature}
