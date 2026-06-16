@@ -79,7 +79,7 @@ Message: ${lead.message || 'Interested in properties'}
 Price range: ${lead.price ? '$' + Number(lead.price).toLocaleString() : 'not specified'}
 Timeframe: ${lead.timeframe || 'not specified'}
 
-Under 120 words. Warm, professional, not salesy. No bullet points. Reply with ONLY the email body.`;
+Under 120 words. Warm, professional, not salesy. No bullet points. Do NOT say things like 'you'd be a great fit', 'you qualify', 'sounds perfect for you', or make any judgment about the lead's eligibility. Just be warm and helpful. Reply with ONLY the email body.`;
 
   } else {
     const isIronPointe = /iron.?pointe|resipointe|madison/i.test(lead.property || '');
@@ -100,7 +100,7 @@ Message: ${lead.message || 'Interested in renting'}
 ${lead.bedrooms ? 'Bedrooms: ' + lead.bedrooms : ''}
 ${lead.budget ? 'Budget: ' + lead.budget : ''}
 
-Under 120 words. Warm, professional, not salesy. No bullet points. Reply with ONLY the email body.`;
+Under 120 words. Warm, professional, not salesy. No bullet points. Do NOT say things like 'you'd be a great fit', 'you qualify', 'sounds perfect for you', or make any judgment about the lead's eligibility. Just be warm and helpful. Reply with ONLY the email body.`;
   }
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
