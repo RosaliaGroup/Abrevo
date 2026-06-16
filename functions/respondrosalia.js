@@ -313,23 +313,32 @@ exports.handler = async (event) => {
         }
       }
 
-      // Build clean HTML email with labeled links + explicit photos/booking blocks
+      // Strip booking URLs from AI reply — we add them explicitly at the bottom
       const bookingLinkUrl = getBookingLink(parsedLead);
+      const cleanReply = emailReply
+        .replace(/\u{1F4C5}\s*https?:\/\/book\.rosaliagroup\.com[^\s]*/gu, '')
+        .replace(/https?:\/\/book\.rosaliagroup\.com[^\s]*/g, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
       const htmlEmail = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#333;max-width:600px;">
-        ${emailReply.replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<>"]+)/g, (match) => {
+        ${cleanReply.replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<>"]+)/g, (match) => {
           if (match.includes('properties.rosaliagroup.com') || match.includes('drive.google.com') || match.includes('abrevo.co/properties')) {
             return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4F8} View Photos &amp; Videos</a>';
           }
-          if (match.includes('book.rosaliagroup.com')) {
-            return '<a href="' + match + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4C5} Book a Tour</a>';
-          }
           return '<a href="' + match + '" style="color:#C9A84C;text-decoration:none;">' + match + '</a>';
         })}
-        ${mediaLink ? '<br><br><div style="margin:16px 0;">' +
-          (mediaLink2
-            ? '<a href="' + mediaLink + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4F8} Studio \u2014 View Photos &amp; Videos</a><br><a href="' + mediaLink2 + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;">\u{1F4F8} 1 Bedroom \u2014 View Photos &amp; Videos</a><br>'
-            : '<a href="' + mediaLink + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;font-size:15px;">\u{1F4F8} View Photos &amp; Videos</a><br>') +
-          '<em style="font-size:12px;color:#999;">*Actual unit may vary. Photos shown are of the same layout/model.</em></div><div style="margin:8px 0;"><a href="' + bookingLinkUrl + '" style="color:#C9A84C;font-weight:bold;text-decoration:none;font-size:15px;">\u{1F4C5} Book a Tour</a></div>' : ''}
+        ${mediaLink ? `
+        <br><br>
+        <a href="${mediaLink}" style="color:#C9A84C;font-weight:bold;text-decoration:none;display:block;margin:8px 0;">\u{1F4F8} ${mediaLink2 ? 'Studio \u2014 ' : ''}View Photos &amp; Videos</a>
+        ${mediaLink2 ? `<a href="${mediaLink2}" style="color:#C9A84C;font-weight:bold;text-decoration:none;display:block;margin:8px 0;">\u{1F4F8} 1 Bedroom \u2014 View Photos &amp; Videos</a>` : ''}
+        <em style="font-size:12px;color:#999;">*Actual unit may vary. Photos shown are of the same layout/model.</em>
+        <br>
+        <a href="${bookingLinkUrl}" style="color:#C9A84C;font-weight:bold;text-decoration:none;display:block;margin:8px 0;">\u{1F4C5} Book a Tour</a>
+        ` : `
+        <br><br>
+        <a href="${bookingLinkUrl}" style="color:#C9A84C;font-weight:bold;text-decoration:none;display:block;margin:8px 0;">\u{1F4C5} Book a Tour</a>
+        `}
       </div>`;
 
       const savedLead = await saveOrUpdateLead(parsedLead, emailReply);
