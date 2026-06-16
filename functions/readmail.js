@@ -2151,10 +2151,16 @@ exports.handler = async (event) => {
         const appfolioPropertyMatch = subject.match(/New Lead for (.+?)(?:\s*-|\s*$)/i);
         const appfolioProperty = appfolioPropertyMatch ? appfolioPropertyMatch[1].trim() : null;
 
-        // Append property photos/videos link if available
+        // Insert property photos/videos link before booking link
         const mediaLink = getPropertyMedia(appfolioProperty || leadContext?.property, body, unitNumber);
         if (mediaLink) {
-          replyText = replyText + '\n\nView photos and videos of the unit:\n' + mediaLink;
+          const bookingPattern = /(https?:\/\/book\.rosaliagroup\.com[^\s]*)/;
+          if (bookingPattern.test(replyText)) {
+            replyText = replyText.replace(bookingPattern, `${mediaLink}\n\n$1`);
+          } else {
+            replyText = replyText + `\n\n${mediaLink}`;
+          }
+          replyText = replyText + '\n*Actual unit may vary. Photos shown are of the same layout/model.';
         }
 
         const effectiveReplyTo = (isAvailLead(from) || isWebflowLead(from, subject)) ? realEmail : replyTo;
