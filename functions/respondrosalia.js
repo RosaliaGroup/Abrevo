@@ -302,10 +302,11 @@ exports.handler = async (event) => {
       const msg = (parsedLead.message || '').toLowerCase();
       const isIronPointe = /iron.?pointe|39.?madison|28.?jefferson/i.test(propText);
       if (isIronPointe) {
+        mediaLink = 'https://properties.rosaliagroup.com/properties/39-madison.html';
         if (/floor.?plan|blueprint|layout/i.test(msg)) {
-          mediaLink = 'https://drive.google.com/file/d/1XKjfX9SNN8Gf7yvP_w3VKhGHM79_FlLU/view';
+          mediaLink2 = 'https://drive.google.com/file/d/1XKjfX9SNN8Gf7yvP_w3VKhGHM79_FlLU/view';
         } else if (/2\s*b(?:ed|r)|two\s*bed/i.test(msg)) {
-          mediaLink = 'https://drive.google.com/file/d/1WmD2LsDCbjE26LBv-qAxodSpK40NcWqi/view';
+          mediaLink2 = 'https://drive.google.com/file/d/1WmD2LsDCbjE26LBv-qAxodSpK40NcWqi/view';
         }
       }
 
