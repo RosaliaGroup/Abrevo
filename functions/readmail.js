@@ -81,36 +81,36 @@ Ana Haynes | Rosalia Group
 };
 
 const PROPERTY_MEDIA = {
-  'iron 65': 'https://properties.rosaliagroup.com/properties/iron65.html',
-  'mcwhorter': 'https://properties.rosaliagroup.com/properties/iron65.html',
-  '39 madison': 'https://properties.rosaliagroup.com/properties/39-madison.html',
-  'iron pointe': 'https://properties.rosaliagroup.com/properties/39-madison.html',
-  '502 market': 'https://properties.rosaliagroup.com/properties/502-market.html',
-  '486 market': 'https://properties.rosaliagroup.com/properties/486-market.html',
-  '556 market': 'https://properties.rosaliagroup.com/properties/556-market.html',
-  '76 webster': 'https://properties.rosaliagroup.com/properties/74-webster.html',
-  '74 webster': 'https://properties.rosaliagroup.com/properties/74-webster.html',
-  '11 thomas': 'https://properties.rosaliagroup.com/properties/11-thomas.html',
-  '162 university': 'https://properties.rosaliagroup.com/properties/164-university.html',
-  '164 university': 'https://properties.rosaliagroup.com/properties/164-university.html',
+  'iron 65': 'https://silver-ganache-1ee2ca.netlify.app/properties/iron65.html',
+  'mcwhorter': 'https://silver-ganache-1ee2ca.netlify.app/properties/iron65.html',
+  '39 madison': 'https://silver-ganache-1ee2ca.netlify.app/properties/39-madison.html',
+  'iron pointe': 'https://silver-ganache-1ee2ca.netlify.app/properties/39-madison.html',
+  '502 market': 'https://silver-ganache-1ee2ca.netlify.app/properties/502-market.html',
+  '486 market': 'https://silver-ganache-1ee2ca.netlify.app/properties/486-market.html',
+  '556 market': 'https://silver-ganache-1ee2ca.netlify.app/properties/556-market.html',
+  '76 webster': 'https://silver-ganache-1ee2ca.netlify.app/properties/74-webster.html',
+  '74 webster': 'https://silver-ganache-1ee2ca.netlify.app/properties/74-webster.html',
+  '11 thomas': 'https://silver-ganache-1ee2ca.netlify.app/properties/11-thomas.html',
+  '162 university': 'https://silver-ganache-1ee2ca.netlify.app/properties/164-university.html',
+  '164 university': 'https://silver-ganache-1ee2ca.netlify.app/properties/164-university.html',
   '289 halsey': 'https://drive.google.com/drive/folders/1kev7bJ_fghfiTZMKxfPCVd0OHU6GXRqQ',
-  '136 s 7th': 'https://properties.rosaliagroup.com/properties/other-listings.html',
+  '136 s 7th': 'https://silver-ganache-1ee2ca.netlify.app/properties/other-listings.html',
   '276 duncan': 'https://drive.google.com/drive/folders/1Of1V_qyNadngRyy2croUqDEXoQIaT7QT',
   '440 elizabeth': 'https://drive.google.com/drive/folders/1Hs2PO3lHQ0S1Pp_9VWO2sWXdFsyQCbv8',
   'the elks': 'https://drive.google.com/drive/folders/1EZHwoZwuZtBMXPe_SuytMVmTC0ujcJB9',
   '180 ferry': 'https://drive.google.com/drive/folders/1C4u8bniEiZlecCxl1dCJLE4fhgYXz0SE',
   '80 freeman': 'https://drive.google.com/drive/folders/1R5lzPHPkbtncNt6XPjTZ7D57J6FYQhXe',
   // Address aliases
-  '28 jefferson': 'https://properties.rosaliagroup.com/properties/39-madison.html',
-  '6 madison': 'https://properties.rosaliagroup.com/properties/486-market.html',
-  '500 market': 'https://properties.rosaliagroup.com/properties/502-market.html',
-  '554 market': 'https://properties.rosaliagroup.com/properties/556-market.html',
-  '65a mcwhorter': 'https://properties.rosaliagroup.com/properties/iron65.html',
-  '65 mcwhorter': 'https://properties.rosaliagroup.com/properties/iron65.html',
-  '176 garfield': 'https://properties.rosaliagroup.com/properties/other-listings.html',
-  '86 wilson': 'https://properties.rosaliagroup.com/properties/other-listings.html',
-  '883 springfield': 'https://properties.rosaliagroup.com/properties/other-listings.html',
-  '53 bleeker': 'https://properties.rosaliagroup.com/properties/other-listings.html',
+  '28 jefferson': 'https://silver-ganache-1ee2ca.netlify.app/properties/39-madison.html',
+  '6 madison': 'https://silver-ganache-1ee2ca.netlify.app/properties/486-market.html',
+  '500 market': 'https://silver-ganache-1ee2ca.netlify.app/properties/502-market.html',
+  '554 market': 'https://silver-ganache-1ee2ca.netlify.app/properties/556-market.html',
+  '65a mcwhorter': 'https://silver-ganache-1ee2ca.netlify.app/properties/iron65.html',
+  '65 mcwhorter': 'https://silver-ganache-1ee2ca.netlify.app/properties/iron65.html',
+  '176 garfield': 'https://silver-ganache-1ee2ca.netlify.app/properties/other-listings.html',
+  '86 wilson': 'https://silver-ganache-1ee2ca.netlify.app/properties/other-listings.html',
+  '883 springfield': 'https://silver-ganache-1ee2ca.netlify.app/properties/other-listings.html',
+  '53 bleeker': 'https://silver-ganache-1ee2ca.netlify.app/properties/other-listings.html',
 };
 
 function getPropertyMedia(property, message, unitNumber) {
@@ -144,7 +144,7 @@ function getPropertyMedia(property, message, unitNumber) {
   if (/iron.?pointe|39.?madison|28.?jefferson/i.test(text)) {
     if (/floor.?plan|blueprint|layout/i.test(raw)) return 'https://drive.google.com/file/d/1XKjfX9SNN8Gf7yvP_w3VKhGHM79_FlLU/view';
     if (/2\s*b(?:ed|r)|two\s*bed/i.test(raw)) return 'https://drive.google.com/file/d/1WmD2LsDCbjE26LBv-qAxodSpK40NcWqi/view';
-    return 'https://properties.rosaliagroup.com/properties/39-madison.html';
+    return 'https://silver-ganache-1ee2ca.netlify.app/properties/39-madison.html';
   }
 
   // 502 Market — unit-specific folders
@@ -190,7 +190,7 @@ function getIron65MediaLink(unitNumber) {
   }
   if (/loft/i.test(unitNumber)) return IRON65_MODELS['loft'];
   if (/duplex/i.test(unitNumber)) return IRON65_MODELS['duplex'];
-  return 'https://properties.rosaliagroup.com/properties/iron65.html';
+  return 'https://silver-ganache-1ee2ca.netlify.app/properties/iron65.html';
 }
 
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
@@ -1484,7 +1484,7 @@ async function sendReply(replyTo, subject, replyText, ccEmail) {
   // Restore URLs as clickable links
   let replyHtml = cleaned.replace(/__URL_(\d+)__/g, (_, i) => {
     const url = urls[parseInt(i)];
-    if (url.includes('drive.google.com') || url.includes('abrevo.co/properties') || url.includes('properties.rosaliagroup.com')) {
+    if (url.includes('drive.google.com') || url.includes('abrevo.co/properties') || url.includes('properties.rosaliagroup.com') || url.includes('silver-ganache-1ee2ca.netlify.app/properties')) {
       let linkLabel = 'View Photos &amp; Videos';
       if (url.includes('1Ufb0l-4L-uNxpzIBKIA2g2upR2YsWMI-')) linkLabel = 'Studio \u2014 View Photos &amp; Videos';
       else if (url.includes('15QalYV80cwWyJ6W8r0DGmmHXV7121yoe')) linkLabel = '1 Bedroom \u2014 View Photos &amp; Videos';
