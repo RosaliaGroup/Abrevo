@@ -31,6 +31,9 @@
 [functions."appointment-reminder"]
   schedule = "0 14 * * *"
   node_bundler = "nft"
+[functions."appointment-reminder-evening"]
+  schedule = "0 0 * * *"
+  node_bundler = "nft"
 [[redirects]]
   from = "/social.html"
   to = "/social.html"
