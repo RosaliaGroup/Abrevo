@@ -1,6 +1,9 @@
 {
   "name": "abrevo-functions",
   "version": "1.0.0",
+  "scripts": {
+    "test": "node --test functions/book-hvac.test.js"
+  },
   "dependencies": {
     "nodemailer": "^6.9.7",
     "googleapis": "^128.0.0",
