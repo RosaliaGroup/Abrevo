@@ -1,41 +1,134 @@
-const { google } = require('googleapis');
-const nodemailer = require('nodemailer');
+// Mechanical Enterprise — HVAC booking function (Vapi tool: book-hvac).
+//
+// ISOLATION (Mechanical-only infrastructure):
+//   - SMS:      Telnyx            (TELNYX_API_KEY / TELNYX_FROM_NUMBER)
+//   - Calendar: Mechanical Google Calendar (MECHANICAL_CALENDAR_ID) — NO Rosalia fallback
+//   - Database: Mechanical Supabase (MECHANICAL_SUPABASE_URL / MECHANICAL_SUPABASE_SERVICE_KEY)
+//               → table `hvac_appointments` with real HVAC field names
+//   - Email:    Mechanical sender (MECHANICAL_FROM_EMAIL)
+//
+// The public Vapi request + response contract is UNCHANGED (same request fields,
+// same 200/400/500 shapes). SMS / calendar / Supabase / email failures remain
+// non-blocking, exactly as before.
+//
+// FOLLOW-UP (do NOT fix in this PR — tracked separately): the ET offset is
+// hardcoded to -4 (EDT) below; it does not handle EST / DST transitions. Date
+// parsing is intentionally left unchanged here.
 
-const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com'; // Rosalia calendar
-const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 const SALES_EMAIL = 'sales@mechanicalenterprise.com';
-const FROM_EMAIL = 'inquiries@rosaliagroup.com';
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
-});
+// Required configuration. If any is missing we return a controlled error rather
+// than silently falling back to shared Rosalia services. Values are never logged.
+const REQUIRED_ENV = [
+  'TELNYX_API_KEY',
+  'TELNYX_FROM_NUMBER',
+  'MECHANICAL_CALENDAR_ID',
+  'MECHANICAL_SUPABASE_URL',
+  'MECHANICAL_SUPABASE_SERVICE_KEY',
+  'MECHANICAL_FROM_EMAIL',
+  'GOOGLE_CREDENTIALS',
+  'GMAIL_USER',
+  'GMAIL_PASS',
+];
 
-async function sendSMS(phone, message) {
-  if (!phone) return;
-  let p = phone.toString().replace(/\D/g, '');
-  if (p.length === 10) p = '+1' + p;
-  else if (p.length === 11 && !p.startsWith('+')) p = '+' + p;
-  try {
-    await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: p, message, key: TEXTBELT_KEY }),
-    });
-  } catch(e) { console.error('SMS error:', e.message); }
+function missingConfig(env = process.env) {
+  return REQUIRED_ENV.filter((k) => !env[k] || String(env[k]).trim() === '');
 }
 
+// ── Phone normalization / validation ─────────────────────────────────────────
+function normalizePhone(phone) {
+  if (!phone) return null;
+  const digits = phone.toString().replace(/\D/g, '');
+  if (digits.length === 10) return '+1' + digits;
+  if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+  return null;
+}
+function isPlausibleE164(v) {
+  return typeof v === 'string' && /^\+1\d{10}$/.test(v);
+}
+function maskPhone(v) {
+  const s = (v || '').toString();
+  return s ? '***' + s.slice(-4) : '(none)';
+}
+
+// ── SMS via Telnyx ───────────────────────────────────────────────────────────
+// Returns a structured result; never throws. Credentials are never logged and
+// the recipient number is masked to its last 4 digits.
+async function sendSMS(phone, message) {
+  const to = normalizePhone(phone);
+  const masked = maskPhone(to || phone);
+  if (!to || !isPlausibleE164(to)) {
+    console.error('[book-hvac][sms] invalid phone', masked);
+    return { success: false, provider: 'telnyx', messageId: null, error: 'invalid_phone' };
+  }
+  const apiKey = process.env.TELNYX_API_KEY;
+  const from = process.env.TELNYX_FROM_NUMBER;
+  if (!apiKey || !from) {
+    console.error('[book-hvac][sms] Telnyx not configured (TELNYX_API_KEY / TELNYX_FROM_NUMBER)');
+    return { success: false, provider: 'telnyx', messageId: null, error: 'not_configured' };
+  }
+  try {
+    const res = await fetch('https://api.telnyx.com/v2/messages', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to, text: message }),
+    });
+    const rawBody = await res.text().catch(() => '');
+    if (!res.ok) {
+      console.error('[book-hvac][sms] Telnyx rejected', res.status, 'to', masked, rawBody.slice(0, 200));
+      return { success: false, provider: 'telnyx', messageId: null, error: `telnyx_${res.status}` };
+    }
+    let data = null;
+    try { data = JSON.parse(rawBody); } catch { /* logged below */ }
+    const messageId = data && data.data && data.data.id ? data.data.id : null;
+    console.log('[book-hvac][sms] accepted to', masked, 'telnyxMessageId', messageId);
+    return { success: true, provider: 'telnyx', messageId, error: null };
+  } catch (e) {
+    console.error('[book-hvac][sms] network error to', masked, e.message);
+    return { success: false, provider: 'telnyx', messageId: null, error: e.message };
+  }
+}
+
+// ── Supabase row builder (real HVAC field names) ─────────────────────────────
+// NOTE: HVAC data is stored in HVAC-shaped columns — never remapped into the
+// legacy real-estate columns (apartment_size / preferred_area / move_in_date).
+function buildAppointmentRow(b, { calendarEventId = null, smsResult = null } = {}) {
+  return {
+    full_name: b.full_name,
+    phone: b.phone,
+    email: b.email || null,
+    preferred_date: b.preferred_date,
+    preferred_time: b.preferred_time,
+    appointment_type: b.appointment_type || 'free_consultation',
+    property_type: b.property_type || null,
+    property_address: b.property_address || null,
+    issue_description: b.issue_description || null,
+    budget: b.budget || null,
+    calendar_event_id: calendarEventId,
+    sms_provider: smsResult ? smsResult.provider : null,
+    sms_message_id: smsResult ? smsResult.messageId : null,
+    source: 'vapi',
+    status: 'scheduled',
+  };
+}
+
+// ── Google Calendar (Mechanical calendar only) ───────────────────────────────
 async function createCalendarEvent(booking) {
+  const calendarId = process.env.MECHANICAL_CALENDAR_ID;
+  if (!calendarId) {
+    // Fail clearly — never fall back to the Rosalia calendar.
+    console.error('[book-hvac][calendar] MECHANICAL_CALENDAR_ID missing — refusing to book to any other calendar');
+    return 'NO_CALENDAR_ID';
+  }
+
   const googleCredentials = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
   if (!googleCredentials.client_email) { return 'NO_CREDS'; }
-  
+
+  const { google } = require('googleapis');
   const auth = new google.auth.GoogleAuth({
     credentials: googleCredentials,
     scopes: ['https://www.googleapis.com/auth/calendar'],
   });
-
   const calendar = google.calendar({ version: 'v3', auth });
 
   let startDateTime;
@@ -64,7 +157,7 @@ async function createCalendarEvent(booking) {
       if (timeMatch[3].toUpperCase() === 'AM' && hours === 12) hours = 0;
     }
 
-    const etOffset = -4; // EDT
+    const etOffset = -4; // FOLLOW-UP: hardcoded EDT; does not handle EST/DST — do not fix in this PR.
     startDateTime = new Date(Date.UTC(year, monthNum, day, hours - etOffset, minutes));
   } catch(e) { return 'DATE_ERR:' + e.message; }
 
@@ -82,11 +175,22 @@ async function createCalendarEvent(booking) {
     attendees,
   };
 
-  const res = await calendar.events.insert({ calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com', resource: event, sendUpdates: 'none' });
+  const res = await calendar.events.insert({ calendarId, resource: event, sendUpdates: 'none' });
   console.log('Calendar event created:', res.data.id);
   return res.data.id;
 }
 
+// Lazily-created nodemailer transporter (test-overridable). Keeps the module
+// load free of heavy requires so unit tests need no installed deps.
+let _transporterOverride = null;
+function getTransporter() {
+  if (_transporterOverride) return _transporterOverride;
+  const nodemailer = require('nodemailer');
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
+  });
+}
 
 exports.handler = async (event) => {
   const headers = {
@@ -95,6 +199,14 @@ exports.handler = async (event) => {
     'Content-Type': 'application/json',
   };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
+
+  // Configuration gate — fail loudly rather than routing to shared Rosalia
+  // services. Only variable NAMES are logged, never their values.
+  const missing = missingConfig();
+  if (missing.length) {
+    console.error('[book-hvac] missing required configuration:', missing.join(', '));
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Server configuration error' }) };
+  }
 
   try {
     const booking = JSON.parse(event.body || '{}');
@@ -125,7 +237,7 @@ exports.handler = async (event) => {
           if (timeMatch[3].toUpperCase() === 'PM' && hours !== 12) hours += 12;
           if (timeMatch[3].toUpperCase() === 'AM' && hours === 12) hours = 0;
         }
-        const etOffset = -4;
+        const etOffset = -4; // FOLLOW-UP: hardcoded EDT (see note at top) — do not fix in this PR.
         const start = new Date(Date.UTC(year, monthNum, day, hours - etOffset, minutes));
         const now = new Date();
         const hoursUntilAppointment = (start - now) / (1000 * 60 * 60);
@@ -137,47 +249,44 @@ exports.handler = async (event) => {
       }
     }
 
-    // Create calendar event - non-blocking
+    // Create calendar event — non-blocking
     let eventId = null;
-    let calendarError = null;
-    try { const cr = await createCalendarEvent(booking); if (cr && !cr.startsWith('DATE')) eventId = cr; } catch(calErr) { console.error('Calendar error:', calErr.message); }
+    try { const cr = await createCalendarEvent(booking); if (cr && !cr.startsWith('DATE') && !cr.startsWith('NO_') && !cr.startsWith('BAD_')) eventId = cr; } catch(calErr) { console.error('Calendar error:', calErr.message); }
 
-    // Save to Supabase bookings table
+    // Send SMS confirmation to customer (Telnyx) — non-blocking. Captured so the
+    // provider + message id can be recorded on the appointment row.
+    let smsResult = null;
+    if (phone) {
+      smsResult = await sendSMS(phone, `Hi ${full_name.split(' ')[0]}! Your Mechanical Enterprise appointment is confirmed for ${preferred_date} at ${preferred_time}. Service: ${appointment_type || 'HVAC'}. Address: ${property_address || 'TBD'}. Questions? Call (862) 419-1763`);
+    }
+
+    // Save to Mechanical Supabase `hvac_appointments` table — non-blocking
     try {
-      const sbRes = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
+      const sbRes = await fetch(`${process.env.MECHANICAL_SUPABASE_URL}/rest/v1/hvac_appointments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Prefer: 'return=minimal' },
-        body: JSON.stringify({
-          full_name, phone, email,
-          preferred_date, preferred_time,
-          budget: appointment_type || 'free_consultation',
-          apartment_size: property_type || 'HVAC',
-          preferred_area: property_address || 'N/A',
-          move_in_date: issue_description || 'N/A',
-          calendar_event_id: eventId,
-          client: 'mechanical',
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: process.env.MECHANICAL_SUPABASE_SERVICE_KEY,
+          Authorization: `Bearer ${process.env.MECHANICAL_SUPABASE_SERVICE_KEY}`,
+          Prefer: 'return=minimal',
+        },
+        body: JSON.stringify(buildAppointmentRow(booking, { calendarEventId: eventId, smsResult })),
       });
       console.log('Supabase status:', sbRes.status);
     } catch(sbErr) { console.error('Supabase error:', sbErr.message); }
 
-    // Send SMS confirmation to customer
-    if (phone) {
-      await sendSMS(phone, `Hi ${full_name.split(' ')[0]}! Your Mechanical Enterprise appointment is confirmed for ${preferred_date} at ${preferred_time}. Service: ${appointment_type || 'HVAC'}. Address: ${property_address || 'TBD'}. Questions? Call (862) 419-1763`);
-    }
-
-    // Send email to sales team
-    try { await transporter.sendMail({
-      from: `"Mechanical Enterprise Booking" <${FROM_EMAIL}>`,
+    // Send email to sales team — non-blocking
+    try { await getTransporter().sendMail({
+      from: `"Mechanical Enterprise Booking" <${process.env.MECHANICAL_FROM_EMAIL}>`,
       to: SALES_EMAIL,
       subject: `New HVAC Appointment - ${full_name} | ${preferred_date} at ${preferred_time}`,
       text: `New HVAC Appointment - ${full_name}\nPhone: ${phone}\nEmail: ${email || 'N/A'}\nService: ${appointment_type || 'N/A'}\nProperty: ${property_address || 'N/A'}\nType: ${property_type || 'N/A'}\nIssue: ${issue_description || 'N/A'}\nDate: ${preferred_date} at ${preferred_time}\n\nCalendar event created`,
     }); } catch(se) { console.error('Sales email non-blocking:', se.message); }
 
-    // Send confirmation email to customer
+    // Send confirmation email to customer — non-blocking
     if (email) {
-      try { await transporter.sendMail({
-        from: `"Mechanical Enterprise" <${FROM_EMAIL}>`,
+      try { await getTransporter().sendMail({
+        from: `"Mechanical Enterprise" <${process.env.MECHANICAL_FROM_EMAIL}>`,
         to: email,
         subject: 'Your HVAC Appointment is Confirmed - Mechanical Enterprise',
         text: `Dear ${full_name},\n\nYour HVAC appointment has been confirmed.\n\nDate: ${preferred_date}\nTime: ${preferred_time}\nService: ${appointment_type || 'HVAC Appointment'}\nAddress: ${property_address || 'TBD'}\n\nOur team will confirm within 1 business hour. Questions? Call (862) 419-1763 or email sales@mechanicalenterprise.com.\n\nThank you,\nMechanical Enterprise LLC\n(862) 419-1763 | mechanicalenterprise.com`,
@@ -189,4 +298,15 @@ exports.handler = async (event) => {
     console.error('book-hvac error:', err.message);
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
+};
+
+// Test-only surface (ignored by Netlify, which invokes `exports.handler`).
+exports.__test = {
+  normalizePhone,
+  isPlausibleE164,
+  missingConfig,
+  buildAppointmentRow,
+  sendSMS,
+  REQUIRED_ENV,
+  setTransporter: (t) => { _transporterOverride = t; },
 };
