@@ -7,9 +7,9 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const mod = require('./book-hvac.js');
+const mod = require('../functions/book-hvac.js');
 const T = mod.__test;
-const SRC = fs.readFileSync(path.join(__dirname, 'book-hvac.js'), 'utf8');
+const SRC = fs.readFileSync(path.join(__dirname, '..', 'functions', 'book-hvac.js'), 'utf8');
 
 function fullEnv() {
   return {
