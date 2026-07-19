@@ -2315,45 +2315,28 @@ async function monLoadBookingsToday() {
   }
 }
 
-const TEXTBELT_KEY_1 = '0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW';
+// SECURITY (Phase 0, 2026-07-19): the previous implementation shipped a
+// Textbelt API key to the browser and sent SMS directly from the client
+// (fetch -> textbelt.com/text). That leaked a live credential and bypassed the
+// server. The client-side send is DISABLED until the server-side Telnyx
+// Communications backend exists. Use "Copy Cancel Link" to send manually for
+// now. Do NOT reintroduce any provider key into browser code.
 
 function monCopyCancelLink(url) {
   navigator.clipboard.writeText(url).then(() => toast('Cancel link copied!'));
 }
 
 async function monSmsCancelLink(phone, name, url, idx) {
-  if (!phone) { toast('No phone number'); return; }
+  // Client-side SMS send intentionally disabled — no secure server endpoint yet.
   const btn = document.getElementById('sms-btn-' + idx);
-  btn.disabled = true;
-  btn.textContent = 'Sending...';
-  try {
-    let normalizedPhone = phone.replace(/\D/g, '');
-    if (normalizedPhone.length === 10) normalizedPhone = '+1' + normalizedPhone;
-    else if (normalizedPhone.length === 11) normalizedPhone = '+' + normalizedPhone;
-    else normalizedPhone = '+' + normalizedPhone;
-    const firstName = (name || '').split(/\s/)[0] || 'there';
-    const msg = `Hi ${firstName}, here is your appointment management link: ${url} — you can reschedule or cancel here.`;
-    const r = await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: normalizedPhone, message: msg, key: TEXTBELT_KEY_1 })
-    });
-    const data = await r.json();
-    if (data.success) {
-      btn.textContent = 'Sent!';
-      btn.style.borderColor = 'var(--green)';
-      btn.style.color = 'var(--green)';
-      toast('SMS sent to ' + firstName);
-    } else {
-      throw new Error(data.error || 'SMS failed');
-    }
-  } catch (e) {
-    btn.textContent = 'Failed';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'SMS unavailable';
+    btn.title = 'Direct SMS is disabled pending the secure Communications backend. Use "Copy Cancel Link" to send manually.';
     btn.style.borderColor = 'var(--red)';
     btn.style.color = 'var(--red)';
-    toast('SMS failed: ' + e.message);
-    setTimeout(() => { btn.textContent = 'Send via SMS'; btn.disabled = false; btn.style.borderColor = ''; btn.style.color = ''; }, 3000);
   }
+  toast('Direct SMS is disabled — use "Copy Cancel Link" to send manually.');
 }
 
 // PANEL 9: Call Quality (24h)
