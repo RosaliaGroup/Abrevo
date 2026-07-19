@@ -12,7 +12,7 @@ process.env.SUPABASE_KEY = "test-service-key"; // dummy — never a real key
 process.env.TEXTBELT_KEY = "test-textbelt-key";
 process.env.NOTIFY_PHONE = "+15551234567";
 
-const { handler } = require("./contact.js");
+const { handler } = require("../functions/contact.js");
 
 function mkRes(status, body) {
   const text = typeof body === "string" ? body : JSON.stringify(body);
@@ -190,7 +190,7 @@ test("POST response carries CORS headers", async () => {
 });
 
 test("source file contains no hardcoded credentials", () => {
-  const src = fs.readFileSync(path.join(__dirname, "contact.js"), "utf8");
+  const src = fs.readFileSync(path.join(__dirname, "..", "functions", "contact.js"), "utf8");
   assert.ok(!/eyJ[A-Za-z0-9_.-]{20,}/.test(src), "no JWT literal in source");
   assert.ok(!/[0-9a-f]{40,}/i.test(src), "no long hex secret in source");
   assert.ok(src.includes("process.env.SUPABASE_KEY"), "reads SUPABASE_KEY from env");
