@@ -120,3 +120,20 @@ There is nothing production-ready for Abrevo to reuse. Recommended path: build a
 ## 10. Production blocker: Telnyx 10DLC
 
 **Telnyx 10DLC campaign registration must be approved before any production sends.** The earlier Twilio A2P attempt was rejected on opt-in/privacy-page grounds, so this is a real risk, not a formality. No production sends until 10DLC is approved and a compliant opt-in/privacy surface exists.
+
+---
+
+## 11. Phase 0 browser QA (2026-07-20)
+
+Method: served the worktree over local HTTP (`127.0.0.1`) and loaded `rosalia.html` in an isolated Chrome tab (no `file://`; the user's own tabs untouched). Exercised the neutralized System-Monitor "Send via SMS" action (`monSmsCancelLink`) with live network capture.
+
+| Check | Result |
+|---|---|
+| Neutralized SMS action no longer sends from the browser | **PASS** — function makes no `fetch`; body references no key/provider |
+| No request made to `textbelt.com` from the action | **PASS** — 0 `textbelt.com` requests captured across two invocations |
+| Clear unavailable message (not a silent failure) | **PASS** — button → "SMS unavailable" (disabled) + tooltip + toast "Direct SMS is disabled — use 'Copy Cancel Link' to send manually." |
+| Send-path key `TEXTBELT_KEY_1` present in browser source | **PASS** — absent (const removed) |
+| Unrelated page functionality still works | **PASS** — `monCopyCancelLink` fallback intact; page renders (title "Rosalia Group — Dashboard") |
+| No Textbelt key present anywhere in browser source | **PARTIAL** — send path clean, but the `monLoadSmsCredits` **quota panel still embeds both key literals** (2 `textbelt.com/quota` refs). Out of scope for the send-only fix; **resolved by rotating both keys** (§8). Recommend a follow-up to move quota checks server-side. |
+
+Note: the string `textbelt.com/text` still appears once in source — it is the **explanatory comment** in the neutralized function, not a live call (verified: the function makes no fetch).
