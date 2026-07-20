@@ -302,8 +302,6 @@ async function submitCancellation() {
   btn.textContent = 'Cancelling...';
 
   try {
-    var SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
-    var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
 
     var normalizedPhone = phone.replace(/\D/g, '');
     if (normalizedPhone.length === 10) normalizedPhone = '+1' + normalizedPhone;
