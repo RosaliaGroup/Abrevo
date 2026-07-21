@@ -8,6 +8,37 @@
   for = "/*"
   [headers.values]
     X-Custom-Domain = "app.abrevo.co"
+# ── GATE A CONTAINMENT (temporary) — path-selective admin gate ──────────────
+# Edge gate runs before HTML delivery, on production + previews. Credentials in
+# Netlify env (Functions scope): ADMIN_GATE_USER / ADMIN_GATE_PASS. Never in JS.
+# Admin FUNCTIONS self-gate in code (requireGateA), so NO edge matcher is added
+# for /.netlify/functions/* — genuine scheduled invocation stays untouched.
+# Booking/webhook/marketing routes are NOT gated. Replace when Gate B (Supabase Auth) lands.
+[[edge_functions]]
+  path = "/rosalia.html"
+  function = "admin-gate"
+[[edge_functions]]
+  path = "/rosalia"
+  function = "admin-gate"
+[[edge_functions]]
+  path = "/crm.html"
+  function = "admin-gate"
+[[edge_functions]]
+  path = "/crm"
+  function = "admin-gate"
+[[edge_functions]]
+  path = "/social.html"
+  function = "admin-gate"
+[[edge_functions]]
+  path = "/social"
+  function = "admin-gate"
+[[edge_functions]]
+  path = "/mechanical.html"
+  function = "admin-gate"
+[[edge_functions]]
+  path = "/mechanical"
+  function = "admin-gate"
+
 [functions]
   node_bundler = "esbuild"
 [functions."readmail"]

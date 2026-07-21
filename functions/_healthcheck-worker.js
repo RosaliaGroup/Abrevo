@@ -1,0 +1,212 @@
+// ============================================================================
+// _healthcheck-worker.js  —  private worker (NOT a Netlify endpoint) [v3]
+// ----------------------------------------------------------------------------
+// Holds the real probe + system_health write logic moved verbatim out of the
+// original healthcheck.js handler. Leading underscore => Netlify treats it as a
+// helper, not a deployed function.
+//
+// runHealthcheck({ dryRun }) -> { ok, status, record, dryRun? }
+//   dryRun=false : performs the Supabase write + alert email (real execution)
+//   dryRun=true  : computes the record and returns it, NO write, NO alert email
+// ============================================================================
+
+const nodemailer = require('nodemailer');
+
+const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const VAPI_KEY = process.env.VAPI_KEY;
+const TEXTBELT_KEY_1 = process.env.TEXTBELT_KEY;
+const TEXTBELT_KEY_2 = process.env.TEXTBELT_KEY_2;
+const GMAIL_USER = 'inquiries@rosaliagroup.com';
+const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
+const ALERT_EMAIL = 'ana@rosaliagroup.com';
+const BASE_URL = 'https://abrevo.co/.netlify/functions';
+
+async function testEndpoint(name, url) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    return { name, ok: r.status < 500, status: r.status };
+  } catch (e) {
+    return { name, ok: false, status: 0, error: e.message };
+  }
+}
+
+async function testBookEndpoint() {
+  try {
+    const r = await fetch('https://abrevo.co/.netlify/functions/book', { method: 'GET' });
+    return { name: 'book', ok: r.status < 500, status: r.status };
+  } catch (e) {
+    return { name: 'book', ok: false, error: e.message };
+  }
+}
+
+async function testTextbelt(key, label) {
+  try {
+    const r = await fetch(`https://textbelt.com/quota/${key}`);
+    const data = await r.json();
+    return { label, credits: data.quotaRemaining ?? 0 };
+  } catch (e) {
+    return { label, credits: -1, error: e.message };
+  }
+}
+
+async function testVapi() {
+  try {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const r = await fetch(`https://api.vapi.ai/call?createdAtGe=${todayStart}&limit=100`, {
+      headers: { Authorization: `Bearer ${VAPI_KEY}` }
+    });
+    const calls = await r.json();
+    const list = Array.isArray(calls) ? calls : [];
+    const total = list.length;
+    const voicemail = list.filter(c => c.endedReason === 'voicemail').length;
+    const hangup = list.filter(c => c.endedReason === 'customer-ended-call').length;
+    return {
+      calls_today: total,
+      voicemail_pct: total ? Math.round((voicemail / total) * 100) : 0,
+      hangup_pct: total ? Math.round((hangup / total) * 100) : 0
+    };
+  } catch (e) {
+    return { calls_today: 0, voicemail_pct: 0, hangup_pct: 0, error: e.message };
+  }
+}
+
+async function saveToSupabase(record) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/system_health`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`
+      },
+      body: JSON.stringify(record)
+    });
+    console.log('Health record saved to Supabase');
+  } catch (e) {
+    console.error('Failed to save health check:', e.message);
+  }
+}
+
+async function sendAlertEmail(issues, record) {
+  if (!GMAIL_PASS) { console.log('No GMAIL_PASS — skipping email alert'); return; }
+  try {
+    const transport = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: GMAIL_USER, pass: GMAIL_PASS }
+    });
+    const timeStr = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+    const body = `Abrevo System Health Alert
+Time: ${timeStr} ET
+
+Issues Found:
+${issues.map(i => '  - ' + i).join('\n')}
+
+Full Report:
+  Book.js: ${record.book_ok ? 'OK' : 'FAIL'}
+  Readmail: ${record.readmail_ok ? 'OK' : 'FAIL'}
+  Autocall: ${record.autocall_ok ? 'OK' : 'FAIL'}
+  Inventory: ${record.inventory_ok ? 'OK' : 'FAIL'}
+  SMS Key 1 (book.js): ${record.sms_key1_credits} credits
+  SMS Key 2 (readmail/outreach): ${record.sms_key2_credits} credits
+  Vapi Calls Today: ${record.vapi_calls_today}
+  Voicemail %: ${record.vapi_voicemail_pct}%
+  Hangup %: ${record.vapi_hangup_pct}%
+
+ACTION REQUIRED: Investigate the issues listed above.`;
+
+    await transport.sendMail({
+      from: `"Abrevo Health Monitor" <${GMAIL_USER}>`,
+      to: ALERT_EMAIL,
+      subject: '\uD83D\uDEA8 Abrevo System Alert',
+      text: body
+    });
+    console.log('Alert email sent to', ALERT_EMAIL);
+  } catch (e) {
+    console.error('Alert email failed:', e.message);
+  }
+}
+
+async function runHealthcheck({ dryRun = false } = {}) {
+  console.log('Health check starting...', dryRun ? '(DRY RUN)' : '');
+  const errors = [];
+
+  // SAFETY: readmail and autocall are OPERATIONAL scheduled functions — an HTTP POST
+  // makes readmail read the live Gmail inbox + send AI replies, and autocall place
+  // Vapi calls + SMS. A dry/manual run must NEVER invoke them, and an HTTP probe can
+  // never prove a cron actually executed. So in dryRun we skip them and report their
+  // execution as "unknown" (never "healthy"). The scheduled (cron) run is unchanged.
+  const unknownProbe = (name) => Promise.resolve({ name, ok: null, status: 'unknown', execution: 'unknown', skipped: true });
+  const [bookTest, readmailTest, autocallTest, inventoryTest] = await Promise.all([
+    testBookEndpoint(),
+    dryRun ? unknownProbe('readmail') : testEndpoint('readmail', `${BASE_URL}/readmail`),
+    dryRun ? unknownProbe('autocall') : testEndpoint('autocall', `${BASE_URL}/autocall`),
+    testEndpoint('inventory', `${BASE_URL}/inventory`)
+  ]);
+
+  // Only a definitive `false` counts as DOWN; an "unknown" (skipped) is neither up nor an error.
+  if (bookTest.ok === false) errors.push(`Book.js DOWN (${bookTest.error || 'HTTP ' + bookTest.status})`);
+  if (readmailTest.ok === false) errors.push(`Readmail DOWN (${readmailTest.error || 'HTTP ' + readmailTest.status})`);
+  if (autocallTest.ok === false) errors.push(`Autocall DOWN (${autocallTest.error || 'HTTP ' + autocallTest.status})`);
+  if (inventoryTest.ok === false) errors.push(`Inventory DOWN (${inventoryTest.error || 'HTTP ' + inventoryTest.status})`);
+
+  const [sms1, sms2] = await Promise.all([
+    testTextbelt(TEXTBELT_KEY_1, 'Key 1 (book.js)'),
+    testTextbelt(TEXTBELT_KEY_2, 'Key 2 (readmail)')
+  ]);
+
+  if (sms1.credits >= 0 && sms1.credits < 500) errors.push(`SMS Key 1 low: ${sms1.credits} credits`);
+  if (sms2.credits >= 0 && sms2.credits < 200) errors.push(`SMS Key 2 low: ${sms2.credits} credits`);
+  if (sms1.credits < 0) errors.push('SMS Key 1 check failed');
+  if (sms2.credits < 0) errors.push('SMS Key 2 check failed');
+
+  const vapi = await testVapi();
+  if (vapi.error) errors.push(`Vapi API error: ${vapi.error}`);
+  if (vapi.hangup_pct > 50) errors.push(`Vapi hangup rate high: ${vapi.hangup_pct}%`);
+
+  const record = {
+    tested_at: new Date().toISOString(),
+    book_ok: bookTest.ok,
+    readmail_ok: readmailTest.ok,
+    autocall_ok: autocallTest.ok,
+    inventory_ok: inventoryTest.ok,
+    sms_key1_credits: Math.max(sms1.credits, 0),
+    sms_key2_credits: Math.max(sms2.credits, 0),
+    vapi_calls_today: vapi.calls_today,
+    vapi_voicemail_pct: vapi.voicemail_pct,
+    vapi_hangup_pct: vapi.hangup_pct,
+    errors: errors.length > 0 ? errors : null
+  };
+
+  if (dryRun) {
+    console.log('DRY RUN — skipping Supabase write, alert email, and operational scheduled-fn probes');
+    // Expose scheduler execution as "unknown" (never written to system_health; return-only).
+    const dryRecord = {
+      ...record,
+      readmail_execution: readmailTest.execution || 'unknown',
+      autocall_execution: autocallTest.execution || 'unknown'
+    };
+    return { ok: true, dryRun: true, status: errors.length > 0 ? 'issues' : 'healthy', record: dryRecord };
+  }
+
+  await saveToSupabase(record);
+  if (errors.length > 0) {
+    console.log('Issues found:', errors);
+    await sendAlertEmail(errors, record);
+  } else {
+    console.log('All systems healthy');
+  }
+
+  return { ok: true, status: errors.length > 0 ? 'issues' : 'healthy', record };
+}
+
+module.exports = { runHealthcheck };

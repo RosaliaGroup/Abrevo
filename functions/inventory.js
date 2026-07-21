@@ -1,4 +1,5 @@
 const { google } = require('googleapis');
+const { requireGateA, adminCorsHeaders } = require('./_gate-a-auth');
 
 const SPREADSHEET_IDS = [
   '17JZID4T1Vz7JOuCkztNNm73gLCnAwlLGWx3gRMUyCJI'
@@ -42,16 +43,10 @@ async function readSheet(sheets, spreadsheetId, index) {
 }
 
 exports.handler = async (event) => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Content-Type': 'application/json'
-  };
-
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
-  }
+  // GATE A: auth first (handles OPTIONS preflight + 401/403). No wildcard CORS.
+  const gate = requireGateA(event);
+  if (!gate.ok) return gate.response;
+  const headers = adminCorsHeaders(event);
 
   if (event.httpMethod !== 'GET') {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };

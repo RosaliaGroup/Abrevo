@@ -2482,15 +2482,24 @@ async function runHealthCheck() {
   el.innerHTML = '<div class="loading-text"><span class="spinner"></span>Running health check...</div>';
 
   try {
-    const r = await fetch('/.netlify/functions/healthcheck', { method: 'POST' });
+    // Gate A: scheduled healthcheck is no longer publicly invocable; use the
+    // authenticated manual endpoint. Same-origin request carries the Basic auth
+    // the edge gate already prompted for. Defaults to dry-run (no DB write).
+    const r = await fetch('/.netlify/functions/admin-healthcheck-run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dryRun: true })
+    });
+    // Graceful handling of 401/403/non-2xx before attempting JSON parse.
+    if (!r.ok) throw new Error(`Health check unavailable (HTTP ${r.status}) — re-authenticate if prompted.`);
     const data = await r.json();
     const isHealthy = data.status === 'healthy';
     let html = `<div class="mon-row">${monDot(isHealthy ? 'green' : 'red', !isHealthy)} <span class="mon-label">Overall</span><span class="${isHealthy ? 'mon-success' : 'mon-error'}">${isHealthy ? 'All Systems Healthy' : data.errors?.length + ' issue(s) found'}</span></div>`;
 
     html += `<div class="mon-metrics-grid" style="margin-top:12px;">
       <div class="mon-metric"><div class="mon-metric-val" style="color:${data.book_ok?'var(--green)':'var(--red)'}">${data.book_ok?'OK':'FAIL'}</div><div class="mon-metric-lbl">Book.js</div></div>
-      <div class="mon-metric"><div class="mon-metric-val" style="color:${data.readmail_ok?'var(--green)':'var(--red)'}">${data.readmail_ok?'OK':'FAIL'}</div><div class="mon-metric-lbl">Readmail</div></div>
-      <div class="mon-metric"><div class="mon-metric-val" style="color:${data.autocall_ok?'var(--green)':'var(--red)'}">${data.autocall_ok?'OK':'FAIL'}</div><div class="mon-metric-lbl">Autocall</div></div>
+      <div class="mon-metric"><div class="mon-metric-val" style="color:${data.readmail_ok==null?'var(--gray,#888)':(data.readmail_ok?'var(--green)':'var(--red)')}">${data.readmail_ok==null?'N/A':(data.readmail_ok?'OK':'FAIL')}</div><div class="mon-metric-lbl">Readmail${data.readmail_execution==='unknown'?' (not probed)':''}</div></div>
+      <div class="mon-metric"><div class="mon-metric-val" style="color:${data.autocall_ok==null?'var(--gray,#888)':(data.autocall_ok?'var(--green)':'var(--red)')}">${data.autocall_ok==null?'N/A':(data.autocall_ok?'OK':'FAIL')}</div><div class="mon-metric-lbl">Autocall${data.autocall_execution==='unknown'?' (not probed)':''}</div></div>
       <div class="mon-metric"><div class="mon-metric-val" style="color:${data.inventory_ok?'var(--green)':'var(--red)'}">${data.inventory_ok?'OK':'FAIL'}</div><div class="mon-metric-lbl">Inventory</div></div>
     </div>`;
 
