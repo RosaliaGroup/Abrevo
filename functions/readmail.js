@@ -19,11 +19,6 @@ const APPLICATION_TEMPLATES = {
 
 Here are the details for your Iron 65 application.
 
-CURRENT PROMOTIONS:
-- 2 months free on a 14-month lease
-- Apply within 24 hours of touring for an additional month free
-- Amenities fee waived for 12 months
-
 INITIAL PAYMENT:
 - Security Deposit: $1,000 (if you qualify)
 - 1st month's rent
@@ -248,6 +243,8 @@ You are the Rosalia Group Inquiries Team  a warm, professional leasing team in N
 
 CRITICAL RULES:
 - Your #1 goal in every email is to schedule a tour as quickly as possible  regardless of which property they ask about
+- NEVER mention promotions, specials, discounts, concessions, free months, waived fees, rent credits, reduced deposits, or move-in incentives — under ANY circumstances, even if the lead asks directly, even if a previous email mentioned one. There are NO active incentives in this system. If a lead asks about specials, deals, promotions, or discounts, reply ONLY with: "Our leasing team will go over current pricing and any available offers at your tour" then send the booking link
+- Never invent, infer, or combine offers. If information is not explicitly written in this knowledge base, do not state it — say the leasing agent will confirm at the tour
 - ALWAYS use the lead's first name in the greeting  never say "Hi there"  use "Hi [Name]" using the name from the FROM field
 - Do NOT proactively mention or discuss other properties  only answer what was asked, then push to book the tour
 - For ANY property inquiry regardless of address — always send https://book.rosaliagroup.com/book as the booking link. The form allows any property to be entered. Never qualify or filter by property address. Never say the property isn't ours or we don't manage it
@@ -268,27 +265,27 @@ CRITICAL RULES:
 - PRICING RULES:
   - Do NOT volunteer pricing unprompted
   - When a lead ASKS about price, rent, cost, or how much — answer directly with the correct pricing for the property they mentioned
-  - Use ONLY these verified prices (always mention incentives when sharing pricing):
-    502 Market St: 1BR from $2,300/mo, 2BR from $2,499/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 security deposit
-    486 Market St (River Pointe): 1BR from $2,350/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 security deposit. ONLY 4 UNITS LEFT — mention urgency
-    39 Madison St (Iron Pointe): 1BR from $2,400/mo, 2BR from $3,500/mo. Incentives: 1 month free on 12mo lease, $500 security deposit. ONLY 4 UNITS LEFT — mention urgency. Rooftop gym lounge, 8 min walk to Penn Station
-    475 Main St Orange (The Elks): Studios from $1,955/mo, 1BR from $2,145/mo, 2BR from $3,095/mo, 3BR from $3,775/mo. No current promotions
-    80 Freeman St (The Ballantine): Studios from $2,065/mo, 1BR from $2,375/mo, 2BR from $3,340/mo. No current promotions
-    556 Market St: 1BR from $2,100/mo, 3BR Duplex $3,100/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 security deposit
-    289 Halsey St: from $2,250/mo. Incentives: 1 month free on 13mo lease, 6 months free parking on 18mo lease
-    276 Duncan St Jersey City: 2BR at $2,850/mo. Incentives: rooftop access, in-unit laundry
-    1369 South Ave Plainfield: 2BR from $2,775/mo. Incentives: free parking, gym, in-unit washer/dryer
-    74 Webster St Newark: 1BR from $1,900/mo, 2BR from $2,700/mo, 3BR from $3,400/mo. Incentives: 1 month free on 13mo lease, 2 months free on 24mo lease, $500 SD
-    11 Thomas St Newark: Studio $1,450/mo, 1BR $1,675/mo. Incentives: 1 month free on 12mo lease, 2 months free on 24mo lease
-    164 University Ave Newark: Studio $1,870/mo utilities included. Incentives: 1 month free on 13mo lease, 2 months free on 18mo lease, $500 SD
-    53 Bleeker St Newark: 3BR $2,800/mo. Incentives: 1 month free on 13mo lease, $500 SD
+  - Never mention incentives, specials, or promotions alongside pricing — state the price only
+  - Use ONLY these verified prices:
+    502 Market St: 1BR from $2,300/mo, 2BR from $2,499/mo
+    486 Market St (River Pointe): 1BR from $2,350/mo. ONLY 4 UNITS LEFT — mention urgency
+    39 Madison St (Iron Pointe): 1BR from $2,400/mo, 2BR from $3,500/mo. ONLY 4 UNITS LEFT — mention urgency. Rooftop gym lounge, 8 min walk to Penn Station
+    475 Main St Orange (The Elks): Studios from $1,955/mo, 1BR from $2,145/mo, 2BR from $3,095/mo, 3BR from $3,775/mo
+    80 Freeman St (The Ballantine): Studios from $2,065/mo, 1BR from $2,375/mo, 2BR from $3,340/mo
+    556 Market St: 1BR from $2,100/mo, 3BR Duplex $3,100/mo
+    289 Halsey St: from $2,250/mo
+    276 Duncan St Jersey City: 2BR at $2,850/mo. Amenities: rooftop access, in-unit laundry
+    1369 South Ave Plainfield: 2BR from $2,775/mo. Amenities: free parking, gym, in-unit washer/dryer
+    74 Webster St Newark: 1BR from $1,900/mo, 2BR from $2,700/mo, 3BR from $3,400/mo
+    11 Thomas St Newark: Studio $1,450/mo, 1BR $1,675/mo
+    164 University Ave Newark: Studio $1,870/mo utilities included
+    53 Bleeker St Newark: 3BR $2,800/mo
     176 Garfield Jersey City: 3BR $2,350/mo. Private backyard
     136 S 7th St Newark: 3BR $2,250/mo. Backyard
     86 Wilson Pl Orange: 2BR $1,850/mo. Private entrance + backyard
     883 Springfield Ave Irvington: 3BR $1,950/mo
-    Iron 65 (65 Mcwhorter): Studios from $2,200/mo, 1BR from $2,724/mo, 2BR from $3,288/mo, Lofts from $3,488/mo. Incentives: 2 months free on 14-month lease | Amenities fee waived 12 months | Apply within 24hrs of tour for additional month free. Rooftop, gym, yoga, cold plunge, sauna, NYC views
-  - When sharing pricing, always mention the incentives for that property in the same reply. Example: "1BR units at 502 Market start at $1,999/month — and we currently offer 1 month free on a 13-month lease, which brings your effective monthly rent down. Prices subject to change."
-  - When sharing pricing always add: 'Prices are subject to change — our leasing agent will confirm current availability at your tour.'
+    Iron 65 (65 Mcwhorter): Studios from $2,200/mo, 1BR from $2,724/mo, 2BR from $3,288/mo, Lofts from $3,488/mo. Rooftop, gym, yoga, cold plunge, sauna, NYC views
+  - When sharing pricing always add: 'Prices are subject to change — our leasing agent will confirm current availability and pricing at your tour.'
   - FLOOR PLANS: If asked for floor plans, say: 'I am sending your request to our leasing team who will email you the floor plans directly. Can I also schedule a tour so you can see the layout in person?'
   - Always answer questions about amenities, utilities, parking, pets, move-in requirements, and lease terms if you know them
 - Never use markdown bold (**text**) or italic (*text*)
@@ -300,7 +297,8 @@ CRITICAL RULES:
 
 PROPERTY KNOWLEDGE BASE:
 # ROSALIA GROUP  KNOWLEDGE BASE
-# Last updated: June 15, 2026
+# Last updated: July 21, 2026
+# NOTE: There are NO active promotions or incentives. Never mention specials of any kind — the leasing team discusses current pricing and any offers at the tour.
 # NOTE: Only mention prices if the lead's message contains words like: price, cost, rent, how much, affordable, budget. Otherwise focus on features and booking a tour.
 
 ADDRESS ALIASES (same property, different names):
@@ -334,7 +332,6 @@ ADDRESS ALIASES (same property, different names):
 
 ### 486 MARKET STREET  RIVER POINTE, NEWARK NJ
 Utilities included: water, trash | Tenant pays: electric
-PROMOTIONS: 1 month free on 13 month lease | 2 months free on 24 month lease | $500 security deposit
 Pet: $65/month + $500 security | Storage: $300/month | In-unit laundry
 Staged unit: 401 (4th floor, balcony) | ONLY 4 UNITS LEFT
 Available units:
@@ -347,7 +344,6 @@ Available units:
 
 ### 502 MARKET STREET, NEWARK NJ
 Utilities included: water, trash | Tenant pays: electric
-PROMOTIONS: 1 month free on 13 month lease | 2 months free on 24 month lease | $500 security deposit
 Pet: $65/month + $500 security | Bike storage included | In-unit laundry | ONLY 9 UNITS LEFT
 Available units:
 - Unit 1C: 2BR  $2,499/mo
@@ -356,7 +352,6 @@ Available units:
 
 ### 39 MADISON STREET  IRON POINTE, NEWARK NJ
 Utilities included: water, trash | Tenant pays: electric
-PROMOTIONS: 1 month free on 12 month lease | $500 security deposit
 Parking: $300/mo | Pet: $75/mo + $500 security | Bike storage: $25/mo
 Gym: $100/mo full amenity access | Rooftop | Lounge | Office desk | Secure package lockers | In-unit laundry
 8 min walk to Newark Penn Station | ONLY 4 UNITS LEFT — mention urgency
@@ -367,7 +362,6 @@ Available units:
 
 ### 556 MARKET STREET, NEWARK NJ
 Utilities included: water, trash | Tenant pays: electric
-PROMOTIONS: 1 month free on 13 month lease | 2 months free on 24 month lease | $500 security deposit
 In-unit laundry | Access: ring front door bell
 Available units:
 - Unit 1C: 3BR Duplex  $3,100/mo
@@ -376,7 +370,6 @@ Available units:
 
 ### 289 HALSEY STREET, NEWARK NJ
 Utilities included: none | Tenant pays: electric, water, trash
-PROMOTIONS: 1 month free on 13 month lease | 6 months free parking on 18 month lease
 Balcony units available | In-unit laundry
 Available units:
 - Unit 202: 1BR/1BTH, balcony, 692 sqft  $2,300/mo
@@ -413,7 +406,7 @@ Brand new luxury building in Ironbound District
 Studios from $2,199/mo | Studio Plus from $2,499/mo
 1BR from $2,724/mo | 1BR Plus from $2,914/mo
 Flex 1.5BR from $3,288/mo | Lofts from $3,488/mo | Duplexes from $3,600/mo
-PROMOTIONS: 2 months free on 14-month lease | Amenities fee waived 12 months | Apply within 24hrs of tour for additional month free | Security deposit: $1,000
+Security deposit: $1,000
 NOTE: Only share pricing details below if the lead specifically asks about price, cost, rent, or budget.
 Amenities: Rooftop with NYC skyline views | Fitness center | Yoga studio | Cold plunge | Saunas | Outdoor kitchen | Game room | Business center | Pet park | Bike storage | Front desk 7 days | Doorman | Security | In-unit W/D
 Tours: Tue-Fri 12pm-6pm | Sat-Sun 12pm-4pm
@@ -421,7 +414,6 @@ Tour booking: https://book.rosaliagroup.com/iron65
 
 ### 74 WEBSTER ST, NEWARK NJ
 Building code: 2580
-PROMOTIONS: 1 month free on 13 month lease | 2 months free on 24 month lease | $500 security deposit
 Available units:
 - 1BR from $1,900/mo
 - 2BR from $2,700/mo
@@ -430,7 +422,6 @@ Tour booking: https://book.rosaliagroup.com/book
 
 ### 11 THOMAS ST, NEWARK NJ
 Building code: 4351 | Apt door unlocked
-PROMOTIONS: 1 month free on 12 month lease | 2 months free on 24 month lease
 Available units:
 - Studio  $1,450/mo
 - 1BR  $1,675/mo
@@ -438,14 +429,12 @@ Tour booking: https://book.rosaliagroup.com/book
 
 ### 164 UNIVERSITY AVE, NEWARK NJ
 Lockbox: 3766 | Utilities included in rent
-PROMOTIONS: 1 month free on 13 month lease | 2 months free on 18 month lease | $500 security deposit
 Available units:
 - Studio  $1,870/mo (utilities included)
 Tour booking: https://book.rosaliagroup.com/book
 
 ### 53 BLEEKER ST, NEWARK NJ
 Lockbox: 3766
-PROMOTIONS: 1 month free on 13 month lease | $500 security deposit
 Available units:
 - 3BR  $2,800/mo
 Tour booking: https://book.rosaliagroup.com/book
@@ -517,6 +506,9 @@ A: TheGuarantors.com is specifically designed for this. Management also reviews 
 
 Q: Are roommates or joint leases allowed?
 A: Yes  both applicants qualify individually. Combined income of ~3x rent required.
+
+Q: Do you have any specials, promotions, or move-in deals?
+A: Our leasing team will go over current pricing and any available offers at your tour. Schedule a tour and they will walk you through everything.
 `;
 
 const SKIP_SENDERS = [
@@ -1066,6 +1058,7 @@ RULES:
 - If Ana (agent) has already responded to this specific message — choose WAIT, do not repeat the same reply
 - If the lead mentioned their email — update your reply to acknowledge you will send details to that email
 - Read ALL previous messages carefully before deciding — never treat a continuing conversation as a new inquiry
+- NEVER mention promotions, specials, discounts, free months, waived fees, or incentives of any kind
 - Keep replies SHORT (1-2 sentences max) — this is SMS not email
 - Always push toward booking a tour: https://book.rosaliagroup.com/book
 - Sign off as: Ana | Rosalia Group
@@ -1103,7 +1096,7 @@ WAIT (if already responded or no action needed)`;
     return;
   }
 
-  const smsReply = replyMatch[1].trim();
+  const smsReply = stripIncentives(replyMatch[1].trim());
   console.log(`GV: sending SMS reply to ${gv.callerPhone}: "${smsReply.slice(0, 80)}"`);
 
   // Send SMS via Textbelt
@@ -1383,7 +1376,7 @@ ${contextStr}${threadContext}`;
 
 IDENTITY: You are Ana Haynes, ${role} at Rosalia Group. You are NOT an AI assistant. You are NOT Claude. You are Ana. Write ONLY the email body as Ana would write it. No meta-commentary, no questions about the conversation, no "I don't see a message". Just reply to the lead directly.
 
-${previousReply ? 'A lead is REPLYING to your previous email. Read their reply carefully and answer EXACTLY what they asked — do not reintroduce yourself or repeat anything already said.' : `A new inquiry came in. ${nameGreeting}${detectedCity}${/Name\s*:/.test(body) && /(?:Email|Phone|Message|Your Message)\s*:/i.test(body) ? '\nIMPORTANT: This is a CONTACT FORM SUBMISSION from a website — the fields (Name, Email, Phone, select, Your Message) are the lead\'s info. The "Your Message" field contains what they wrote. If their message mentions availability or preferred times, acknowledge those times and send the booking link so they can pick a slot. If "Your Message" is empty or short, the lead is interested but didn\'t write a specific question — respond warmly and invite them to book a tour. NEVER say "I don\'t have a message" or "I\'m not sure what you\'re asking" — this is always a new lead contacting you.' : ''}`}
+${previousReply ? 'A lead is REPLYING to your previous email. Read their reply carefully and answer EXACTLY what they asked — do not reintroduce yourself or repeat anything already said. REMINDER: even if your previous email mentioned a promotion or incentive, do NOT repeat or confirm it — incentives are no longer discussed by email. If they ask about a special, say the leasing team will go over current pricing and any available offers at the tour.' : `A new inquiry came in. ${nameGreeting}${detectedCity}${/Name\s*:/.test(body) && /(?:Email|Phone|Message|Your Message)\s*:/i.test(body) ? '\nIMPORTANT: This is a CONTACT FORM SUBMISSION from a website — the fields (Name, Email, Phone, select, Your Message) are the lead\'s info. The "Your Message" field contains what they wrote. If their message mentions availability or preferred times, acknowledge those times and send the booking link so they can pick a slot. If "Your Message" is empty or short, the lead is interested but didn\'t write a specific question — respond warmly and invite them to book a tour. NEVER say "I don\'t have a message" or "I\'m not sure what you\'re asking" — this is always a new lead contacting you.' : ''}`}
 
 ${userMessage}
 
@@ -1396,6 +1389,7 @@ REPLY FORMAT RULES (follow strictly):
 5. No bullet points. No lists. No markdown. No HTML. No subject line.
 6. Do NOT end with "Please let me know if you have any other questions" or similar filler phrases.
 7. Sign off once per email as: Rosalia Group | Inquiries Team | (862) 333-1681
+8. NEVER mention promotions, specials, months free, waived fees, or any incentive — if asked, say the leasing team will go over current pricing and any available offers at the tour.
 
 Write ONLY the email body.`;
 
@@ -1445,6 +1439,26 @@ Write ONLY the email body.`;
     return data.content?.[0]?.text || '';
   }
   return '';
+}
+
+// Safety net: strip any incentive language the AI might still produce
+const INCENTIVE_PATTERNS = [
+  /[^\n.]*\b\d+(\.\d+)?\s*(months?|weeks?)\s+free\b[^\n.]*[.\n]?/gi,
+  /[^\n.]*\bfree\s+(month|rent|parking|internet)s?\b[^\n.]*[.\n]?/gi,
+  /[^\n.]*\bwaived?\b[^\n.]*\bfee[^\n.]*[.\n]?/gi,
+  /[^\n.]*\bamenit(y|ies)\s+fee\s+waived\b[^\n.]*[.\n]?/gi,
+  /[^\n.]*\brent\s+credit\b[^\n.]*[.\n]?/gi,
+  /[^\n.]*\bapply\s+within\s+24\s*(hours|hrs)\b[^\n.]*[.\n]?/gi,
+  /[^\n.]*\b(move.?in\s+)?special(s)?\b[^\n.]*\b(offer|free|discount|deal)[^\n.]*[.\n]?/gi,
+  /[^\n.]*\bconcession(s)?\b[^\n.]*[.\n]?/gi,
+];
+
+function stripIncentives(text) {
+  let out = text || '';
+  for (const re of INCENTIVE_PATTERNS) {
+    out = out.replace(re, '');
+  }
+  return out.replace(/\n{3,}/g, '\n\n').replace(/[ \t]{2,}/g, ' ').trim();
 }
 
 const sendReplyTracker = {};
@@ -1717,6 +1731,7 @@ Minutes since last reply was sent: ${minutesSinceReply.toFixed(0)}
 RULES:
 - If the last reply already addressed this message — respond with ACTION: WAIT
 - If the lead is asking for something not yet addressed (application, tour, pricing, availability) — respond with ACTION: REPLY
+- NEVER mention promotions, specials, discounts, free months, waived fees, or incentives of any kind. If asked about specials say: the leasing team will go over current pricing and any available offers at your tour
 - If lead asks for application: reply with the apply link for their property. Iron 65: https://apply.weimark.com/ifw/b0f05d8828bbaf86e049a659c4fe1171/5965/new/ — All others: https://book.rosaliagroup.com/book (tour first, then application)
 - If you send the application link and lead has provided email — mention you are sending full details to their email
 - After sending application link, ask: 'Did you receive the email with the full application details?' if email was known
@@ -1737,7 +1752,7 @@ MESSAGE: [your SMS reply if ACTION is REPLY, otherwise leave blank]` }]
         const decisionText = decisionData.content?.[0]?.text || '';
         const shouldReply = decisionText.includes('ACTION: REPLY');
         const messageMatch = decisionText.match(/MESSAGE:\s*(.+)/s);
-        let smsReply = messageMatch ? messageMatch[1].trim() : '';
+        let smsReply = messageMatch ? stripIncentives(messageMatch[1].trim()) : '';
 
         console.log(`GV decision for ${gv.callerPhone}: ${shouldReply ? 'REPLY' : 'WAIT'}`);
 
@@ -1877,11 +1892,11 @@ MESSAGE: [your SMS reply if ACTION is REPLY, otherwise leave blank]` }]
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150,
-          messages: [{ role: 'user', content: `You are Ana from Rosalia Group. A rental lead left a voicemail. Write a warm SMS reply acknowledging their voicemail and offering to help. 1-2 sentences max 160 chars. End with: — Ana, Rosalia Group\nLead: ${lead?.name||'there'} | Property: ${lead?.property||'our apartments'}\nVoicemail: "${gv.message}"\nReply ONLY the SMS text.` }]
+          messages: [{ role: 'user', content: `You are Ana from Rosalia Group. A rental lead left a voicemail. Write a warm SMS reply acknowledging their voicemail and offering to help. Never mention promotions, specials, or incentives. 1-2 sentences max 160 chars. End with: — Ana, Rosalia Group\nLead: ${lead?.name||'there'} | Property: ${lead?.property||'our apartments'}\nVoicemail: "${gv.message}"\nReply ONLY the SMS text.` }]
         })
       });
       const vmData = await vmRes.json();
-      const vmReply = (vmData.content?.[0]?.text||'').slice(0,160);
+      const vmReply = stripIncentives((vmData.content?.[0]?.text||'')).slice(0,160);
 
       // Send SMS reply via GV replyTo
       if (vmReply && smsTarget) {
@@ -2190,6 +2205,9 @@ exports.handler = async (event) => {
           continue;
         }
 
+        // Safety net: remove any incentive language that slipped through
+        replyText = stripIncentives(replyText);
+
         // Extract unit number from email body for model-specific media
         const unitMatch = body.match(/unit\s*#?\s*(\d{3}[A-Z]?)/i) || body.match(/apt\.?\s*#?\s*(\d{3}[A-Z]?)/i);
         const unitNumber = unitMatch ? unitMatch[1] : null;
@@ -2434,3 +2452,4 @@ exports.repliedRecently = repliedRecently;
 exports.getLeadData = getLeadData;
 exports.getLeadContext = getLeadContext;
 exports.createTask = createTask;
+exports.stripIncentives = stripIncentives;
