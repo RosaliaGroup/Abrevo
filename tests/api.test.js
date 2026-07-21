@@ -306,6 +306,46 @@ test("create agent: name required; role allow-list", async () => {
   assert.equal(parse(await handler(ev("POST", "/api/agents", { headers: H, body: { name: "Ana", role: "manager" } }))).status, 200);
 });
 
+// ---------- social cross-client search/list ----------
+test("social search/list: session required (401 without)", async () => {
+  assert.equal(parse(await handler(ev("GET", "/api/leads", { qs: { mode: "social-list" } }))).status, 401);
+  assert.equal(parse(await handler(ev("GET", "/api/leads", { qs: { mode: "social-search", q: "x" } }))).status, 401);
+});
+test("social search: validates agent/client, sanitizes q, bounded limit, fixed select", async () => {
+  const { cookieHeader } = await loginAndGet();
+  const H = { cookie: cookieHeader };
+  // invalid agent id
+  assert.equal(parse(await handler(ev("GET", "/api/leads", { headers: H, qs: { mode: "social-search", q: "a", agent: "a b" } }))).status, 400);
+  // invalid client (not allow-listed)
+  assert.equal(parse(await handler(ev("GET", "/api/leads", { headers: H, qs: { mode: "social-search", q: "a", client: "evilcorp" } }))).status, 400);
+  // empty/sanitized-to-nothing query
+  assert.equal(parse(await handler(ev("GET", "/api/leads", { headers: H, qs: { mode: "social-search", q: "(*),=" } }))).status, 400);
+  // valid: sanitized ilike, cross-client, agent filter, limit 20, fixed select
+  await handler(ev("GET", "/api/leads", { headers: H, qs: { mode: "social-search", q: "jane,(*)", agent: "5", client: "rosalia" } }));
+  const c = calls.find((x) => x.u.includes("or=(name.ilike"));
+  assert.ok(c, "search query built");
+  const u = decodeURIComponent(c.u);
+  assert.ok(u.includes("assigned_to=eq.5"), "agent filter applied");
+  assert.ok(u.includes("client=eq.rosalia"), "allow-listed client applied");
+  assert.ok(u.includes("limit=20"), "bounded limit");
+  assert.ok(u.includes("select=id,name,email,phone,source,client,created_at,assigned_to"), "fixed bounded select");
+  assert.ok(!/[(),]=/.test(u.split("or=(")[0]), "no injection before or-clause");
+});
+test("social-list: no q, optional agent, limit 50, cross-client by default", async () => {
+  const { cookieHeader } = await loginAndGet();
+  await handler(ev("GET", "/api/leads", { headers: { cookie: cookieHeader }, qs: { mode: "social-list" } }));
+  const c = calls.find((x) => x.u.includes("/rest/v1/leads?") && x.u.includes("limit=50"));
+  assert.ok(c, "list query built with limit 50");
+  assert.ok(!c.u.includes("client=eq."), "cross-client by default");
+});
+test("social search: upstream failure -> controlled 502, no raw leak", async () => {
+  installFetch({ getStatus: 500 });
+  const { cookieHeader } = await loginAndGet();
+  const r = parse(await handler(ev("GET", "/api/leads", { headers: { cookie: cookieHeader }, qs: { mode: "social-list" } })));
+  assert.equal(r.status, 502); assert.equal(r.body.error, "upstream_failed");
+  assert.ok(!/relation|db error/.test(JSON.stringify(r.body)));
+});
+
 // ---------- logout / config ----------
 test("logout clears the cookie", async () => {
   const r = await handler(ev("POST", "/api/auth/logout"));

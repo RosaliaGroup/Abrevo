@@ -116,6 +116,9 @@ const LEAD_SOURCES = new Set(["email", "phone", "zillow", "webflow", "facebook",
 const DEAL_STAGES = new Set(["inquiry", "toured", "applied", "approved", "lease_sent", "signed", "moved_in", "lost"]);
 const TASK_PRIORITIES = new Set(["normal", "high", "low"]);
 const AGENT_ROLES = new Set(["leasing_agent", "manager", "admin"]);
+const SOCIAL_CLIENTS = new Set(["rosalia", "mechanical"]);
+// Fields social.html's lead table/enrich actually render.
+const SOCIAL_LEAD_SELECT = "id,name,email,phone,source,client,created_at,assigned_to,property,status,replied_at";
 const COMMISSION_STATUSES = { paid: { status: "paid", stampField: "paid_at" } };
 
 const ValidationError = (field) => { const e = new Error("validation:" + field); e._validation = field; return e; };
@@ -311,6 +314,25 @@ exports.handler = async (event) => {
     }
     if (route === "/leads" && method === "GET") {
       const mode = qs.mode || "list";
+      // social.html: cross-client, optionally agent/client-filtered list & search.
+      if (mode === "social-list" || mode === "social-search") {
+        const agent = qs.agent;
+        if (agent != null && agent !== "" && !validId(agent)) return json(400, { ok: false, error: "bad_agent" });
+        const client = qs.client;
+        if (client != null && client !== "" && !SOCIAL_CLIENTS.has(client)) return json(400, { ok: false, error: "bad_client" });
+        const filters = [];
+        if (client) filters.push(`client=eq.${encodeURIComponent(client)}`);
+        if (agent) filters.push(`assigned_to=eq.${encodeURIComponent(agent)}`);
+        if (mode === "social-search") {
+          const q = sanitizeSearch(qs.q);
+          if (!q) return json(400, { ok: false, error: "empty_query" });
+          const enc = encodeURIComponent(q);
+          filters.push(`or=(name.ilike.*${enc}*,email.ilike.*${enc}*,phone.ilike.*${enc}*)`);
+        }
+        const limit = mode === "social-search" ? 20 : 50;
+        const query = `leads?${filters.length ? filters.join("&") + "&" : ""}order=created_at.desc&limit=${limit}&select=${SOCIAL_LEAD_SELECT}`;
+        return json(200, { ok: true, data: await sbGet(query) });
+      }
       const builder = LEAD_MODES[mode];
       if (!builder) return json(400, { ok: false, error: "bad_mode" });
       let query;
