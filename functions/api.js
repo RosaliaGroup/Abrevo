@@ -107,6 +107,7 @@ function pickVapiCall(c) {
     createdAt: c && c.createdAt,
     status: c && c.status,
     endedReason: c && c.endedReason,
+    duration: c && c.duration,
     assistantId: c && c.assistantId,
     assistant: c && c.assistant ? { name: c.assistant.name } : null,
   };

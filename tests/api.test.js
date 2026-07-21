@@ -40,7 +40,7 @@ function installFetch(scn = {}) {
     if (u.includes("/rest/v1/sms_sends?select=id") && u.includes("kind=eq.cancel-link")) return mkRes(200, Array.from({ length: scn.smsDup || 0 }, (_, i) => ({ id: i })));
     if (u.includes("/rest/v1/sms_sends?select=id")) return mkRes(200, Array.from({ length: scn.smsRate || 0 }, (_, i) => ({ id: i })));
     if (u.includes("/rest/v1/sms_sends") && method === "POST") return mkRes(201, "");
-    if (u.includes("api.vapi.ai/call")) return scn.vapiStatus ? mkRes(scn.vapiStatus, "err") : mkRes(200, scn.vapi || [{ createdAt: "2026-07-20", status: "ended", endedReason: "ok", assistantId: "a1", assistant: { name: "Bot" }, secretField: "leak" }]);
+    if (u.includes("api.vapi.ai/call")) return scn.vapiStatus ? mkRes(scn.vapiStatus, "err") : mkRes(200, scn.vapi || [{ createdAt: "2026-07-20", status: "ended", endedReason: "ok", duration: 42, assistantId: "a1", assistant: { name: "Bot" }, secretField: "leak" }]);
     if (u.includes("textbelt.com/text")) return mkRes(200, scn.textbelt || { success: true });
     if (u.includes("/.netlify/functions/")) return mkRes(scn.actionStatus || 200, scn.action || { done: true });
     if (u.includes("/rest/v1/") && method === "GET") return mkRes(200, scn.rows || [{ id: 1 }]);
@@ -176,7 +176,7 @@ test("vapi: invalid filter -> 400; valid -> mapped, minimal fields, no key/raw l
   assert.equal(parse(await handler(ev("GET", "/api/vapi/calls", { headers: { cookie: cookieHeader }, qs: { limit: "9999" } }))).status, 400);
   const { status, body } = parse(await handler(ev("GET", "/api/vapi/calls", { headers: { cookie: cookieHeader }, qs: { limit: "100" } })));
   assert.equal(status, 200);
-  assert.deepEqual(Object.keys(body.data[0]).sort(), ["assistant", "assistantId", "createdAt", "endedReason", "status"]);
+  assert.deepEqual(Object.keys(body.data[0]).sort(), ["assistant", "assistantId", "createdAt", "duration", "endedReason", "status"]);
   assert.ok(!("secretField" in body.data[0]), "extra provider fields dropped");
   const call = calls.find((c) => c.u.includes("api.vapi.ai"));
   assert.match(call.headers.Authorization, /Bearer /); // key used server-side only
