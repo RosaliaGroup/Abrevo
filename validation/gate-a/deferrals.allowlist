@@ -1,0 +1,22 @@
+# Gate A — documented/deferred secret-scan findings
+# ---------------------------------------------------------------------------
+# Format (one per line):   <repo-relative-path>::<label>
+#   - <label> is the finding label printed by scan-secrets.sh (e.g. PRIVATE_KEY_PEM,
+#     JWT, GMAIL_APP_PW, service_role, textbelt, VAPI_KEY, vapi_uuid, ...).
+#   - Omit "::<label>" to accept ALL findings in that file (use sparingly).
+#
+# A line here means: "this finding is KNOWN and intentionally deferred, with a
+# reason recorded below." It does NOT delete the secret — it only downgrades the
+# scan from FAIL to an accepted WARN so the suite can distinguish 'undocumented
+# leak' from 'documented, owner-acknowledged deferral' (AC line 29).
+#
+# EMPTY BY DEFAULT ON PURPOSE. Server-side embedded credentials (e.g. the Google
+# service-account private key in functions/inventory.js, or a Gmail app password
+# in functions/book-appointment.js) are real findings slated for Gate D
+# (rotation), which happens AFTER Gate C cutover. Do NOT allowlist them here to
+# silence the scan unless the owner has explicitly accepted the deferral — the
+# honest default is for the scan to surface them.
+#
+# Example (commented out — enable only with an owner decision + reason):
+# functions/inventory.js::PRIVATE_KEY_PEM   # DEFER to Gate D rotation; server-side only, not browser-delivered. Owner: ____  Date: ____
+# functions/book-appointment.js::GMAIL_APP_PW  # DEFER to Gate D; confirm no caller before disabling. Owner: ____  Date: ____
