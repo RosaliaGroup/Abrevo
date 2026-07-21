@@ -410,16 +410,43 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 </div>
 
 <script>
-// ── SUPABASE CONFIG ──
-const SB_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
-const SB_HEADERS = { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' };
+// ── CRM API (server-owned; NO database credentials in the browser) ──
+// The Supabase service-role key was removed from this page. All data access
+// now goes through the server-owned /crm-data function, which holds the key
+// server-side. See docs/PHASE2.6-CREDENTIAL-CONTAINMENT.md.
+const CRM_API = '/.netlify/functions/crm-data';
 
-async function sb(path, opts) {
-  const res = await fetch(SB_URL + '/rest/v1/' + path, { headers: SB_HEADERS, ...opts });
-  if (opts && opts.method === 'DELETE') return null;
-  const text = await res.text();
-  try { return JSON.parse(text); } catch(e) { return null; }
+function showCrmError(msg) {
+  let el = document.getElementById('crm-error-banner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'crm-error-banner';
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#e5534b;color:#fff;padding:10px 16px;font-size:14px;text-align:center;cursor:pointer;';
+    el.onclick = () => el.remove();
+    document.body.appendChild(el);
+  }
+  el.textContent = (msg || 'Request failed') + ' — tap to dismiss';
+}
+
+// Read: resolves to an array (or null after surfacing an error).
+async function crmGet(action, params = {}) {
+  try {
+    const p = new URLSearchParams({ action, ...params });
+    const res = await fetch(CRM_API + '?' + p.toString());
+    const j = await res.json().catch(() => null);
+    if (!res.ok || !j || j.ok === false) { showCrmError((j && j.error && j.error.message) || ('Failed to load ' + action)); return null; }
+    return j.data;
+  } catch (e) { showCrmError('Network error loading ' + action); return null; }
+}
+
+// Write: resolves true on success, false after surfacing an error.
+async function crmPost(action, payload = {}) {
+  try {
+    const res = await fetch(CRM_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...payload }) });
+    const j = await res.json().catch(() => null);
+    if (!res.ok || !j || j.ok === false) { showCrmError((j && j.error && j.error.message) || (action + ' failed')); return false; }
+    return true;
+  } catch (e) { showCrmError('Network error: ' + action); return false; }
 }
 
 // ── STATE ──
@@ -458,17 +485,17 @@ async function loadDashboard() {
   const today = new Date().toISOString().split('T')[0];
   const weekAgo = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
 
-  allLeads = await sb('leads?order=created_at.desc&limit=500') || [];
-  allAgents = await sb('agents?order=name.asc') || [];
-  allDeals = await sb('deals?order=created_at.desc') || [];
-  allCommissions = await sb('commissions?order=created_at.desc') || [];
+  allLeads = await crmGet('leads') || [];
+  allAgents = await crmGet('agents') || [];
+  allDeals = await crmGet('deals') || [];
+  allCommissions = await crmGet('commissions') || [];
 
   // Populate agent dropdowns
   populateAgentDropdowns();
 
   const newToday = allLeads.filter(l => l.created_at && l.created_at.startsWith(today)).length;
   const activeDeals = allDeals.filter(d => !['moved_in','lost'].includes(d.stage)).length;
-  const bookings = await sb('bookings?preferred_date=gte.' + weekAgo + '&preferred_date=lte.' + new Date(Date.now()+7*86400000).toISOString().split('T')[0] + '&limit=100') || [];
+  const bookings = await crmGet('bookings', { from: weekAgo, to: new Date(Date.now()+7*86400000).toISOString().split('T')[0] }) || [];
   const pendingComm = allCommissions.filter(c => c.status === 'pending').reduce((s,c) => s + (c.amount||0), 0);
 
   document.getElementById('stat-new-leads').textContent = newToday;
@@ -534,7 +561,7 @@ async function openLeadDetail(id) {
   if (lead.notes) info.innerHTML += '<div style="grid-column:span 2;margin-top:8px;padding-top:12px;border-top:1px solid var(--border)"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Notes</div><div style="white-space:pre-wrap;font-size:13px">'+esc(lead.notes)+'</div></div>';
 
   // Activity
-  const activities = await sb('activities?lead_id=eq.'+id+'&order=created_at.desc&limit=20') || [];
+  const activities = await crmGet('activities', { lead_id: id }) || [];
   document.getElementById('ld-activity-list').innerHTML = activities.length ? activities.map(a => '<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><div style="font-size:12px;color:var(--text-muted)">'+fmtDate(a.created_at)+' &middot; '+esc(a.type||'note')+'</div><div style="font-size:13px;margin-top:4px">'+esc(a.description)+'</div></div>').join('') : '<p style="color:var(--text-muted)">No activity recorded</p>';
 
   // Tasks
@@ -557,7 +584,7 @@ const STAGES = ['inquiry','toured','applied','approved','lease_sent','signed','m
 const STAGE_LABELS = {inquiry:'Inquiry',toured:'Toured',applied:'Applied',approved:'Approved',lease_sent:'Lease Sent',signed:'Signed',moved_in:'Moved In',lost:'Lost'};
 
 async function loadPipeline() {
-  if (!allDeals.length) allDeals = await sb('deals?order=created_at.desc') || [];
+  if (!allDeals.length) allDeals = await crmGet('deals') || [];
   const board = document.getElementById('kanban-board');
   board.innerHTML = STAGES.map(stage => {
     const deals = allDeals.filter(d => d.stage === stage);
@@ -576,7 +603,7 @@ function openDealDetail(id) {
 
 // ── TASKS ──
 async function loadTasks() {
-  allTasks = await sb('tasks?order=due_date.asc') || [];
+  allTasks = await crmGet('tasks') || [];
   const filter = document.getElementById('task-filter-status').value;
   const now = new Date().toISOString().split('T')[0];
   let filtered = allTasks;
@@ -592,13 +619,13 @@ async function loadTasks() {
 }
 
 async function completeTask(id) {
-  await sb('tasks?id=eq.'+id, { method:'PATCH', body: JSON.stringify({status:'completed',completed_at:new Date().toISOString()}) });
+  if (!await crmPost('completeTask', { id })) return;
   loadTasks();
 }
 
 // ── AGENTS ──
 async function loadAgents() {
-  if (!allAgents.length) allAgents = await sb('agents?order=name.asc') || [];
+  if (!allAgents.length) allAgents = await crmGet('agents') || [];
   const grid = document.getElementById('agents-grid');
   grid.innerHTML = allAgents.map(a => {
     const leads = allLeads.filter(l => l.assigned_to === a.id).length;
@@ -610,7 +637,7 @@ async function loadAgents() {
 
 // ── COMMISSIONS ──
 async function loadCommissions() {
-  if (!allCommissions.length) allCommissions = await sb('commissions?order=created_at.desc') || [];
+  if (!allCommissions.length) allCommissions = await crmGet('commissions') || [];
   const pending = allCommissions.filter(c => c.status === 'pending');
   const paid = allCommissions.filter(c => c.status === 'paid');
   const now = new Date();
@@ -627,7 +654,7 @@ async function loadCommissions() {
 }
 
 async function markPaid(id) {
-  await sb('commissions?id=eq.'+id, { method:'PATCH', body: JSON.stringify({status:'paid',paid_at:new Date().toISOString()}) });
+  if (!await crmPost('payCommission', { id })) return;
   allCommissions = [];
   loadCommissions();
 }
@@ -642,7 +669,7 @@ function showCommTab(tab) {
 
 // ── SEQUENCES ──
 async function loadSequences() {
-  allSequences = await sb('follow_up_sequences?order=name.asc') || [];
+  allSequences = await crmGet('sequences') || [];
   const grid = document.getElementById('seq-grid');
   if (!allSequences.length) {
     grid.innerHTML = '<p style="color:var(--text-muted)">No follow-up sequences configured.</p>';
@@ -669,9 +696,9 @@ async function saveLead() {
     created_at: new Date().toISOString(),
   };
   if (!data.name && !data.email) return alert('Name or email required');
-  await sb('leads', { method:'POST', headers:{...SB_HEADERS, Prefer:'return=representation'}, body: JSON.stringify(data) });
+  if (!await crmPost('createLead', { data })) return;
   closeModal('add-lead-modal');
-  allLeads = await sb('leads?order=created_at.desc&limit=500') || [];
+  allLeads = await crmGet('leads') || [];
   loadLeads();
 }
 
@@ -685,9 +712,9 @@ async function saveDeal() {
     notes: document.getElementById('ad-notes').value.trim() || null,
     created_at: new Date().toISOString(),
   };
-  await sb('deals', { method:'POST', headers:{...SB_HEADERS, Prefer:'return=representation'}, body: JSON.stringify(data) });
+  if (!await crmPost('createDeal', { data })) return;
   closeModal('add-deal-modal');
-  allDeals = await sb('deals?order=created_at.desc') || [];
+  allDeals = await crmGet('deals') || [];
   loadPipeline();
 }
 
@@ -703,7 +730,7 @@ async function saveTask() {
     created_at: new Date().toISOString(),
   };
   if (!data.title) return alert('Task title required');
-  await sb('tasks', { method:'POST', headers:{...SB_HEADERS, Prefer:'return=representation'}, body: JSON.stringify(data) });
+  if (!await crmPost('createTask', { data })) return;
   closeModal('add-task-modal');
   loadTasks();
 }
@@ -717,7 +744,7 @@ async function saveAgent() {
     created_at: new Date().toISOString(),
   };
   if (!data.name) return alert('Name required');
-  await sb('agents', { method:'POST', headers:{...SB_HEADERS, Prefer:'return=representation'}, body: JSON.stringify(data) });
+  if (!await crmPost('createAgent', { data })) return;
   closeModal('add-agent-modal');
   allAgents = [];
   loadAgents();

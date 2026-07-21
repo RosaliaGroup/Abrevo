@@ -2374,34 +2374,15 @@ function monLoadCallQuality(vapiCalls) {
 }
 
 // PANEL 10: SMS Credits
+// SECURITY (Phase 2.6): this panel previously embedded two live Textbelt API
+// keys in the browser and called textbelt.com/quota directly. The key literals
+// were removed. A provider quota check must run server-side (no credential in
+// the browser). Until that server endpoint exists, the panel shows "unavailable".
+// Do NOT reintroduce any provider key into browser code.
 async function monLoadSmsCredits() {
   const el = document.getElementById('mon-sms-credits');
-  try {
-    const [r1, r2] = await Promise.all([
-      fetch('https://textbelt.com/quota/0672a5cd59b0fa1638624d31dea7505b49a5d146u7lBHeSj1QPHplFQ5B1yKVIYW').then(r => r.json()),
-      fetch('https://textbelt.com/quota/06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr').then(r => r.json())
-    ]);
-
-    const q1 = r1.quotaRemaining ?? 0;
-    const q2 = r2.quotaRemaining ?? 0;
-
-    function creditColor(q) { return q < 100 ? 'var(--red)' : q < 500 ? '#F39C12' : 'var(--green)'; }
-    function creditDot(q) { return q < 100 ? 'red' : q < 500 ? 'yellow' : 'green'; }
-
-    let html = `<div class="mon-metrics-grid" style="grid-template-columns:1fr 1fr;">
-      <div class="mon-metric"><div class="mon-metric-val" style="color:${creditColor(q1)}">${q1}</div><div class="mon-metric-lbl">Key 1 (book.js)</div></div>
-      <div class="mon-metric"><div class="mon-metric-val" style="color:${creditColor(q2)}">${q2}</div><div class="mon-metric-lbl">Key 2 (readmail)</div></div>
-    </div>`;
-
-    html += `<div class="mon-row">${monDot(creditDot(q1), q1 < 100)} <span class="mon-label">Key 1 — book.js</span><span class="${q1 < 100 ? 'mon-error' : 'mon-val'}">${q1} remaining</span></div>`;
-    html += `<div class="mon-row">${monDot(creditDot(q2), q2 < 100)} <span class="mon-label">Key 2 — readmail/outreach</span><span class="${q2 < 100 ? 'mon-error' : 'mon-val'}">${q2} remaining</span></div>`;
-
-    el.innerHTML = html;
-    return { q1, q2 };
-  } catch(e) {
-    el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Failed: ${e.message}</span></div>`;
-    return null;
-  }
+  el.innerHTML = `<div class="mon-row">${monDot('yellow')} <span class="mon-val">SMS credit check unavailable — moved server-side (no key in browser).</span></div>`;
+  return null;
 }
 
 // Master refresh

@@ -38,6 +38,26 @@ test('server modules hardcode no provider credentials (env only)', () => {
   }
 });
 
+test('crm.html no longer exposes the Supabase service-role key (Phase 2.6)', () => {
+  const html = read('crm.html');
+  assert.equal(/service_role/i.test(html), false);
+  assert.equal(/eyJhbGci/.test(html), false);                 // no JWT literal
+  assert.equal(/SB_KEY|SB_HEADERS/.test(html), false);        // old key wiring gone
+  assert.equal(/supabase\.co\/rest/i.test(html), false);      // no direct PostgREST from browser
+  assert.equal(/Authorization/i.test(html), false);           // no bearer header in browser
+  assert.match(html, /\/\.netlify\/functions\/crm-data/);     // uses server endpoint
+  // sms:/tel: buttons intentionally preserved for the later pilot
+  assert.ok(html.includes('href="tel:'), 'tel: Call links preserved');
+  assert.ok(html.includes('href="sms:'), 'sms: Text buttons preserved');
+});
+
+test('rosalia.html has no Textbelt key literals or live quota fetch left (Phase 2.6)', () => {
+  const html = read('rosalia.html');
+  assert.equal(/0672a5cd59b0fa1638624d31dea7505b49a5d146/.test(html), false);
+  assert.equal(/06aa74dcb12c73154e34300053413dd8479b0cdd/.test(html), false);
+  assert.equal(/fetch\(['"]https:\/\/textbelt\.com\/(text|quota)/.test(html), false); // no live call
+});
+
 test('new server code introduces no Twilio/Textbelt send path', () => {
   const files = ['functions/communications.js', 'functions/telnyx-inbound.js', 'functions/telnyx-status.js',
     'functions/_lib/smsWebhook.js', 'functions/_lib/commApi.js', 'functions/_lib/smsService.js'];
