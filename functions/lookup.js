@@ -1,15 +1,18 @@
+const { requireInternalToken, NO_CORS } = require('./_internal-auth');
+
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 exports.handler = async (event) => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Content-Type': 'application/json',
-  };
-
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
-  }
+  // Server-to-server only (Vapi/IVR caller lookup). Returns caller PII via the
+  // privileged service-role key, so it MUST NOT be browser-callable. Not scheduled.
+  const headers = NO_CORS;
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' };
+  // INTERNAL token required (default-deny) BEFORE method checks, body parsing, or
+  // any privileged Supabase query. Vapi must send X-Internal-Token (see rollout note).
+  const gate = requireInternalToken(event);
+  if (!gate.ok) return gate.response;
+  if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
   try {
     const { phone } = JSON.parse(event.body || '{}');

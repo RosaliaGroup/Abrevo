@@ -1,6 +1,13 @@
+const { requireGateA, adminCorsHeaders } = require('./_gate-a-auth');
+
 exports.handler = async (event) => {
-  const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
+  // GATE A: authenticate BEFORE parsing body or calling Anthropic. No wildcard CORS.
+  const gate = requireGateA(event);
+  if (!gate.ok) return gate.response;
+  const headers = adminCorsHeaders(event);
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+  }
 
   const { name, email, phone } = JSON.parse(event.body || '{}');
   if (!name) return { statusCode: 400, headers, body: JSON.stringify({ error: 'name required' }) };

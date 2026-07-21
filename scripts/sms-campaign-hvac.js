@@ -1,15 +1,21 @@
 // ============================================================
-// sms-campaign-hvac.js
+// sms-campaign-hvac.js  —  OPERATIONAL SCRIPT (NOT a Netlify endpoint) [Gate A]
 // Mechanical Enterprise HVAC — Textbelt SMS Outreach Campaign
 // ============================================================
+// Moved out of functions/ during Gate A containment: this is a manually-run CLI
+// with NO exports.handler; it must never be a deployed/publicly-invocable surface.
+//
+// SAFETY (Gate A): DRY-RUN BY DEFAULT. A live send REQUIRES BOTH:
+//   --live                       (opt into sending)
+//   --confirm-production SEND     (explicit production confirmation)
+// Missing either one => the script previews and aborts without sending.
+//
 // USAGE:
-//   node sms-campaign-hvac.js --dry-run         (preview + credit check)
-//   node sms-campaign-hvac.js --limit 20        (send first 20)
-//   node sms-campaign-hvac.js                   (send all 'new')
+//   node sms-campaign-hvac.js                                  (dry run — preview only)
+//   node sms-campaign-hvac.js --limit 20                       (dry run, first 20)
+//   node sms-campaign-hvac.js --live --confirm-production SEND (LIVE send all 'new')
 //
 // TEXTBELT KEY: stored in TEXTBELT_KEY env var
-// NOTE: ~42 credits remaining — top up before full run at https://textbelt.com
-//       1,100 texts ≈ $55 at $0.05/text (bulk pricing available)
 //
 // COMPLIANCE:
 //   - "Reply STOP" included in every message (required)
@@ -19,6 +25,13 @@
 const https = require('https');
 const fs    = require('fs');
 
+// ─── GATE A SEND GUARD ─────────────────────────────────────
+// Live send is opt-in and requires two independent confirmations.
+const LIVE_FLAG   = process.argv.includes('--live');
+const CONFIRM_IDX = process.argv.indexOf('--confirm-production');
+const CONFIRMED   = CONFIRM_IDX !== -1 && process.argv[CONFIRM_IDX + 1] === 'SEND';
+const IS_LIVE     = LIVE_FLAG && CONFIRMED;
+
 // ─── CONFIG ────────────────────────────────────────────────
 const CONFIG = {
   TEXTBELT_KEY:  process.env.TEXTBELT_KEY,
@@ -27,7 +40,7 @@ const CONFIG = {
   SOURCE:        'hvac-list-07105',
   STATUS:        'new',
   DELAY_MS:      1200,
-  DRY_RUN:       process.argv.includes('--dry-run'),
+  DRY_RUN:       !IS_LIVE,   // default-safe: only LIVE when both confirmations present
   LIMIT:         getLimitArg(),
   BOOKING_URL:   'https://mwbe-enterprises.com/free-assessment',
   COMPANY_PHONE: '(973) 555-0100',  // ← update with real number
@@ -120,7 +133,7 @@ async function updateStatus(id, status, tbId) {
 // ─── MAIN ──────────────────────────────────────────────────
 async function main() {
   console.log('\n📱 Mechanical Enterprise — HVAC SMS Campaign (Textbelt)');
-  console.log(`🔁 Mode: ${CONFIG.DRY_RUN ? 'DRY RUN' : 'LIVE SEND'}`);
+  console.log(`🔁 Mode: ${CONFIG.DRY_RUN ? 'DRY RUN (no SMS will be sent)' : 'LIVE SEND'}`);
   if (CONFIG.LIMIT) console.log(`🔢 Limit: ${CONFIG.LIMIT}`);
 
   const quota = await checkCredits();
@@ -132,7 +145,8 @@ async function main() {
   }
 
   const leads = await fetchLeads();
-  console.log(`✅ ${leads.length} leads ready\n`);
+  const recipientCount = CONFIG.LIMIT ? Math.min(CONFIG.LIMIT, leads.length) : leads.length;
+  console.log(`✅ ${leads.length} leads matched | intended recipients: ${recipientCount}\n`);
   if (!leads.length) { console.log('No leads. Run import-hvac-leads.js first.'); return; }
 
   if (CONFIG.DRY_RUN) {
@@ -141,10 +155,17 @@ async function main() {
       const msg = getMsg(l,i);
       console.log(`To: ${l.phone} (${l.name})\n[${msg.length} chars]: ${msg}\n`);
     });
-    console.log(`💳 Credits needed: ${CONFIG.LIMIT || leads.length} | Available: ${quota.quotaRemaining ?? 'unknown'}`);
-    console.log('\n✅ Dry run done. Remove --dry-run to send.');
+    console.log(`💳 Credits needed: ${recipientCount} | Available: ${quota.quotaRemaining ?? 'unknown'}`);
+    console.log(`\n⛔ DRY RUN — no messages sent to ${recipientCount} recipient(s).`);
+    if (LIVE_FLAG && !CONFIRMED) {
+      console.log('   --live was given but --confirm-production SEND was NOT. Aborting send.');
+    }
+    console.log('   To send for real: node sms-campaign-hvac.js --live --confirm-production SEND');
     return;
   }
+
+  console.log(`🚨 LIVE SEND CONFIRMED — sending to ${recipientCount} recipient(s) in 3s...\n`);
+  await new Promise(r => setTimeout(r, 3000));
 
   const results = []; let sent=0, failed=0;
 

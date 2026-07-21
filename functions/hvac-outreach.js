@@ -5,6 +5,7 @@
 // Netlify scheduled function — can also be triggered manually from dashboard
 
 const nodemailer = require('nodemailer');
+const { requireInternalToken, NO_CORS } = require('./_internal-auth');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -202,8 +203,12 @@ async function getLeadsToContact(batchSize = 10) {
 
 // ── MAIN HANDLER ──
 exports.handler = async (event) => {
-  const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
+  const headers = NO_CORS; // server-to-server; not browser-facing
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' };
+  // INTERNAL token required (default-deny) BEFORE method checks, body parsing, or logic.
+  const gate = requireInternalToken(event);
+  if (!gate.ok) return gate.response;
+  if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
   try {
     const body = JSON.parse(event.body || '{}');

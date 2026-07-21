@@ -1480,8 +1480,10 @@ setTimeout(updateFlyer, 100);
 // ========== SYSTEM MONITOR ==========
 const VAPI_KEY = '064f441d-a388-4404-8b6c-05e91e90f1ff';
 const VAPI_BASE = 'https://api.vapi.ai';
-const AUTOCALL_URL = 'https://abrevo.co/.netlify/functions/autocall';
-const READMAIL_URL = 'https://abrevo.co/.netlify/functions/readmail';
+// Gate A: autocall/readmail are SCHEDULED operational functions (they place real
+// outbound calls and process/answer mail). The dashboard must NEVER invoke them —
+// a GET triggers the operation. Endpoint URLs intentionally removed so no browser
+// code can call them; these functions run only on their Netlify cron schedule.
 
 const ASSISTANT_MAP = {
   'Rosalia Outbound': 'Alex',
@@ -1675,64 +1677,24 @@ async function monLoadCallsTexts(vapiCalls) {
 
 // PANEL 4: Autocall
 async function monLoadAutocall() {
+  // Gate A: DO NOT invoke the operational function from the browser — GET /autocall
+  // places real outbound calls. autocall runs on its Netlify cron schedule; this
+  // panel is informational only and never triggers the operation.
   const el = document.getElementById('mon-autocall');
-  try {
-    const r = await fetch(AUTOCALL_URL);
-    const data = await r.json();
-    const hasErrors = data.errors && data.errors.length > 0;
-    const dotColor = hasErrors ? 'red' : 'green';
-
-    let html = `<div class="mon-metrics-grid">
-      <div class="mon-metric"><div class="mon-metric-val">${data.leadsFound ?? data.found ?? '--'}</div><div class="mon-metric-lbl">Leads Found</div></div>
-      <div class="mon-metric"><div class="mon-metric-val">${data.called ?? data.processed ?? '--'}</div><div class="mon-metric-lbl">Called</div></div>
-      <div class="mon-metric"><div class="mon-metric-val">${data.skipped ?? '--'}</div><div class="mon-metric-lbl">Skipped</div></div>
-    </div>`;
-    html += `<div class="mon-row">${monDot(dotColor, true)} <span class="mon-label">Status</span><span class="${hasErrors ? 'mon-error' : 'mon-success'}">${hasErrors ? 'Errors detected' : 'Working'}</span></div>`;
-
-    if (hasErrors) {
-      data.errors.slice(0,3).forEach(err => {
-        html += `<div class="mon-row">${monDot('red')} <span class="mon-error">${typeof err === 'string' ? err : JSON.stringify(err)}</span></div>`;
-      });
-    }
-    el.innerHTML = html;
-    return !hasErrors;
-  } catch(e) {
-    el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Offline: ${e.message}</span></div>`;
-    return false;
-  }
+  el.innerHTML = `<div class="mon-row">${monDot('gray', true)} <span class="mon-label">Status</span><span class="mon-val">Scheduled (cron)</span></div>`
+    + `<div class="mon-row"><span class="mon-label">Live run not polled from dashboard (Gate A)</span></div>`;
+  return true;
 }
 
 // PANEL 5: Readmail
 async function monLoadReadmail() {
+  // Gate A: DO NOT invoke the operational function from the browser — GET /readmail
+  // processes the inbox and sends AI email replies. readmail runs on its Netlify cron
+  // schedule; this panel is informational only and never triggers the operation.
   const el = document.getElementById('mon-readmail');
-  try {
-    const r = await fetch(READMAIL_URL);
-    const data = await r.json();
-    const hasErrors = data.errors && data.errors.length > 0;
-    const processed = data.processed ?? data.replied ?? 0;
-    const skipped = data.skipped ?? 0;
-    const dotColor = hasErrors ? 'red' : (processed > 0 ? 'green' : (skipped > 0 ? 'yellow' : 'gray'));
-
-    let html = `<div class="mon-metrics-grid">
-      <div class="mon-metric"><div class="mon-metric-val">${data.unread ?? data.total ?? '--'}</div><div class="mon-metric-lbl">Unread</div></div>
-      <div class="mon-metric"><div class="mon-metric-val">${processed}</div><div class="mon-metric-lbl">Processed</div></div>
-      <div class="mon-metric"><div class="mon-metric-val">${skipped}</div><div class="mon-metric-lbl">Skipped</div></div>
-    </div>`;
-
-    const statusText = hasErrors ? 'Errors detected' : (processed > 0 ? 'Processing' : (skipped > 0 ? 'All skipped' : 'Idle'));
-    html += `<div class="mon-row">${monDot(dotColor, true)} <span class="mon-label">Status</span><span class="${hasErrors ? 'mon-error' : (dotColor === 'yellow' ? 'mon-val' : 'mon-success')}">${statusText}</span></div>`;
-
-    if (hasErrors) {
-      (data.errors || []).slice(0,3).forEach(err => {
-        html += `<div class="mon-row">${monDot('red')} <span class="mon-error">${typeof err === 'string' ? err : JSON.stringify(err)}</span></div>`;
-      });
-    }
-    el.innerHTML = html;
-    return !hasErrors;
-  } catch(e) {
-    el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Offline: ${e.message}</span></div>`;
-    return false;
-  }
+  el.innerHTML = `<div class="mon-row">${monDot('gray', true)} <span class="mon-label">Status</span><span class="mon-val">Scheduled (cron)</span></div>`
+    + `<div class="mon-row"><span class="mon-label">Live run not polled from dashboard (Gate A)</span></div>`;
+  return true;
 }
 
 // PANEL 6: Activity Feed
