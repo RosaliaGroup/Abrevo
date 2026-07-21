@@ -250,6 +250,18 @@
   </style>
 </head>
 <body>
+
+<div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#0b0b12;align-items:center;justify-content:center;font-family:-apple-system,Segoe UI,Roboto,sans-serif;">
+  <form id="login-form" style="background:#15151f;padding:32px;border-radius:12px;width:320px;max-width:90vw;border:1px solid #2a2a3a;">
+    <h2 style="color:#e8b800;margin:0 0 4px;font-size:20px;">Rosalia Social</h2>
+    <p style="color:#888;margin:0 0 20px;font-size:13px;">Operator sign-in required</p>
+    <input id="login-user" placeholder="Username" autocomplete="username" style="width:100%;padding:12px;margin-bottom:10px;border-radius:8px;border:1px solid #333;background:#0b0b12;color:#fff;box-sizing:border-box;">
+    <input id="login-pass" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;padding:12px;margin-bottom:10px;border-radius:8px;border:1px solid #333;background:#0b0b12;color:#fff;box-sizing:border-box;">
+    <div id="login-err" style="color:#e55;font-size:13px;min-height:18px;margin-bottom:10px;"></div>
+    <button type="submit" id="login-btn" style="width:100%;padding:12px;border:0;border-radius:8px;background:#e8b800;color:#111;font-weight:700;cursor:pointer;">Sign in</button>
+  </form>
+</div>
+<button id="logout-btn" onclick="apiLogout()" style="display:none;position:fixed;bottom:16px;right:16px;z-index:9998;padding:8px 14px;border:1px solid #333;border-radius:8px;background:#15151f;color:#aaa;cursor:pointer;font-size:12px;">Log out</button>
 <div class="app">
   <!-- Sidebar -->
   <nav class="sidebar">
@@ -742,8 +754,52 @@
 
 <script>
 // ---- Config ----
-const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoa2dwZXBrd2lieGJ4c2VwZXRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMyNjczNCwiZXhwIjoyMDg3OTAyNzM0fQ.k4MG4RGSjUiyQZ6m_U4BvWl3T60BwFPhucaoboeB9m4';
+// ── Authenticated API client (server holds all provider credentials) ──
+let __csrf = null;
+function showLoginGate(show) {
+  var g = document.getElementById('login-gate'); var lo = document.getElementById('logout-btn');
+  var loggedIn = (show === false);
+  if (g) g.style.display = loggedIn ? 'none' : 'flex';
+  if (lo) lo.style.display = loggedIn ? 'block' : 'none';
+}
+async function apiRaw(path, opts) {
+  try {
+    const res = await fetch('/api' + path, Object.assign({ credentials: 'same-origin' }, opts || {}));
+    if (res.status === 401) { showLoginGate(true); return null; }
+    let body = {}; try { body = await res.json(); } catch (e) {}
+    if (!res.ok || body.ok === false) return null;
+    return body;
+  } catch (e) { return null; }
+}
+async function apiGet(path) { const b = await apiRaw(path, { method: 'GET' }); return b ? b.data : null; }
+async function apiSend(method, path, data) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (__csrf) headers['X-CSRF-Token'] = __csrf;
+  return await apiRaw(path, { method: method, headers: headers, body: data ? JSON.stringify(data) : '{}' });
+}
+async function apiLogin(username, password) {
+  const res = await fetch('/api/auth/login', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: username, password: password }) });
+  const body = await res.json().catch(function(){ return {}; });
+  if (res.ok && body.ok) { __csrf = body.csrfToken; return { ok: true }; }
+  return { ok: false, status: res.status, error: body.error };
+}
+async function apiLogout() { try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {} __csrf = null; showLoginGate(true); }
+async function bootstrapSession() {
+  try { const s = await (await fetch('/api/auth/session', { credentials: 'same-origin' })).json(); if (s && s.ok) { __csrf = s.csrfToken; showLoginGate(false); return true; } } catch (e) {}
+  showLoginGate(true); return false;
+}
+document.addEventListener('DOMContentLoaded', function () {
+  bootstrapSession();
+  var f = document.getElementById('login-form');
+  if (f) f.addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    var btn = document.getElementById('login-btn'); var errEl = document.getElementById('login-err');
+    btn.disabled = true; btn.textContent = 'Signing in...'; errEl.textContent = '';
+    var r = await apiLogin(document.getElementById('login-user').value, document.getElementById('login-pass').value);
+    btn.disabled = false; btn.textContent = 'Sign in';
+    if (r.ok) { showLoginGate(false); } else { errEl.textContent = r.status === 429 ? 'Too many attempts. Try again later.' : 'Invalid credentials'; }
+  });
+});
 
 // ---- State ----
 let scheduledPosts = JSON.parse(localStorage.getItem('abrevo_posts') || '[]');
@@ -847,14 +903,10 @@ Keep each under 250 characters for cross-platform compatibility.
 Return ONLY a JSON array of objects with "text" and "tags" (array of 2-3 short tags) fields. No markdown, no explanation.`;
 
   try {
-    const response = await fetch('/.netlify/functions/ai-generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, max_tokens: 800 })
-    });
-
+    const __r = await apiSend('POST', '/actions/ai-generate', { prompt, max_tokens: 800 });
+    const response = { ok: !!(__r && __r.ok) };
     if (!response.ok) throw new Error('AI endpoint not available');
-    const data = await response.json();
+    const data = (__r && __r.data) || {};
     const ideas = JSON.parse(data.text || data.content || '[]');
 
     resBox.innerHTML = ideas.map(idea => `
@@ -945,10 +997,7 @@ async function generateIdeas() {
 // ---- Lead Enrichment ----
 async function loadAgentFilter() {
   try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/agents?select=id,name&order=name.asc', {
-      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
-    });
-    const agents = await res.json();
+    const agents = await apiGet('/agents') || [];
     if (!Array.isArray(agents)) return;
     const sel = document.getElementById('enrich-agent-filter');
     if (!sel) return;
@@ -970,11 +1019,7 @@ async function searchLeads(agentFilter) {
   document.getElementById('no-leads').style.display = 'none';
 
   try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?or=(name.ilike.*${encodeURIComponent(query)}*,email.ilike.*${encodeURIComponent(query)}*,phone.ilike.*${encodeURIComponent(query)}*)${agentFilter ? '&assigned_to=eq.'+agentFilter : ''}&limit=20&order=created_at.desc`,
-      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
-    );
-    const leads = await res.json();
+    const leads = await apiGet('/leads?mode=social-search&q=' + encodeURIComponent(query) + (agentFilter ? '&agent=' + encodeURIComponent(agentFilter) : '')) || [];
     renderLeads(leads);
   } catch (err) {
     toast('Error searching leads: ' + err.message);
@@ -986,11 +1031,7 @@ async function loadAllLeads(agentFilter) {
   document.getElementById('enrich-loading').style.display = 'flex';
   document.getElementById('no-leads').style.display = 'none';
   try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?order=created_at.desc&limit=50&select=name,email,phone,source,client,created_at,assigned_to${agentFilter ? '&assigned_to=eq.'+agentFilter : ''}`,
-      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
-    );
-    const leads = await res.json();
+    const leads = await apiGet('/leads?mode=social-list' + (agentFilter ? '&agent=' + encodeURIComponent(agentFilter) : '')) || [];
     renderLeads(leads);
   } catch (err) {
     toast('Error loading leads: ' + err.message);
@@ -1068,12 +1109,8 @@ async function enrichLead(name, email, phone) {
   detail.scrollIntoView({ behavior: 'smooth' });
 
   try {
-    const res = await fetch('/.netlify/functions/ai-enrich', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, phone })
-    });
-    const data = await res.json();
+    const __r = await apiSend('POST', '/actions/ai-enrich', { name, email, phone });
+    const data = (__r && __r.data) || {};
 
     const linkOrNone = (url, label) => url ? `<a href="${url}" target="_blank" style="color:var(--gold);text-decoration:underline;font-size:13px;">${url}</a>` : `<span style="color:var(--text-muted);font-size:13px;">Not found</span>`;
     const mentions = (data.web_mentions || []).length > 0
@@ -1271,12 +1308,8 @@ async function bulkEnrich() {
     if (cached) { done++; progressText.textContent = `Enriched ${done}/${selected.length}...`; continue; }
     progressText.textContent = `Enriching ${done + 1}/${selected.length}: ${lead.name || lead.email}...`;
     try {
-      const res = await fetch('/.netlify/functions/ai-enrich', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: lead.name, email: lead.email, phone: lead.phone })
-      });
-      const data = await res.json();
+      const __r = await apiSend('POST', '/actions/ai-enrich', { name: lead.name, email: lead.email, phone: lead.phone });
+      const data = (__r && __r.data) || {};
       saveEnrichCache(key, data);
     } catch (e) { /* skip failures */ }
     done++;
@@ -1298,12 +1331,8 @@ async function followSelected(platform) {
     // Enrich if not cached
     if (!cached) {
       try {
-        const res = await fetch('/.netlify/functions/ai-enrich', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: lead.name, email: lead.email, phone: lead.phone })
-        });
-        cached = await res.json();
+        const __r = await apiSend('POST', '/actions/ai-enrich', { name: lead.name, email: lead.email, phone: lead.phone });
+        cached = (__r && __r.data) || {};
         saveEnrichCache(key, cached);
       } catch (e) { continue; }
     }
@@ -1478,10 +1507,7 @@ document.getElementById('flyer-property')?.addEventListener('change', function()
 setTimeout(updateFlyer, 100);
 
 // ========== SYSTEM MONITOR ==========
-const VAPI_KEY = '064f441d-a388-4404-8b6c-05e91e90f1ff';
-const VAPI_BASE = 'https://api.vapi.ai';
-const AUTOCALL_URL = 'https://abrevo.co/.netlify/functions/autocall';
-const READMAIL_URL = 'https://abrevo.co/.netlify/functions/readmail';
+// (Vapi + function triggers now go through the authenticated /api layer)
 
 const ASSISTANT_MAP = {
   'Rosalia Outbound': 'Alex',
@@ -1510,18 +1536,10 @@ function monDot(color, pulse) {
 }
 
 async function monFetchVapi(path) {
-  const r = await fetch(VAPI_BASE + path, { headers: { 'Authorization': 'Bearer ' + VAPI_KEY } });
-  if (!r.ok) throw new Error('Vapi ' + r.status);
-  return r.json();
+  return (await apiGet('/vapi/calls?limit=100')) || [];
 }
 
-async function monFetchSupabase(table, query) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-  });
-  if (!r.ok) throw new Error('Supabase ' + r.status);
-  return r.json();
-}
+// monFetchSupabase removed — all Supabase access now goes through /api
 
 // PANEL 1: AI Assistants
 async function monLoadAssistants() {
@@ -1600,7 +1618,7 @@ async function monLoadAssistants() {
 async function monLoadEmails() {
   const el = document.getElementById('mon-emails');
   try {
-    const leads = await monFetchSupabase('leads', 'select=name,replied_at,property&replied_at=not.is.null&order=replied_at.desc&limit=20');
+    const leads = await apiGet('/leads?mode=monitor-replied') || [];
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
     const todayEmails = leads.filter(l => new Date(l.replied_at) >= todayStart);
 
@@ -1651,7 +1669,7 @@ async function monLoadCallsTexts(vapiCalls) {
     let callAttempts = 0;
     let textsToday = 0;
     try {
-      const leads = await monFetchSupabase('leads', 'select=call_attempts,phone,updated_at&limit=500');
+      const leads = await apiGet('/leads?mode=monitor-callattempts') || [];
       callAttempts = leads.reduce((s, l) => s + (l.call_attempts || 0), 0);
       textsToday = leads.filter(l => l.phone && l.updated_at && new Date(l.updated_at) >= todayStart).length;
     } catch(e) { /* ignore */ }
@@ -1677,8 +1695,9 @@ async function monLoadCallsTexts(vapiCalls) {
 async function monLoadAutocall() {
   const el = document.getElementById('mon-autocall');
   try {
-    const r = await fetch(AUTOCALL_URL);
-    const data = await r.json();
+    const __x = await apiSend('POST', '/actions/autocall');
+    const data = (__x && __x.data) || {};
+    const r = { ok: true };
     const hasErrors = data.errors && data.errors.length > 0;
     const dotColor = hasErrors ? 'red' : 'green';
 
@@ -1706,8 +1725,9 @@ async function monLoadAutocall() {
 async function monLoadReadmail() {
   const el = document.getElementById('mon-readmail');
   try {
-    const r = await fetch(READMAIL_URL);
-    const data = await r.json();
+    const __x = await apiSend('POST', '/actions/readmail');
+    const data = (__x && __x.data) || {};
+    const r = { ok: true };
     const hasErrors = data.errors && data.errors.length > 0;
     const processed = data.processed ?? data.replied ?? 0;
     const skipped = data.skipped ?? 0;
@@ -1762,7 +1782,7 @@ async function monLoadFeed(vapiCalls, emailLeads) {
 
   // Bookings
   try {
-    const bookings = await monFetchSupabase('bookings', 'select=*&order=created_at.desc&limit=10');
+    const bookings = await apiGet('/bookings?mode=recent') || [];
     bookings.forEach(b => {
       items.push({
         time: new Date(b.created_at),
