@@ -947,6 +947,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="/healthcheck-ui.js"></script>
 <script>
 // ---- Config ----
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
@@ -2482,32 +2483,65 @@ async function runHealthCheck() {
   el.innerHTML = '<div class="loading-text"><span class="spinner"></span>Running health check...</div>';
 
   try {
-    const r = await fetch('/.netlify/functions/healthcheck', { method: 'POST' });
-    const data = await r.json();
-    const isHealthy = data.status === 'healthy';
-    let html = `<div class="mon-row">${monDot(isHealthy ? 'green' : 'red', !isHealthy)} <span class="mon-label">Overall</span><span class="${isHealthy ? 'mon-success' : 'mon-error'}">${isHealthy ? 'All Systems Healthy' : data.errors?.length + ' issue(s) found'}</span></div>`;
+    // Authenticated, side-effect-free (dry-run) manual healthcheck.
+    const r = await fetch('/.netlify/functions/admin-healthcheck-run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dryRun: true })
+    });
 
+    // Handle auth / non-2xx / non-JSON BEFORE parsing, so we never blow up on
+    // an HTML login page or an error body.
+    const cls = HealthcheckUI.classifyHealthcheckResponse(r.status, r.headers.get('content-type'));
+    if (cls.kind !== 'ok') {
+      el.innerHTML = `<div class="mon-row">${monDot('red', true)} <span class="mon-error">${escapeHtml(cls.message)}</span></div>`;
+      btn.disabled = false;
+      btn.textContent = 'Run Health Check';
+      return;
+    }
+
+    let data;
+    try {
+      data = await r.json();
+    } catch (_) {
+      el.innerHTML = `<div class="mon-row">${monDot('red', true)} <span class="mon-error">Health check returned invalid JSON.</span></div>`;
+      btn.disabled = false;
+      btn.textContent = 'Run Health Check';
+      return;
+    }
+
+    // Overall is NEVER "healthy" while execution states are unknown; the worker
+    // returns bounded statuses ('issues' | 'no_detected_issues').
+    const hasIssues = data.status === 'issues';
+    const overallText = hasIssues ? ((data.issues && data.issues.length) || 0) + ' issue(s) found' : 'No detected issues';
+    let html = `<div class="mon-row">${monDot(hasIssues ? 'red' : 'green', hasIssues)} <span class="mon-label">Overall</span><span class="${hasIssues ? 'mon-error' : 'mon-success'}">${overallText}</span></div>`;
+
+    // Scheduler execution vs. business-activity freshness are shown SEPARATELY.
+    // readmail/autocall execution is "unknown" (no heartbeat exists) — shown gray,
+    // never as OK/FAIL.
     html += `<div class="mon-metrics-grid" style="margin-top:12px;">
-      <div class="mon-metric"><div class="mon-metric-val" style="color:${data.book_ok?'var(--green)':'var(--red)'}">${data.book_ok?'OK':'FAIL'}</div><div class="mon-metric-lbl">Book.js</div></div>
-      <div class="mon-metric"><div class="mon-metric-val" style="color:${data.readmail_ok?'var(--green)':'var(--red)'}">${data.readmail_ok?'OK':'FAIL'}</div><div class="mon-metric-lbl">Readmail</div></div>
-      <div class="mon-metric"><div class="mon-metric-val" style="color:${data.autocall_ok?'var(--green)':'var(--red)'}">${data.autocall_ok?'OK':'FAIL'}</div><div class="mon-metric-lbl">Autocall</div></div>
-      <div class="mon-metric"><div class="mon-metric-val" style="color:${data.inventory_ok?'var(--green)':'var(--red)'}">${data.inventory_ok?'OK':'FAIL'}</div><div class="mon-metric-lbl">Inventory</div></div>
+      <div class="mon-metric"><div class="mon-metric-val" style="color:var(--text-muted)">${HealthcheckUI.executionLabel(data.readmail_execution)}</div><div class="mon-metric-lbl">Readmail exec</div></div>
+      <div class="mon-metric"><div class="mon-metric-val" style="color:var(--text-muted)">${HealthcheckUI.executionLabel(data.autocall_execution)}</div><div class="mon-metric-lbl">Autocall exec</div></div>
+      <div class="mon-metric"><div class="mon-metric-val" style="color:${data.supabase_ok?'var(--green)':'var(--red)'}">${data.supabase_ok?'OK':'FAIL'}</div><div class="mon-metric-lbl">Supabase</div></div>
+      <div class="mon-metric"><div class="mon-metric-val" style="color:${data.inventory_ok?'var(--green)':'var(--red)'}">${data.inventory_ok?'OK':(escapeHtml(data.inventory_error_code||'FAIL'))}</div><div class="mon-metric-lbl">Inventory</div></div>
     </div>`;
 
+    html += `<div class="mon-row" style="margin-top:12px;">${monDot('gray')} <span class="mon-label">Readmail activity (24h)</span><span class="mon-val">${escapeHtml(HealthcheckUI.activityLabel(data.readmail_activity_fresh))}</span></div>`;
+    html += `<div class="mon-row">${monDot('gray')} <span class="mon-label">Autocall activity (24h)</span><span class="mon-val">${escapeHtml(HealthcheckUI.activityLabel(data.autocall_activity_fresh))}</span></div>`;
     html += `<div class="mon-row" style="margin-top:12px;">${monDot(data.sms_key1_credits>500?'green':data.sms_key1_credits>100?'yellow':'red')} <span class="mon-label">SMS Key 1</span><span class="mon-val">${data.sms_key1_credits} credits</span></div>`;
     html += `<div class="mon-row">${monDot(data.sms_key2_credits>200?'green':data.sms_key2_credits>50?'yellow':'red')} <span class="mon-label">SMS Key 2</span><span class="mon-val">${data.sms_key2_credits} credits</span></div>`;
     html += `<div class="mon-row">${monDot('gray')} <span class="mon-label">Vapi Calls Today</span><span class="mon-val">${data.vapi_calls_today} | VM: ${data.vapi_voicemail_pct}% | Hangup: ${data.vapi_hangup_pct}%</span></div>`;
 
-    if (data.errors && data.errors.length) {
+    if (data.issues && data.issues.length) {
       html += '<div class="mon-section-label" style="margin-top:12px;">Issues</div>';
-      data.errors.forEach(e => { html += `<div class="mon-row">${monDot('red', true)} <span class="mon-error">${escapeHtml(e)}</span></div>`; });
-      html += `<div style="margin-top:8px;font-size:11px;color:var(--text-muted);">Alert email and SMS sent to team</div>`;
+      data.issues.forEach(e => { html += `<div class="mon-row">${monDot('red', true)} <span class="mon-error">${escapeHtml(e)}</span></div>`; });
     }
+    html += `<div style="margin-top:8px;font-size:11px;color:var(--text-muted);">Dry run — no alerts sent, no operational functions triggered.</div>`;
 
     el.innerHTML = html;
     loadHealthHistory();
   } catch (e) {
-    el.innerHTML = `<div class="mon-row">${monDot('red')} <span class="mon-error">Health check failed: ${escapeHtml(e.message)}</span></div>`;
+    el.innerHTML = `<div class="mon-row">${monDot('red', true)} <span class="mon-error">Health check request failed. Check your connection and try again.</span></div>`;
   }
   btn.disabled = false;
   btn.textContent = 'Run Health Check';
@@ -2542,14 +2576,17 @@ async function loadHealthHistory() {
     let html = '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:12px 0;">';
     history.reverse().forEach(h => {
       const hasErrors = h.errors && h.errors.length > 0;
-      const allOk = h.book_ok && h.readmail_ok && h.autocall_ok && h.inventory_ok && !hasErrors;
+      // *_ok columns may be null = "unknown" (e.g. readmail/autocall execution has
+      // no heartbeat). Unknown is neutral, NOT a failure — only an explicit false
+      // or a recorded error counts against a run.
+      const allOk = !hasErrors && h.inventory_ok !== false;
       const color = allOk ? 'var(--green)' : 'var(--red)';
       const time = new Date(h.tested_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
       const failures = [];
-      if (!h.book_ok) failures.push('Book');
-      if (!h.readmail_ok) failures.push('Readmail');
-      if (!h.autocall_ok) failures.push('Autocall');
-      if (!h.inventory_ok) failures.push('Inventory');
+      if (h.book_ok === false) failures.push('Book');
+      if (h.readmail_ok === false) failures.push('Readmail');
+      if (h.autocall_ok === false) failures.push('Autocall');
+      if (h.inventory_ok === false) failures.push('Inventory');
       if (h.sms_key1_credits < 500) failures.push('SMS1:' + h.sms_key1_credits);
       if (h.sms_key2_credits < 200) failures.push('SMS2:' + h.sms_key2_credits);
       if (h.vapi_hangup_pct > 50) failures.push('Hangup:' + h.vapi_hangup_pct + '%');
@@ -2560,7 +2597,7 @@ async function loadHealthHistory() {
     html += '</div>';
 
     // Legend
-    const passCount = history.filter(h => h.book_ok && h.readmail_ok && h.autocall_ok && h.inventory_ok && (!h.errors || !h.errors.length)).length;
+    const passCount = history.filter(h => (!h.errors || !h.errors.length) && h.inventory_ok !== false).length;
     const failCount = history.length - passCount;
     html += `<div style="display:flex;gap:16px;font-size:12px;color:var(--text-muted);padding-top:8px;">
       <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:4px;"></span>${passCount} passed</span>
