@@ -34,6 +34,13 @@
 [functions."appointment-reminder-evening"]
   schedule = "0 0 * * *"
   node_bundler = "nft"
+# Authenticated operator API (single server-owned layer) — must precede the SPA catch-all
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/social.html"
   to = "/social.html"
