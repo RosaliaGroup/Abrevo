@@ -41,6 +41,7 @@ function createFakeRepo() {
       const row = {
         id, normalized_phone, status: 'open', opted_out_at: null,
         created_by: created_by || null, last_message_at: null,
+        last_read_at: null, last_message_preview: null, last_message_direction: null,
         created_at: 't', updated_at: 't',
       };
       conversations.set(id, row);
@@ -88,6 +89,30 @@ function createFakeRepo() {
       Object.assign(m, patch);
       return { ...m };
     },
+    async getMessageById(id) {
+      const m = messages.find((x) => x.id === id);
+      return m ? { ...m } : null;
+    },
+    async getMessageByProviderId(provider, pmid) {
+      const m = messages.find((x) => x.provider === provider && x.provider_message_id === pmid);
+      return m ? { ...m } : null;
+    },
+    async listConversations({ limit = 25, offset = 0 } = {}) {
+      const all = [...conversations.values()].sort((a, b) => {
+        const la = a.last_message_at || '', lb = b.last_message_at || '';
+        if (la !== lb) return lb.localeCompare(la); // desc, '' (null) sorts last
+        return String(b.created_at).localeCompare(String(a.created_at));
+      });
+      return all.slice(offset, offset + limit).map((c) => ({ ...c }));
+    },
+    async listMessages(conversationId, { limit = 50, offset = 0 } = {}) {
+      const all = messages
+        .filter((m) => m.conversation_id === conversationId)
+        .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+      return all.slice(offset, offset + limit).map((m) => ({ ...m }));
+    },
+    async setOptOut(conversationId, at) { return this.touchConversation(conversationId, { opted_out_at: at }); },
+    async markRead(conversationId, at) { return this.touchConversation(conversationId, { last_read_at: at }); },
   };
   return repo;
 }
