@@ -132,6 +132,43 @@ function createSupabaseRepo(opts = {}) {
       if (!r.ok) throw new Error(`updateMessage failed: ${r.status} ${r.text.slice(0, 200)}`);
       return Array.isArray(r.json) ? r.json[0] : r.json;
     },
+
+    async getMessageById(id) {
+      const r = await rest('GET', `/messages?id=eq.${enc(id)}&limit=1`);
+      if (!r.ok) throw new Error(`getMessageById failed: ${r.status} ${r.text.slice(0, 200)}`);
+      return Array.isArray(r.json) && r.json.length ? r.json[0] : null;
+    },
+
+    async getMessageByProviderId(provider, providerMessageId) {
+      const r = await rest('GET',
+        `/messages?provider=eq.${enc(provider)}&provider_message_id=eq.${enc(providerMessageId)}&limit=1`);
+      if (!r.ok) throw new Error(`getMessageByProviderId failed: ${r.status} ${r.text.slice(0, 200)}`);
+      return Array.isArray(r.json) && r.json.length ? r.json[0] : null;
+    },
+
+    // Conversations ordered by most-recent activity (nulls last), paginated.
+    async listConversations({ limit = 25, offset = 0 } = {}) {
+      const r = await rest('GET',
+        `/conversations?order=last_message_at.desc.nullslast,created_at.desc&limit=${enc(limit)}&offset=${enc(offset)}`);
+      if (!r.ok) throw new Error(`listConversations failed: ${r.status} ${r.text.slice(0, 200)}`);
+      return Array.isArray(r.json) ? r.json : [];
+    },
+
+    // Messages of a conversation in chronological order, paginated.
+    async listMessages(conversationId, { limit = 50, offset = 0 } = {}) {
+      const r = await rest('GET',
+        `/messages?conversation_id=eq.${enc(conversationId)}&order=created_at.asc&limit=${enc(limit)}&offset=${enc(offset)}`);
+      if (!r.ok) throw new Error(`listMessages failed: ${r.status} ${r.text.slice(0, 200)}`);
+      return Array.isArray(r.json) ? r.json : [];
+    },
+
+    async setOptOut(conversationId, at) {
+      return this.touchConversation(conversationId, { opted_out_at: at });
+    },
+
+    async markRead(conversationId, at) {
+      return this.touchConversation(conversationId, { last_read_at: at });
+    },
   };
 }
 
