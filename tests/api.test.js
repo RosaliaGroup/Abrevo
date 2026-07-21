@@ -43,8 +43,9 @@ function installFetch(scn = {}) {
     if (u.includes("api.vapi.ai/call")) return scn.vapiStatus ? mkRes(scn.vapiStatus, "err") : mkRes(200, scn.vapi || [{ createdAt: "2026-07-20", status: "ended", endedReason: "ok", duration: 42, assistantId: "a1", assistant: { name: "Bot" }, secretField: "leak" }]);
     if (u.includes("textbelt.com/text")) return mkRes(200, scn.textbelt || { success: true });
     if (u.includes("/.netlify/functions/")) return mkRes(scn.actionStatus || 200, scn.action || { done: true });
-    if (u.includes("/rest/v1/") && method === "GET") return mkRes(200, scn.rows || [{ id: 1 }]);
+    if (u.includes("/rest/v1/") && method === "GET") return scn.getStatus ? mkRes(scn.getStatus, "db error detail: relation leaked") : mkRes(200, scn.rows || [{ id: 1 }]);
     if (u.includes("/rest/v1/") && method === "PATCH") return mkRes(200, "");
+    if (u.includes("/rest/v1/") && method === "POST") return mkRes(201, scn.insert || [{ id: 999 }]);
     throw new Error("unexpected fetch " + method + " " + u);
   };
 }
@@ -220,6 +221,89 @@ test("sms cancel-link: per-IP rate limit -> 429", async () => {
   const { cookieHeader, csrf } = await loginAndGet();
   const r = parse(await handler(ev("POST", "/api/sms/cancel-link", { headers: { cookie: cookieHeader, "x-csrf-token": csrf }, body: { phone: "6462269189", name: "J", url: "https://book.rosaliagroup.com/cancel" } })));
   assert.equal(r.status, 429); assert.equal(r.body.error, "rate_limited");
+});
+
+// ---------- CRM reads ----------
+test("crm reads: all require a session (401 without)", async () => {
+  for (const p of ["/api/agents", "/api/deals", "/api/commissions", "/api/sequences", "/api/activities?lead_id=1", "/api/leads?mode=crm-list", "/api/bookings?mode=crm-week", "/api/tasks?sort=due"]) {
+    assert.equal(parse(await handler(ev("GET", p))).status, 401, p);
+  }
+});
+test("crm reads: with session return data; fixed queries; bad params -> 400", async () => {
+  const { cookieHeader } = await loginAndGet();
+  const H = { cookie: cookieHeader };
+  assert.equal(parse(await handler(ev("GET", "/api/agents", { headers: H }))).status, 200);
+  assert.equal(parse(await handler(ev("GET", "/api/leads", { headers: H, qs: { mode: "crm-list" } }))).status, 200);
+  assert.ok(calls.some((c) => c.u.includes("leads?order=created_at.desc&limit=500&select=id,name")));
+  assert.equal(parse(await handler(ev("GET", "/api/tasks", { headers: H, qs: { sort: "evil" } }))).status, 400);
+  assert.equal(parse(await handler(ev("GET", "/api/activities", { headers: H, qs: {} }))).status, 400);
+  assert.equal(parse(await handler(ev("GET", "/api/activities", { headers: H, qs: { lead_id: "a b" } }))).status, 400);
+});
+test("crm reads: database failure -> controlled 502, no raw error leaked", async () => {
+  installFetch({ getStatus: 500 });
+  const { cookieHeader } = await loginAndGet();
+  const r = parse(await handler(ev("GET", "/api/deals", { headers: { cookie: cookieHeader } })));
+  assert.equal(r.status, 502); assert.equal(r.body.error, "upstream_failed");
+  assert.ok(!/relation|db error/.test(JSON.stringify(r.body)), "no raw DB error leaked");
+});
+
+// ---------- CRM writes: PATCH ----------
+test("complete task (status=completed): needs CSRF; sets completed_at", async () => {
+  const { cookieHeader, csrf } = await loginAndGet();
+  assert.equal(parse(await handler(ev("PATCH", "/api/tasks/7", { headers: { cookie: cookieHeader }, body: { status: "completed" } }))).status, 403);
+  const okr = parse(await handler(ev("PATCH", "/api/tasks/7", { headers: { cookie: cookieHeader, "x-csrf-token": csrf }, body: { status: "completed" } })));
+  assert.equal(okr.status, 200);
+  const patch = calls.find((c) => c.method === "PATCH" && c.u.includes("/rest/v1/tasks?id=eq.7"));
+  assert.equal(patch.body.status, "completed"); assert.ok(patch.body.completed_at);
+});
+test("mark commission paid: CSRF required; bad status 400; ok sets paid_at", async () => {
+  const { cookieHeader, csrf } = await loginAndGet();
+  assert.equal(parse(await handler(ev("PATCH", "/api/commissions/3", { headers: { cookie: cookieHeader }, body: { status: "paid" } }))).status, 403);
+  assert.equal(parse(await handler(ev("PATCH", "/api/commissions/3", { headers: { cookie: cookieHeader, "x-csrf-token": csrf }, body: { status: "void" } }))).status, 400);
+  const okr = parse(await handler(ev("PATCH", "/api/commissions/3", { headers: { cookie: cookieHeader, "x-csrf-token": csrf }, body: { status: "paid" } })));
+  assert.equal(okr.status, 200);
+  const patch = calls.find((c) => c.method === "PATCH" && c.u.includes("/rest/v1/commissions?id=eq.3"));
+  assert.equal(patch.body.status, "paid"); assert.ok(patch.body.paid_at);
+});
+
+// ---------- CRM writes: creates ----------
+test("create lead: CSRF; name required; source allow-list; server-set fields; allow-list enforced", async () => {
+  const { cookieHeader, csrf } = await loginAndGet();
+  const H = { cookie: cookieHeader, "x-csrf-token": csrf };
+  assert.equal(parse(await handler(ev("POST", "/api/leads", { headers: { cookie: cookieHeader }, body: { name: "A" } }))).status, 403); // no csrf
+  assert.equal(parse(await handler(ev("POST", "/api/leads", { headers: H, body: { email: "a@b.com" } }))).status, 400); // no name
+  assert.equal(parse(await handler(ev("POST", "/api/leads", { headers: H, body: { name: "A", source: "haxor" } }))).status, 400); // bad source
+  const okr = parse(await handler(ev("POST", "/api/leads", { headers: H, body: { name: "Jane", email: "jane@x.com", source: "zillow", client: "HACK", status: "admin", evilField: "x" } })));
+  assert.equal(okr.status, 200); assert.equal(okr.body.id, 999);
+  const ins = calls.find((c) => c.method === "POST" && c.u.endsWith("/rest/v1/leads"));
+  assert.equal(ins.body.client, "rosalia"); // server-set, not the injected "HACK"
+  assert.equal(ins.body.status, "new");     // server-set, not "admin"
+  assert.ok(!("evilField" in ins.body), "unknown field dropped");
+});
+test("create deal: stage required + allow-listed; numeric rent", async () => {
+  const { cookieHeader, csrf } = await loginAndGet();
+  const H = { cookie: cookieHeader, "x-csrf-token": csrf };
+  assert.equal(parse(await handler(ev("POST", "/api/deals", { headers: H, body: { property: "X" } }))).status, 400); // stage required
+  assert.equal(parse(await handler(ev("POST", "/api/deals", { headers: H, body: { stage: "nonsense" } }))).status, 400);
+  assert.equal(parse(await handler(ev("POST", "/api/deals", { headers: H, body: { stage: "toured", monthly_rent: "abc" } }))).status, 400);
+  assert.equal(parse(await handler(ev("POST", "/api/deals", { headers: H, body: { stage: "toured", monthly_rent: 2500, lead_id: "9" } }))).status, 200);
+});
+test("create task: title required; priority allow-list; status server-set", async () => {
+  const { cookieHeader, csrf } = await loginAndGet();
+  const H = { cookie: cookieHeader, "x-csrf-token": csrf };
+  assert.equal(parse(await handler(ev("POST", "/api/tasks", { headers: H, body: { priority: "high" } }))).status, 400); // no title
+  assert.equal(parse(await handler(ev("POST", "/api/tasks", { headers: H, body: { title: "T", priority: "URGENT" } }))).status, 400);
+  const okr = parse(await handler(ev("POST", "/api/tasks", { headers: H, body: { title: "Call Jane", priority: "high", status: "done-by-hacker" } })));
+  assert.equal(okr.status, 200);
+  const ins = calls.find((c) => c.method === "POST" && c.u.endsWith("/rest/v1/tasks"));
+  assert.equal(ins.body.status, "pending"); // server-set
+});
+test("create agent: name required; role allow-list", async () => {
+  const { cookieHeader, csrf } = await loginAndGet();
+  const H = { cookie: cookieHeader, "x-csrf-token": csrf };
+  assert.equal(parse(await handler(ev("POST", "/api/agents", { headers: H, body: { email: "a@b.com" } }))).status, 400); // no name
+  assert.equal(parse(await handler(ev("POST", "/api/agents", { headers: H, body: { name: "A", role: "superadmin" } }))).status, 400);
+  assert.equal(parse(await handler(ev("POST", "/api/agents", { headers: H, body: { name: "Ana", role: "manager" } }))).status, 200);
 });
 
 // ---------- logout / config ----------

@@ -82,6 +82,7 @@ async function recordAttempt(ip, username, success) {
 const LEAD_MODES = {
   list: () => `leads?client=eq.rosalia&order=created_at.desc&limit=50&select=name,email,phone,source,client,created_at`,
   all: () => `leads?select=*&order=created_at.desc&limit=500`,
+  "crm-list": () => `leads?order=created_at.desc&limit=500&select=id,name,email,phone,source,property,status,assigned_to,client,notes,last_contact_at,replied_at,created_at,call_attempts`,
   "monitor-replied": () => `leads?select=name,replied_at,property&replied_at=not.is.null&order=replied_at.desc&limit=20`,
   "monitor-callattempts": () => `leads?select=call_attempts,phone,updated_at&limit=500`,
   search: (q) =>
@@ -97,8 +98,72 @@ const BOOKING_MODES = {
     const end = new Date(start); end.setUTCDate(end.getUTCDate() + 1);
     return `bookings?select=full_name,phone,preferred_date,preferred_time,calendar_event_id,created_at,type&created_at=gte.${start.toISOString()}&created_at=lt.${end.toISOString()}&order=created_at.desc`;
   },
+  "crm-week": () => {
+    const day = (d) => d.toISOString().slice(0, 10);
+    const from = new Date(); from.setUTCDate(from.getUTCDate() - 7);
+    const to = new Date(); to.setUTCDate(to.getUTCDate() + 7);
+    return `bookings?select=full_name,phone,preferred_date,preferred_time,type,created_at&preferred_date=gte.${day(from)}&preferred_date=lte.${day(to)}&order=preferred_date.asc&limit=100`;
+  },
 };
-const TASK_STATUSES = { resolved: { status: "resolved", resolvedField: "resolved_at" } };
+const TASK_STATUSES = {
+  resolved: { status: "resolved", stampField: "resolved_at" },   // rosalia
+  completed: { status: "completed", stampField: "completed_at" }, // crm
+};
+const TASK_SORTS = { created: "created_at.desc", due: "due_date.asc" };
+
+// CRM write allow-lists (fixed; unknown keys are rejected, values validated).
+const LEAD_SOURCES = new Set(["email", "phone", "zillow", "webflow", "facebook", "instagram", "fub", "walk-in", "avail"]);
+const DEAL_STAGES = new Set(["inquiry", "toured", "applied", "approved", "lease_sent", "signed", "moved_in", "lost"]);
+const TASK_PRIORITIES = new Set(["normal", "high", "low"]);
+const AGENT_ROLES = new Set(["leasing_agent", "manager", "admin"]);
+const COMMISSION_STATUSES = { paid: { status: "paid", stampField: "paid_at" } };
+
+const ValidationError = (field) => { const e = new Error("validation:" + field); e._validation = field; return e; };
+function vStr(v, max, field, required) {
+  if (v == null || v === "") { if (required) throw ValidationError(field); return null; }
+  if (typeof v !== "string") throw ValidationError(field);
+  const s = v.trim();
+  if (!s) { if (required) throw ValidationError(field); return null; }
+  if (s.length > max) throw ValidationError(field);
+  return s;
+}
+function vEmail(v, field) {
+  const s = vStr(v, 320, field, false);
+  if (s && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) throw ValidationError(field);
+  return s;
+}
+function vId(v, field) {
+  if (v == null || v === "") return null;
+  if (!/^[A-Za-z0-9-]{1,64}$/.test(String(v))) throw ValidationError(field);
+  return String(v);
+}
+function vEnum(v, set, field, required) {
+  const s = vStr(v, 64, field, required);
+  if (s == null) return null;
+  if (!set.has(s)) throw ValidationError(field);
+  return s;
+}
+function vNum(v, field) {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0) throw ValidationError(field);
+  return n;
+}
+function vDate(v, field) {
+  const s = vStr(v, 40, field, false);
+  if (s && !Number.isFinite(Date.parse(s))) throw ValidationError(field);
+  return s;
+}
+async function sbPost(table, row) {
+  const res = await fetch(`${ENV().URL}/rest/v1/${table}`, {
+    method: "POST",
+    headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=representation" }),
+    body: JSON.stringify(row),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`sb_post_${res.status}`);
+  try { const p = JSON.parse(text); const r = Array.isArray(p) ? p[0] : p; return r && r.id != null ? r.id : null; } catch { return null; }
+}
 const ACTIONS = new Set(["ai-generate", "ai-enrich", "autocall", "healthcheck", "readmail"]);
 
 // Vapi call fields the dashboard actually consumes (everything else is dropped).
@@ -224,7 +289,25 @@ exports.handler = async (event) => {
       return json(200, { ok: true, data: await sbGet(LEAD_ALERTS_QUERY()) });
     }
     if (route === "/tasks" && method === "GET") {
-      return json(200, { ok: true, data: await sbGet(`tasks?select=*&order=created_at.desc&limit=100`) });
+      const sort = TASK_SORTS[qs.sort || "created"];
+      if (!sort) return json(400, { ok: false, error: "bad_sort" });
+      return json(200, { ok: true, data: await sbGet(`tasks?select=*&order=${sort}&limit=100`) });
+    }
+    if (route === "/agents" && method === "GET") {
+      return json(200, { ok: true, data: await sbGet(`agents?select=id,name,email,phone,role&order=name.asc&limit=200`) });
+    }
+    if (route === "/deals" && method === "GET") {
+      return json(200, { ok: true, data: await sbGet(`deals?select=id,lead_id,property,monthly_rent,stage,agent_id,notes,created_at&order=created_at.desc&limit=500`) });
+    }
+    if (route === "/commissions" && method === "GET") {
+      return json(200, { ok: true, data: await sbGet(`commissions?select=id,deal_id,agent_id,amount,status,paid_at,created_at&order=created_at.desc&limit=500`) });
+    }
+    if (route === "/sequences" && method === "GET") {
+      return json(200, { ok: true, data: await sbGet(`follow_up_sequences?select=*&order=name.asc&limit=100`) });
+    }
+    if (route === "/activities" && method === "GET") {
+      if (!validId(qs.lead_id)) return json(400, { ok: false, error: "bad_lead_id" });
+      return json(200, { ok: true, data: await sbGet(`activities?select=id,lead_id,type,body,created_at&lead_id=eq.${encodeURIComponent(qs.lead_id)}&order=created_at.desc&limit=20`) });
     }
     if (route === "/leads" && method === "GET") {
       const mode = qs.mode || "list";
@@ -291,9 +374,77 @@ exports.handler = async (event) => {
       const spec = TASK_STATUSES[body.status];
       if (!spec) return json(400, { ok: false, error: "bad_status" });
       const patch = { status: spec.status };
-      if (spec.resolvedField) patch[spec.resolvedField] = new Date().toISOString();
+      if (spec.stampField) patch[spec.stampField] = new Date().toISOString();
       await sbPatch(`tasks?id=eq.${encodeURIComponent(id)}`, patch);
       return json(200, { ok: true, task: { id, status: spec.status } });
+    }
+    if (route.startsWith("/commissions/") && method === "PATCH") {
+      if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
+      const id = route.slice("/commissions/".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+      let body; try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { ok: false, error: "invalid_json" }); }
+      const spec = COMMISSION_STATUSES[body.status];
+      if (!spec) return json(400, { ok: false, error: "bad_status" });
+      const patch = { status: spec.status, [spec.stampField]: new Date().toISOString() };
+      await sbPatch(`commissions?id=eq.${encodeURIComponent(id)}`, patch);
+      return json(200, { ok: true, id, status: spec.status });
+    }
+
+    // ----- CRM creates (require CSRF; field-level allow-list + validation) -----
+    if ((route === "/leads" || route === "/deals" || route === "/tasks" || route === "/agents") && method === "POST") {
+      if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
+      let body; try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { ok: false, error: "invalid_json" }); }
+      if (!body || typeof body !== "object" || Array.isArray(body)) return json(400, { ok: false, error: "invalid_body" });
+      let row, table;
+      try {
+        if (route === "/leads") {
+          table = "leads";
+          row = {
+            name: vStr(body.name, 200, "name", true),
+            email: vEmail(body.email, "email"),
+            phone: normalizePhone(body.phone),
+            source: vEnum(body.source, LEAD_SOURCES, "source", false),
+            property: vStr(body.property, 500, "property", false),
+            assigned_to: vId(body.assigned_to, "assigned_to"),
+            notes: vStr(body.notes, 5000, "notes", false),
+            client: "rosalia", status: "new", // server-set, not client-controlled
+          };
+        } else if (route === "/deals") {
+          table = "deals";
+          row = {
+            lead_id: vId(body.lead_id, "lead_id"),
+            property: vStr(body.property, 500, "property", false),
+            monthly_rent: vNum(body.monthly_rent, "monthly_rent"),
+            stage: vEnum(body.stage, DEAL_STAGES, "stage", true),
+            agent_id: vId(body.agent_id, "agent_id"),
+            notes: vStr(body.notes, 5000, "notes", false),
+          };
+        } else if (route === "/tasks") {
+          table = "tasks";
+          row = {
+            title: vStr(body.title, 300, "title", true),
+            lead_id: vId(body.lead_id, "lead_id"),
+            assigned_to: vId(body.assigned_to, "assigned_to"),
+            due_date: vDate(body.due_date, "due_date"),
+            priority: vEnum(body.priority, TASK_PRIORITIES, "priority", false) || "normal",
+            description: vStr(body.description, 5000, "description", false),
+            status: "pending", // server-set
+          };
+        } else {
+          table = "agents";
+          row = {
+            name: vStr(body.name, 200, "name", true),
+            email: vEmail(body.email, "email"),
+            phone: normalizePhone(body.phone),
+            role: vEnum(body.role, AGENT_ROLES, "role", false) || "leasing_agent",
+          };
+        }
+      } catch (ve) {
+        if (ve && ve._validation) return json(400, { ok: false, error: "invalid_field", field: ve._validation });
+        throw ve;
+      }
+      const id = await sbPost(table, row);
+      return json(200, { ok: true, id });
     }
 
     // ----- cancel-link SMS (require CSRF; fixed template; server-owned key) -----
