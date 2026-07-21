@@ -20,6 +20,11 @@ alter table public.conversations
   add column if not exists last_message_preview  text        null,
   add column if not exists last_message_direction text       null;
 
+-- Backs the conversation-list ordering (last_message_at desc nulls last).
+-- Recommended in the Phase 2 review; added here (still unapplied) before testing.
+create index if not exists conversations_last_message_at_idx
+  on public.conversations (last_message_at desc nulls last);
+
 alter table public.conversations      enable row level security;
 alter table public.messages           enable row level security;
 alter table public.conversation_links enable row level security;
