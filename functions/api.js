@@ -99,7 +99,41 @@ const BOOKING_MODES = {
   },
 };
 const TASK_STATUSES = { resolved: { status: "resolved", resolvedField: "resolved_at" } };
-const ACTIONS = new Set(["ai-generate", "ai-enrich", "autocall", "healthcheck"]);
+const ACTIONS = new Set(["ai-generate", "ai-enrich", "autocall", "healthcheck", "readmail"]);
+
+// Vapi call fields the dashboard actually consumes (everything else is dropped).
+function pickVapiCall(c) {
+  return {
+    createdAt: c && c.createdAt,
+    status: c && c.status,
+    endedReason: c && c.endedReason,
+    assistantId: c && c.assistantId,
+    assistant: c && c.assistant ? { name: c.assistant.name } : null,
+  };
+}
+
+// Cancel-link SMS: fixed, server-owned message template + allow-listed link host.
+// The browser never supplies message text — only the destination and the link,
+// and the link must point at the approved cancel page.
+const CANCEL_LINK_PREFIX = "https://book.rosaliagroup.com/cancel";
+const SMS_DUP_WINDOW_MS = 5 * 60 * 1000;      // no repeat to same number within 5 min
+const SMS_RATE_MAX = 20;                       // per IP per hour
+const SMS_RATE_WINDOW_MS = 60 * 60 * 1000;
+
+function normalizePhone(raw) {
+  const d = String(raw || "").replace(/\D/g, "");
+  if (d.length === 10) return "+1" + d;
+  if (d.length === 11) return "+" + d;
+  if (d.length >= 12) return "+" + d;
+  return null; // fewer than 10 digits -> invalid
+}
+function firstName(name) {
+  return String(name || "").replace(/[^a-zA-Z' -]/g, "").trim().split(/\s+/)[0] || "there";
+}
+async function smsRecentCount(query) {
+  const rows = await sbGet(query);
+  return Array.isArray(rows) ? rows.length : 0;
+}
 
 // Search input allow-list: bounded charset + length, so it cannot break the PostgREST
 // or=() filter or inject operators.
@@ -228,6 +262,24 @@ exports.handler = async (event) => {
       let data; try { data = JSON.parse(text); } catch { data = { raw: text }; }
       return json(res.ok ? 200 : 502, { ok: res.ok, data });
     }
+    if (route === "/vapi/calls" && method === "GET") {
+      const vk = process.env.VAPI_KEY;
+      if (!vk) return json(500, { ok: false, error: "server_not_configured" });
+      // Allow-list query params: only `limit`, bounded to [1,100]. Anything else -> 400.
+      for (const k of Object.keys(qs)) if (k !== "limit") return json(400, { ok: false, error: "bad_filter" });
+      let limit = 100;
+      if (qs.limit !== undefined) {
+        limit = Number(qs.limit);
+        if (!Number.isInteger(limit) || limit < 1 || limit > 100) return json(400, { ok: false, error: "bad_filter" });
+      }
+      let res;
+      try { res = await fetch(`https://api.vapi.ai/call?limit=${limit}`, { headers: { Authorization: `Bearer ${vk}` } }); }
+      catch { return json(502, { ok: false, error: "provider_failed" }); }
+      if (!res.ok) return json(502, { ok: false, error: "provider_failed" });
+      let arr; try { arr = await res.json(); } catch { return json(502, { ok: false, error: "provider_failed" }); }
+      if (!Array.isArray(arr)) arr = [];
+      return json(200, { ok: true, data: arr.slice(0, limit).map(pickVapiCall) });
+    }
 
     // ----- writes (require CSRF) -----
     if (route.startsWith("/tasks/") && method === "PATCH") {
@@ -241,6 +293,45 @@ exports.handler = async (event) => {
       if (spec.resolvedField) patch[spec.resolvedField] = new Date().toISOString();
       await sbPatch(`tasks?id=eq.${encodeURIComponent(id)}`, patch);
       return json(200, { ok: true, task: { id, status: spec.status } });
+    }
+
+    // ----- cancel-link SMS (require CSRF; fixed template; server-owned key) -----
+    if (route === "/sms/cancel-link" && method === "POST") {
+      if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
+      const key = process.env.TEXTBELT_KEY;
+      if (!key) return json(500, { ok: false, error: "server_not_configured" });
+      let body; try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { ok: false, error: "invalid_json" }); }
+      const phone = normalizePhone(body.phone);
+      if (!phone) return json(400, { ok: false, error: "invalid_phone" });
+      const url = String(body.url || "");
+      if (!url.startsWith(CANCEL_LINK_PREFIX)) return json(400, { ok: false, error: "invalid_link" });
+      const ip = auth.getClientIp(event);
+      // duplicate-send protection (same number within window) + per-IP rate limit
+      const dupSince = new Date(Date.now() - SMS_DUP_WINDOW_MS).toISOString();
+      const rateSince = new Date(Date.now() - SMS_RATE_WINDOW_MS).toISOString();
+      try {
+        if (await smsRecentCount(`sms_sends?select=id&kind=eq.cancel-link&phone=eq.${encodeURIComponent(phone)}&sent_at=gte.${encodeURIComponent(dupSince)}`) > 0)
+          return json(429, { ok: false, error: "duplicate_recent" });
+        if (await smsRecentCount(`sms_sends?select=id&ip=eq.${encodeURIComponent(ip)}&sent_at=gte.${encodeURIComponent(rateSince)}`) >= SMS_RATE_MAX)
+          return json(429, { ok: false, error: "rate_limited" });
+      } catch { /* if the guard store is unreachable, do not block a legitimate send */ }
+      const message = `Hi ${firstName(body.name)}, here is your appointment management link: ${url} — you can reschedule or cancel here.`;
+      let provider;
+      try {
+        const r = await fetch("https://textbelt.com/text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, message, key }),
+        });
+        provider = await r.json().catch(() => ({}));
+      } catch { return json(502, { ok: false, error: "provider_failed" }); }
+      // Record the attempt regardless (best-effort) for rate/dup tracking.
+      fetch(`${e.URL}/rest/v1/sms_sends`, {
+        method: "POST", headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
+        body: JSON.stringify({ phone, kind: "cancel-link", ip }),
+      }).catch(() => {});
+      if (!provider || provider.success !== true) return json(502, { ok: false, error: "send_failed" });
+      return json(200, { ok: true, data: { sent: true } });
     }
 
     // ----- actions (require CSRF; authed proxy to existing functions) -----

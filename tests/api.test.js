@@ -16,6 +16,8 @@ process.env.OPERATOR_USERNAME = "operator";
 process.env.OPERATOR_PASSWORD_HASH = auth.hashPassword(PASSWORD); // minted here; no secret committed
 process.env.OPERATOR_SESSION_SECRET = "test-session-secret-value";
 process.env.URL = "https://site.example";
+process.env.VAPI_KEY = "test-vapi-key";
+process.env.TEXTBELT_KEY = "test-textbelt-key";
 
 const { handler } = require("../functions/api.js");
 const SECRET = process.env.OPERATOR_SESSION_SECRET;
@@ -35,6 +37,11 @@ function installFetch(scn = {}) {
     if (u.includes("/rest/v1/login_attempts?select=id")) return mkRes(200, Array.from({ length: scn.fails || 0 }, (_, i) => ({ id: i })));
     if (u.includes("/rest/v1/login_attempts") && method === "POST") return mkRes(201, "");
     if (u.includes("/rest/v1/login_attempts") && method === "DELETE") return mkRes(200, "");
+    if (u.includes("/rest/v1/sms_sends?select=id") && u.includes("kind=eq.cancel-link")) return mkRes(200, Array.from({ length: scn.smsDup || 0 }, (_, i) => ({ id: i })));
+    if (u.includes("/rest/v1/sms_sends?select=id")) return mkRes(200, Array.from({ length: scn.smsRate || 0 }, (_, i) => ({ id: i })));
+    if (u.includes("/rest/v1/sms_sends") && method === "POST") return mkRes(201, "");
+    if (u.includes("api.vapi.ai/call")) return scn.vapiStatus ? mkRes(scn.vapiStatus, "err") : mkRes(200, scn.vapi || [{ createdAt: "2026-07-20", status: "ended", endedReason: "ok", assistantId: "a1", assistant: { name: "Bot" }, secretField: "leak" }]);
+    if (u.includes("textbelt.com/text")) return mkRes(200, scn.textbelt || { success: true });
     if (u.includes("/.netlify/functions/")) return mkRes(scn.actionStatus || 200, scn.action || { done: true });
     if (u.includes("/rest/v1/") && method === "GET") return mkRes(200, scn.rows || [{ id: 1 }]);
     if (u.includes("/rest/v1/") && method === "PATCH") return mkRes(200, "");
@@ -157,6 +164,62 @@ test("actions: missing upstream (ai-generate) -> 502 action_unavailable", async 
   const { cookieHeader, csrf } = await loginAndGet();
   const r = parse(await handler(ev("POST", "/api/actions/ai-generate", { headers: { cookie: cookieHeader, "x-csrf-token": csrf }, body: {} })));
   assert.equal(r.status, 502); assert.equal(r.body.error, "action_unavailable");
+});
+
+// ---------- vapi calls ----------
+test("vapi: unauthenticated -> 401", async () => {
+  assert.equal(parse(await handler(ev("GET", "/api/vapi/calls"))).status, 401);
+});
+test("vapi: invalid filter -> 400; valid -> mapped, minimal fields, no key/raw leak", async () => {
+  const { cookieHeader } = await loginAndGet();
+  assert.equal(parse(await handler(ev("GET", "/api/vapi/calls", { headers: { cookie: cookieHeader }, qs: { assistantId: "x" } }))).status, 400);
+  assert.equal(parse(await handler(ev("GET", "/api/vapi/calls", { headers: { cookie: cookieHeader }, qs: { limit: "9999" } }))).status, 400);
+  const { status, body } = parse(await handler(ev("GET", "/api/vapi/calls", { headers: { cookie: cookieHeader }, qs: { limit: "100" } })));
+  assert.equal(status, 200);
+  assert.deepEqual(Object.keys(body.data[0]).sort(), ["assistant", "assistantId", "createdAt", "endedReason", "status"]);
+  assert.ok(!("secretField" in body.data[0]), "extra provider fields dropped");
+  const call = calls.find((c) => c.u.includes("api.vapi.ai"));
+  assert.match(call.headers.Authorization, /Bearer /); // key used server-side only
+});
+test("vapi: provider failure -> controlled 502", async () => {
+  installFetch({ vapiStatus: 500 });
+  const { cookieHeader } = await loginAndGet();
+  const r = parse(await handler(ev("GET", "/api/vapi/calls", { headers: { cookie: cookieHeader }, qs: {} })));
+  assert.equal(r.status, 502); assert.equal(r.body.error, "provider_failed");
+});
+
+// ---------- cancel-link SMS ----------
+test("sms cancel-link: needs session+CSRF; fixed template; invalid phone/link rejected; success; dup/rate 429", async () => {
+  const { cookieHeader, csrf } = await loginAndGet();
+  const good = { phone: "(646) 226-9189", name: "Jane Doe", url: "https://book.rosaliagroup.com/cancel?phone=1" };
+  // no session
+  assert.equal(parse(await handler(ev("POST", "/api/sms/cancel-link", { body: good }))).status, 401);
+  // no CSRF
+  assert.equal(parse(await handler(ev("POST", "/api/sms/cancel-link", { headers: { cookie: cookieHeader }, body: good }))).status, 403);
+  const H = { cookie: cookieHeader, "x-csrf-token": csrf };
+  // invalid phone
+  assert.equal(parse(await handler(ev("POST", "/api/sms/cancel-link", { headers: H, body: { ...good, phone: "123" } }))).status, 400);
+  // arbitrary link / message injection impossible: link must be approved prefix
+  assert.equal(parse(await handler(ev("POST", "/api/sms/cancel-link", { headers: H, body: { ...good, url: "https://evil.example/x" } }))).status, 400);
+  // success + server builds fixed template (browser message text is ignored entirely)
+  const okr = parse(await handler(ev("POST", "/api/sms/cancel-link", { headers: H, body: { ...good, message: "PWNED arbitrary text" } })));
+  assert.equal(okr.status, 200); assert.equal(okr.body.ok, true);
+  const sent = calls.find((c) => c.u.includes("textbelt.com/text"));
+  assert.match(sent.body.message, /here is your appointment management link/);
+  assert.ok(!/PWNED/.test(sent.body.message), "browser-supplied text never used");
+  assert.equal(sent.body.phone, "+16462269189");
+});
+test("sms cancel-link: duplicate within window -> 429", async () => {
+  installFetch({ smsDup: 1 });
+  const { cookieHeader, csrf } = await loginAndGet();
+  const r = parse(await handler(ev("POST", "/api/sms/cancel-link", { headers: { cookie: cookieHeader, "x-csrf-token": csrf }, body: { phone: "6462269189", name: "J", url: "https://book.rosaliagroup.com/cancel" } })));
+  assert.equal(r.status, 429); assert.equal(r.body.error, "duplicate_recent");
+});
+test("sms cancel-link: per-IP rate limit -> 429", async () => {
+  installFetch({ smsRate: 20 });
+  const { cookieHeader, csrf } = await loginAndGet();
+  const r = parse(await handler(ev("POST", "/api/sms/cancel-link", { headers: { cookie: cookieHeader, "x-csrf-token": csrf }, body: { phone: "6462269189", name: "J", url: "https://book.rosaliagroup.com/cancel" } })));
+  assert.equal(r.status, 429); assert.equal(r.body.error, "rate_limited");
 });
 
 // ---------- logout / config ----------
