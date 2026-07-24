@@ -17,10 +17,17 @@ delivery webhooks exist yet, no UI, and nothing performs a production send.
 
 ## Required environment variables (server-side only; never sent to the browser)
 
-- `SUPABASE_URL` — e.g. `https://fhkgpepkwibxbxsepetd.supabase.co`
-- `SUPABASE_SERVICE_KEY` — Supabase service-role key
-- `TELNYX_API_KEY` — Telnyx API key
-- `TELNYX_FROM_NUMBER` — E.164 sender, e.g. `+1XXXXXXXXXX`
+- `SUPABASE_URL` — Supabase project URL (`supabaseRepo.js`).
+- `SUPABASE_SERVICE_KEY` — Supabase service-role key (`supabaseRepo.js`). Shares the
+  name/value already used by the existing `functions/api.js` and other functions.
+- `TELNYX_API_KEY` — Telnyx API key, outbound send (`telnyx.js`).
+- `TELNYX_FROM_NUMBER` — E.164 sender, e.g. `+1XXXXXXXXXX` (`telnyx.js`).
+- `TELNYX_PUBLIC_KEY` — Telnyx Ed25519 webhook signing key; required by the inbound
+  and delivery-status webhooks (`telnyx-inbound.js`, `telnyx-status.js`).
+- `OPERATOR_SESSION_SECRET` — HMAC secret for the operator session/CSRF gate on
+  `communications.js` and `telnyx-health.js` (`operatorGate.js`). Shares the
+  name/value already used by `functions/api.js`; the operator endpoints fail closed
+  (500) when it is absent.
 
 No credentials are hardcoded. Config is validated via `telnyx.configCheck()` /
 `GET` on the `telnyx-health` function without exposing any value.
