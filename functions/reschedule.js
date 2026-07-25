@@ -6,7 +6,7 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 const GOOGLE_CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
 const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
-const ANA_PHONE = '+2014970225';
+const ANA_PHONE = '+12014970225';
 const NOTIFY_EMAIL = 'inquiries@rosaliagroup.com';
 
 // Email transporter using Gmail
