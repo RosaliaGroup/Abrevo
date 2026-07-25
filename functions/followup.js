@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { ELIGIBLE_STATUS_FILTER } = require('./lib/followup-eligibility');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -69,7 +70,7 @@ exports.handler = async () => {
 
     // Get leads that got first reply but no booking, not yet followed up
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?replied_at=not.is.null&status=neq.booked&follow_up_count=lt.2&replied_at=lt.${twoDaysAgo}&select=id,name,email,phone,client,replied_at,follow_up_count,last_follow_up_at`,
+      `${SUPABASE_URL}/rest/v1/leads?replied_at=not.is.null&${ELIGIBLE_STATUS_FILTER}&follow_up_count=lt.2&replied_at=lt.${twoDaysAgo}&select=id,name,email,phone,client,status,replied_at,follow_up_count,last_follow_up_at`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const leads = await res.json();
@@ -77,6 +78,11 @@ exports.handler = async () => {
 
     let processed = 0;
     for (const lead of leads) {
+      // Defensive opt-out guard (belt-and-suspenders with the status whitelist above).
+      if (lead.status === 'dnc') {
+        console.log('[followup] skipped: dnc');
+        continue;
+      }
       const followUpCount = lead.follow_up_count || 0;
       const repliedAt = new Date(lead.replied_at);
       const lastFollowUp = lead.last_follow_up_at ? new Date(lead.last_follow_up_at) : null;
