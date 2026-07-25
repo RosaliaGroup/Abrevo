@@ -7,10 +7,10 @@
  * Rosalia assistants only. Mechanical is out of scope and untouched.
  *
  * Endpoint:  POST /.netlify/functions/send-link
- * Auth:      x-vapi-secret header must match process.env.VAPI_TOOL_SECRET
+ * Auth:      x-vapi-secret header must match process.env.VAPI_SEND_LINK_SECRET
  *
  * Env vars:
- *   VAPI_TOOL_SECRET
+ *   VAPI_SEND_LINK_SECRET    — shared secret for this tool (Rosalia only)
  *   TELNYX_API_KEY
  *   TELNYX_MESSAGING_PROFILE_ID
  *   TELNYX_FROM_ROSALIA      — +12014269354
@@ -106,7 +106,8 @@ exports.handler = async (event) => {
   }
 
   // --- auth: constant-time compare, matching the lib/auth.js convention ---
-  const expected = process.env.VAPI_TOOL_SECRET;
+  // Rosalia-specific secret. Deliberately NOT VAPI_TOOL_SECRET, which belongs to Mechanical.
+  const expected = process.env.VAPI_SEND_LINK_SECRET;
   const provided = header(event, 'x-vapi-secret');
 
   if (!expected || !timingEqualStr(provided, expected)) {
