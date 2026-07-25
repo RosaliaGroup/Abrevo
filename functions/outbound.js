@@ -1,12 +1,19 @@
 // ---------------------------------------------
 // outbound.js -- Rosalia Group Outbound Call Trigger
 // Triggers Alex (Vapi) to call any lead from any source
-// POST body: { phone, name, email, source, property, category }
+// POST body: { phone, name, email, source, property, category, action }
 // category: "luxury" | "general" (defaults to "general")
+//
+// SMS now sends via Telnyx (functions/lib/sms.js) from +12014269354.
+// All paths here are Rosalia -- no HVAC branch, nothing Mechanical touched.
+//
+// `success` on SMS actions now reflects the real send result. It was
+// previously hardcoded true, which hid a 13-day Textbelt outage.
 // ---------------------------------------------
 
+const { sendSMS: sendViaTelnyx } = require('./lib/sms');
+
 const VAPI_API_KEY = process.env.VAPI_KEY || process.env.VAPI_API_KEY;
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
 const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
 
@@ -43,22 +50,12 @@ function normalizePhone(phone) {
   return p;
 }
 
-// -- SEND SMS --
+// -- SEND SMS (Telnyx) --
 async function sendSMS(phone, message) {
-  if (!phone) return null;
-  try {
-    const res = await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
-    });
-    const result = await res.json();
-    console.log('SMS to', phone, ':', result.success ? 'SUCCESS' : 'FAILED', result);
-    return result;
-  } catch (err) {
-    console.error('SMS error:', err.message);
-    return { success: false, error: err.message };
-  }
+  if (!phone) return { success: false, error: 'no_phone' };
+  const result = await sendViaTelnyx(phone, message, { optOut: true });
+  console.log('SMS to', phone, ':', result.success ? 'SUCCESS' : 'FAILED', result.error || '');
+  return result;
 }
 
 // -- TRIGGER VAPI OUTBOUND CALL --
@@ -104,14 +101,12 @@ async function triggerCall(phone, name, config, leadMeta = {}) {
 }
 
 // -- VOICEMAIL / NO-ANSWER TEXT --
-// Mirrors Alex's voicemail script + booking link
 function buildNoAnswerSMS(name, bookingLink) {
   const first = name?.split(' ')[0] || 'there';
   return `Hi ${first} -- this is Alex from Rosalia Group. I tried reaching you about luxury apartments in New Jersey. We have brand new buildings in Newark and Orange with balconies, backyards, rooftop access, and stunning finishes -- starting at $1,999/mo with up to 2 months free right now. Availability is very limited! Book a tour here: ${bookingLink} or call us at (862) 419-1814.`;
 }
 
 // -- INTERESTED LEAD TEXT --
-// Sent when lead confirms interest on live call
 function buildInterestedSMS(name, bookingLink) {
   const first = name?.split(' ')[0] || 'there';
   return `Hi ${first}! Here's your tour booking link for Rosalia Group: ${bookingLink}\n\nAs soon as we receive your booking we'll be in touch to confirm everything. See you soon! -- Alex, Rosalia Group (862) 419-1814`;
@@ -153,10 +148,16 @@ exports.handler = async (event) => {
     if (action === 'text_interested') {
       const msg = buildInterestedSMS(name, bookingLink);
       const smsResult = await sendSMS(normalizedPhone, msg);
+      const sent = smsResult && smsResult.success === true;
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ success: true, action: 'text_interested', sms: smsResult }),
+        body: JSON.stringify({
+          success: sent,
+          action: 'text_interested',
+          error: sent ? null : (smsResult && smsResult.error) || 'SMS failed to send',
+          sms: smsResult,
+        }),
       };
     }
 
@@ -164,10 +165,16 @@ exports.handler = async (event) => {
     if (action === 'text_no_answer') {
       const msg = buildNoAnswerSMS(name, bookingLink);
       const smsResult = await sendSMS(normalizedPhone, msg);
+      const sent = smsResult && smsResult.success === true;
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ success: true, action: 'text_no_answer', sms: smsResult }),
+        body: JSON.stringify({
+          success: sent,
+          action: 'text_no_answer',
+          error: sent ? null : (smsResult && smsResult.error) || 'SMS failed to send',
+          sms: smsResult,
+        }),
       };
     }
 
@@ -178,13 +185,15 @@ exports.handler = async (event) => {
       // Outside business hours -- send text instead
       const msg = buildNoAnswerSMS(name, bookingLink);
       const smsResult = await sendSMS(normalizedPhone, msg);
+      const sent = smsResult && smsResult.success === true;
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
-          success: true,
+          success: sent,
           action: 'text_outside_hours',
           message: 'Outside business hours -- SMS sent instead of call',
+          error: sent ? null : (smsResult && smsResult.error) || 'SMS failed to send',
           sms: smsResult,
         }),
       };
@@ -198,13 +207,15 @@ exports.handler = async (event) => {
       console.warn('Call failed -- falling back to SMS');
       const msg = buildNoAnswerSMS(name, bookingLink);
       const smsResult = await sendSMS(normalizedPhone, msg);
+      const sent = smsResult && smsResult.success === true;
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
-          success: true,
+          success: sent,
           action: 'text_fallback',
           callError: callResult.error,
+          error: sent ? null : (smsResult && smsResult.error) || 'SMS failed to send',
           sms: smsResult,
         }),
       };

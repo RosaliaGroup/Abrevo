@@ -1,7 +1,23 @@
+// sendForm.js -- texts the caller a booking or reschedule form link.
+//
+// Rosalia + Iron 65 now send via Telnyx (functions/lib/sms.js) from the
+// registered number +12014269354.
+//
+// The HVAC branch is deliberately left on its original Textbelt path.
+// Mechanical runs its own sender (mechanicalenterprise.com), and its
+// behaviour here must not change.
+//
+// Returns honest results: `success` now reflects whether the SMS actually
+// sent. Previously it was hardcoded true, which is why a 13-day Textbelt
+// outage showed as "Completed successfully" on every call.
+
+const { sendSMS: sendViaTelnyx } = require('./lib/sms');
+
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 const SITE_URL = 'https://book.rosaliagroup.com';
 
-async function sendSMS(phone, message) {
+// Legacy sender -- HVAC only, unchanged.
+async function sendViaTextbelt(phone, message) {
   let p = phone.toString().replace(/\D/g, '');
   if (p.length === 10) p = '+1' + p;
   else if (p.length === 11 && !p.startsWith('+')) p = '+' + p;
@@ -66,20 +82,29 @@ exports.handler = async (event) => {
 
     const message = `Hi ${firstName}! ${brandName} here. Here's your link to ${actionText}: ${formUrl}`;
 
-    console.log(`Sending form link to ${phone}: ${formUrl}`);
-    const result = await sendSMS(phone, message);
-    console.log('SMS result:', JSON.stringify(result));
+    const provider = isHVAC ? 'textbelt' : 'telnyx';
+    console.log(`sendForm -> ${provider} | ${formUrl}`);
 
-    const smsSent = result?.success === true;
+    const result = isHVAC
+      ? await sendViaTextbelt(phone, message)
+      : await sendViaTelnyx(phone, message, { optOut: true });
+
+    const smsSent = result && result.success === true;
+    const errText = smsSent ? null : String((result && result.error) || 'SMS failed to send');
+
+    if (!smsSent) console.error(`sendForm FAILED via ${provider}: ${errText}`);
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        success: true,
+        success: smsSent,
         smsSent,
+        provider,
         formUrl,
-        message: smsSent ? 'Form link sent successfully' : 'SMS failed to send',
+        messageId: (result && result.id) || null,
+        error: errText,
+        message: smsSent ? 'Form link sent successfully' : `SMS failed to send: ${errText}`,
       }),
     };
   } catch (err) {
