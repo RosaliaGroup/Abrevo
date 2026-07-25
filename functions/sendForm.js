@@ -1,33 +1,24 @@
-// sendForm.js -- texts the caller a booking or reschedule form link.
+// sendForm.js -- texts the caller their Rosalia Group / Iron 65 booking or
+// reschedule link. Sends via Telnyx (functions/lib/sms.js) from +12014269354.
 //
-// Rosalia + Iron 65 now send via Telnyx (functions/lib/sms.js) from the
-// registered number +12014269354.
+// ROSALIA ONLY. The old HVAC branch has been removed: neither Mechanical
+// assistant uses this endpoint (both use MechanicalSendFormTelnyx against
+// mechanicalenterprise.com), and a fuzzy property-string match was capable
+// of sending a Rosalia caller a Mechanical Enterprise link. If an HVAC-ish
+// property does arrive here it is refused loudly rather than guessed at.
 //
-// The HVAC branch is deliberately left on its original Textbelt path.
-// Mechanical runs its own sender (mechanicalenterprise.com), and its
-// behaviour here must not change.
-//
-// Returns honest results: `success` now reflects whether the SMS actually
-// sent. Previously it was hardcoded true, which is why a 13-day Textbelt
-// outage showed as "Completed successfully" on every call.
+// `success` reflects whether the SMS actually sent.
 
-const { sendSMS: sendViaTelnyx } = require('./lib/sms');
+const { sendSMS } = require('./lib/sms');
 
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
 const SITE_URL = 'https://book.rosaliagroup.com';
 
-// Legacy sender -- HVAC only, unchanged.
-async function sendViaTextbelt(phone, message) {
-  let p = phone.toString().replace(/\D/g, '');
-  if (p.length === 10) p = '+1' + p;
-  else if (p.length === 11 && !p.startsWith('+')) p = '+' + p;
-  const res = await fetch('https://textbelt.com/text', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: p, message, key: TEXTBELT_KEY }),
-  });
-  return res.json();
-}
+const URLS = {
+  book: `${SITE_URL}/book`,
+  reschedule: `${SITE_URL}/reschedule`,
+  iron65: `${SITE_URL}/iron65`,
+  iron65Reschedule: `${SITE_URL}/iron65-reschedule`,
+};
 
 exports.handler = async (event) => {
   const headers = {
@@ -51,48 +42,45 @@ exports.handler = async (event) => {
       };
     }
 
-    // Determine correct form URL based on property and type
-    const isIron65 = (property || '').toLowerCase().includes('iron 65') ||
-                     (property || '').toLowerCase().includes('mcwhorter') ||
-                     (property || '').toLowerCase().includes('iron65');
-    const isHVAC = (property || '').toLowerCase().includes('hvac') ||
-                   (property || '').toLowerCase().includes('mechanical') ||
-                   (property || '').toLowerCase().includes('mechanical enterprise');
+    const prop = (property || '').toLowerCase();
 
+    // Refuse HVAC/Mechanical rather than sending a Rosalia link to an HVAC
+    // caller (or the reverse). Mechanical has its own endpoint.
+    if (/hvac|mechanical/.test(prop)) {
+      console.error(`sendForm REFUSED: HVAC property routed to Rosalia endpoint -- "${property}"`);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          smsSent: false,
+          error: 'wrong_tenant',
+          message:
+            'This endpoint sends Rosalia Group and Iron 65 links only. HVAC requests must use the Mechanical send-form endpoint.',
+        }),
+      };
+    }
+
+    const isIron65 = /iron ?65|mcwhorter/.test(prop);
     const isReschedule = type === 'reschedule';
 
-    let formUrl;
-    if (isHVAC) {
-      formUrl = isReschedule
-        ? 'https://book.mechanicalenterprise.com/hvac-reschedule'
-        : 'https://book.mechanicalenterprise.com/hvac';
-    } else if (isReschedule) {
-      formUrl = isIron65
-        ? 'https://book.rosaliagroup.com/iron65-reschedule'
-        : 'https://book.rosaliagroup.com/reschedule';
-    } else {
-      formUrl = isIron65
-        ? 'https://book.rosaliagroup.com/iron65'
-        : 'https://book.rosaliagroup.com/book';
-    }
+    const formUrl = isReschedule
+      ? (isIron65 ? URLS.iron65Reschedule : URLS.reschedule)
+      : (isIron65 ? URLS.iron65 : URLS.book);
 
     const firstName = (name || '').split(' ')[0] || 'there';
     const actionText = isReschedule ? 'reschedule your tour' : 'book your tour';
-    const brandName = isHVAC ? 'Mechanical Enterprise' : (isIron65 ? 'Iron 65' : 'Rosalia Group');
+    const brandName = isIron65 ? 'Iron 65' : 'Rosalia Group';
 
     const message = `Hi ${firstName}! ${brandName} here. Here's your link to ${actionText}: ${formUrl}`;
 
-    const provider = isHVAC ? 'textbelt' : 'telnyx';
-    console.log(`sendForm -> ${provider} | ${formUrl}`);
+    console.log(`sendForm -> telnyx | ${brandName} | ${formUrl}`);
 
-    const result = isHVAC
-      ? await sendViaTextbelt(phone, message)
-      : await sendViaTelnyx(phone, message, { optOut: true });
-
+    const result = await sendSMS(phone, message, { optOut: true });
     const smsSent = result && result.success === true;
     const errText = smsSent ? null : String((result && result.error) || 'SMS failed to send');
 
-    if (!smsSent) console.error(`sendForm FAILED via ${provider}: ${errText}`);
+    if (!smsSent) console.error(`sendForm FAILED: ${errText}`);
 
     return {
       statusCode: 200,
@@ -100,7 +88,8 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         success: smsSent,
         smsSent,
-        provider,
+        provider: 'telnyx',
+        brand: brandName,
         formUrl,
         messageId: (result && result.id) || null,
         error: errText,
