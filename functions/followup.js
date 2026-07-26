@@ -1,5 +1,13 @@
 const nodemailer = require('nodemailer');
 const { ELIGIBLE_STATUS_FILTER } = require('./lib/followup-eligibility');
+const {
+  buildFollowupPrompt,
+  validateGeneratedEmailBody,
+  assembleEmail,
+  buildFallbackEmail,
+  buildSMS,
+  threadHeaders,
+} = require('./lib/followup-content');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -8,6 +16,42 @@ const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
 const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
 const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+
+// Ask Claude to improve ONLY the wording of a follow-up email. Returns the raw
+// generated body text, or null on any failure (missing key, API error, network
+// error, empty output) so the caller falls back to a static template. Logs are
+// PII-safe: lead id + reason only, never name/email/message content.
+async function generateFollowupBody(lead, attempt) {
+  if (!ANTHROPIC_KEY) {
+    console.log(`[followup] ANTHROPIC_API_KEY not set — static fallback for lead ${lead.id}`);
+    return null;
+  }
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: buildFollowupPrompt(lead, attempt) }],
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.type === 'error') {
+      console.log(`[followup] Claude API error for lead ${lead.id}: status ${res.status} — static fallback`);
+      return null;
+    }
+    return data.content?.[0]?.text || null;
+  } catch (e) {
+    console.log(`[followup] Claude API call failed for lead ${lead.id}: ${e.message} — static fallback`);
+    return null;
+  }
+}
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -16,22 +60,22 @@ const transporter = nodemailer.createTransport({
 
 async function sendFollowUpEmail(lead, attempt) {
   if (!lead.email || lead.email.includes('reply.avail.co') || lead.email.includes('convo.zillow')) return;
-  const firstName = (lead.name || '').split(' ')[0] || 'there';
   const isIron65 = lead.client === 'iron65';
   const bookingUrl = isIron65 ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
-  const property = isIron65 ? 'Iron 65' : 'our properties';
 
-  const subjects = [
-    `${firstName}, still looking for an apartment?`,
-    `Last chance — tours filling up fast at ${property}`,
-  ];
-  const bodies = [
-    `Hi ${firstName},\n\nJust following up on your inquiry about ${property}. We still have units available and would love to schedule a tour for you.\n\nBook your tour here: ${bookingUrl}\n\nBest regards,\nRosalia Group\n(862) 333-1681`,
-    `Hi ${firstName},\n\nWe wanted to reach out one more time — tours at ${property} are filling up quickly. If you're still interested, grab your spot now.\n\nBook here: ${bookingUrl}\n\nBest regards,\nRosalia Group\n(862) 333-1681`,
-  ];
-
-  const subject = subjects[attempt - 2] || subjects[0];
-  const body = bodies[attempt - 2] || bodies[0];
+  // Improve wording via Claude; validate; fall back to a static template on any
+  // failure. The trusted booking URL and opt-out are always added by code, never
+  // generated or altered by the model.
+  const generated = await generateFollowupBody(lead, attempt);
+  const validation = generated ? validateGeneratedEmailBody(generated)
+    : { ok: false, reason: 'no_generation' };
+  let subject; let body;
+  if (validation.ok) {
+    ({ subject, body } = assembleEmail(lead, generated, bookingUrl));
+  } else {
+    ({ subject, body } = buildFallbackEmail(lead, attempt, bookingUrl));
+    console.log(`[followup] fallback email path for lead ${lead.id} (attempt ${attempt}) reason=${validation.reason}`);
+  }
 
   try {
     await transporter.sendMail({
@@ -39,6 +83,8 @@ async function sendFollowUpEmail(lead, attempt) {
       to: lead.email,
       subject,
       text: body,
+      // In-Reply-To / References only when valid stored metadata exists (none today).
+      ...threadHeaders(lead),
     });
     console.log(`Follow-up email #${attempt} sent to:`, lead.email);
     return true;
@@ -50,12 +96,9 @@ async function sendFollowUpEmail(lead, attempt) {
 
 async function sendFollowUpSMS(lead, attempt) {
   if (!lead.phone) return;
-  const firstName = (lead.name || '').split(' ')[0] || 'there';
   const isIron65 = lead.client === 'iron65';
   const bookingUrl = isIron65 ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
-  const msg = attempt === 2
-    ? `Hi ${firstName}! Still looking for an apartment? We have units available. Book a tour: ${bookingUrl}`
-    : `Hi ${firstName}! Last chance — tours filling up fast. Book now: ${bookingUrl}`;
+  const msg = buildSMS(lead, attempt, bookingUrl);
   try {
     let p = lead.phone.toString().replace(/\D/g, '');
     if (p.length === 10) p = '+1' + p;
@@ -79,7 +122,7 @@ exports.handler = async () => {
 
     // Get leads that got first reply but no booking, not yet followed up
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?replied_at=not.is.null&${ELIGIBLE_STATUS_FILTER}&follow_up_count=lt.2&replied_at=lt.${twoDaysAgo}&select=id,name,email,phone,client,status,replied_at,follow_up_count,last_follow_up_at`,
+      `${SUPABASE_URL}/rest/v1/leads?replied_at=not.is.null&${ELIGIBLE_STATUS_FILTER}&follow_up_count=lt.2&replied_at=lt.${twoDaysAgo}&select=id,name,email,phone,client,status,property,message,email_reply,notes,replied_at,follow_up_count,last_follow_up_at`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const leads = await res.json();
