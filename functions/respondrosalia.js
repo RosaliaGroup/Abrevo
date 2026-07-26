@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
+const { sendSMS } = require('./lib/sms');
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const ANA_PHONE = '+16462269189';
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
@@ -140,19 +140,6 @@ async function generateFollowUp(lead, followUpNumber) {
     };
     return msgs[followUpNumber] || msgs[1];
   }
-}
-
-async function sendSMS(phone, message) {
-  if (!phone) return null;
-  let p = phone.toString().replace(/\D/g, '');
-  if (p.length === 10) p = '+1' + p;
-  else if (p.length === 11 && !p.startsWith('+')) p = '+' + p;
-  const res = await fetch('https://textbelt.com/text', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: p, message, key: TEXTBELT_KEY }),
-  });
-  return res.json();
 }
 
 async function findExistingLead(email, phone) {
@@ -398,12 +385,12 @@ exports.handler = async (event) => {
       const savedLead = await saveOrUpdateLead(parsedLead, emailReply);
       console.log('Lead saved/merged, id:', savedLead?.id);
 
-      // SMS to lead -- no URLs (Textbelt whitelist pending)
+      // SMS to lead -- no URLs (carrier whitelist pending)
       if (parsedLead.phone) {
         const smsText = parsedLead.category === 'buyer'
           ? `Hi ${parsedLead.name?.split(' ')[0] || 'there'}! This is Ana from Rosalia Group following up on your real estate inquiry. I'll reach out shortly -- (862) 333-1681.`
           : `Hi ${parsedLead.name?.split(' ')[0] || 'there'}! This is Ana from Rosalia Group following up on your rental inquiry. I'll reach out shortly -- (862) 333-1681.`;
-        const smsResult = await sendSMS(parsedLead.phone, smsText);
+        const smsResult = await sendSMS(parsedLead.phone, smsText, { optOut: true });
         console.log('Lead SMS:', JSON.stringify(smsResult));
       }
 
@@ -444,7 +431,7 @@ exports.handler = async (event) => {
 
     if (action === 'follow_up') {
       const followUpText = await generateFollowUp(parsedLead, follow_up_number);
-      if (parsedLead.phone) await sendSMS(parsedLead.phone, followUpText);
+      if (parsedLead.phone) await sendSMS(parsedLead.phone, followUpText, { optOut: true });
       if (lead_id) await updateLeadFollowUp(lead_id, follow_up_number);
       const subject = follow_up_number === 1
         ? `Following up -- ${parsedLead.property || 'your inquiry'}`

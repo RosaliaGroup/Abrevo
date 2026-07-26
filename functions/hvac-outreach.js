@@ -9,7 +9,7 @@ const nodemailer = require('nodemailer');
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const VAPI_KEY = process.env.VAPI_KEY;
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
+const { sendSMS } = require('./lib/sms');
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
 // HVAC-specific Vapi config — uses Jessica assistant (CINC outbound)
@@ -52,24 +52,6 @@ function isValidEmail(email) {
   if (email.includes('noemail-')) return false;
   if (!email.includes('@') || !email.includes('.')) return false;
   return true;
-}
-
-// ── SEND SMS ──
-async function sendSMS(phone, message) {
-  if (!phone) return { success: false, error: 'No phone' };
-  try {
-    const res = await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
-    });
-    const result = await res.json();
-    console.log(`SMS to ${phone}:`, result.success ? 'OK' : result.error);
-    return result;
-  } catch (err) {
-    console.error('SMS error:', err.message);
-    return { success: false, error: err.message };
-  }
 }
 
 // ── TRIGGER VAPI CALL ──
@@ -261,7 +243,7 @@ exports.handler = async (event) => {
       // ── SMS ──
       if ((mode === 'all' || mode === 'sms') && phone) {
         const smsMsg = `Hi ${name.split(' ')[0] || 'there'}! This is Mechanical Enterprise in NJ. Your home at ${address || 'your property'} may qualify for up to $16,000 in NJ HVAC rebates. Book a FREE assessment: ${HVAC_BOOKING_URL} — (862) 419-1763`;
-        result.sms = await sendSMS(phone, smsMsg);
+        result.sms = await sendSMS(phone, smsMsg, { optOut: true });
         await new Promise(r => setTimeout(r, 300));
       }
 

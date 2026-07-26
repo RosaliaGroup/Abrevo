@@ -1,6 +1,6 @@
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
+const { sendSMS } = require('./lib/sms');
 const ANA_PHONE = '+16462269189';
 
 // -- PARSE FUB EMAIL BODY --
@@ -176,17 +176,8 @@ async function notifyAna(lead, action) {
   if (!ANA_PHONE) return;
   const emoji = action === 'created' ? 'New' : 'Updated';
   const msg = `${emoji} FUB Lead!\nName: ${lead.name || 'N/A'}\nEmail: ${lead.email || 'N/A'}\nPhone: ${lead.phone || 'N/A'}\nSource: ${lead.source || 'N/A'}\nProperty: ${lead.property || 'N/A'}`;
-  try {
-    const res = await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: ANA_PHONE, message: msg, key: TEXTBELT_KEY }),
-    });
-    const result = await res.json();
-    console.log('Ana SMS:', result.success ? 'sent' : result.error);
-  } catch (err) {
-    console.error('SMS error:', err.message);
-  }
+  const result = await sendSMS(ANA_PHONE, msg);
+  console.log('Ana SMS:', result.success ? 'sent' : result.error);
 }
 
 // -- HANDLER --

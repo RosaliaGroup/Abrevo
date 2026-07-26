@@ -5,7 +5,7 @@ const VAPI_ASSISTANT_ID = '1cae5323-6b83-4434-8461-6330472da140';
 const VAPI_PHONE_ID = '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 const JESSICA_ASSISTANT_ID = '35f4e4a2-aabc-47be-abfc-630cf6a85d58';
 const JESSICA_PHONE_ID = '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
+const { sendSMS } = require('./lib/sms');
 const ANA_PHONE = '+16462269189';
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
 const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
@@ -91,13 +91,9 @@ async function updateLeadStatus(leadId, status, attempts) {
   });
 }
 
-async function sendSMS(phone, leadName, bookingUrl, attemptNumber) {
-  if (!TEXTBELT_KEY) return;
-  let p = phone.replace(/\D/g, '');
-  if (p.length === 10) p = '+1' + p;
-  else if (p.length === 11 && !p.startsWith('+')) p = '+' + p;
+async function sendLeadSMS(phone, leadName, bookingUrl, attemptNumber) {
   const firstName = (leadName || '').split(' ')[0] || 'there';
-  
+
   // Vary the message based on attempt number
   let msg;
   if (attemptNumber === 1) {
@@ -108,16 +104,9 @@ async function sendSMS(phone, leadName, bookingUrl, attemptNumber) {
     msg = `Hi ${firstName}! Rosalia Group here -- we have limited units available. Don't miss out! Book your tour: ${bookingUrl}`;
   }
 
-  try {
-    await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: p, message: msg, key: TEXTBELT_KEY }),
-    });
-    console.log(`SMS attempt ${attemptNumber} sent to ${p}`);
-  } catch (err) {
-    console.error('SMS error:', err.message);
-  }
+  const result = await sendSMS(phone, msg, { optOut: true });
+  console.log(`SMS attempt ${attemptNumber} sent to ${result.to || phone}: ${result.success}`);
+  return result;
 }
 
 async function triggerCall(phone, leadName, assistantId, phoneId, property) {
@@ -182,7 +171,7 @@ exports.handler = async (event) => {
         const callId = await triggerCall(lead.phone, lead.name, assistantId, phoneId, lead.property);
 
         // Send SMS after every missed call attempt
-        await sendSMS(lead.phone, lead.name, bookingUrl, attempts);
+        await sendLeadSMS(lead.phone, lead.name, bookingUrl, attempts);
 
         // Update lead - mark call attempt but keep status as 'new' until they answer
         const newStatus = attempts >= MAX_CALL_ATTEMPTS ? 'contacted' : lead.status || 'new';

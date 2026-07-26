@@ -4,7 +4,7 @@ const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
+const { sendSMS } = require('./lib/sms');
 const SITE_URL = 'https://abrevo.co';
 
 // Find leads to survey:
@@ -72,16 +72,12 @@ async function sendSurveyEmail(lead) {
 }
 
 async function sendSurveySMS(lead) {
-  if (!lead.phone || !TEXTBELT_KEY) return;
+  if (!lead.phone) return;
   const surveyUrl = `${SITE_URL}/survey?id=${lead.id}&name=${encodeURIComponent(lead.name || '')}`;
   const firstName = (lead.name || '').split(' ')[0] || 'there';
   const msg = `Hi ${firstName}! Rosalia Group here. We'd love your feedback on your apartment search -- takes 60 seconds: ${surveyUrl}`;
 
-  await fetch('https://textbelt.com/text', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: lead.phone, message: msg, key: TEXTBELT_KEY }),
-  });
+  await sendSMS(lead.phone, msg, { optOut: true });
 }
 
 exports.handler = async (event) => {

@@ -5,7 +5,7 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
+const { sendSMS } = require('./lib/sms');
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/iron65';
 const FUB_BASE = 'https://api.followupboss.com/v1';
 const FUB_AUTH = 'Basic ' + Buffer.from((process.env.FUB_API_KEY || '') + ':').toString('base64');
@@ -151,17 +151,11 @@ async function saveToSupabase(fubPerson) {
 
 // Send SMS to lead
 async function sendSMSToLead(phone, leadName) {
-  if (!phone || !TEXTBELT_KEY) return;
+  if (!phone) return;
   const firstName = (leadName || '').split(' ')[0] || 'there';
   const msg = `Hi ${firstName}! Alex from Iron 65 Luxury Apartments here. We received your inquiry and would love to show you our brand new building in Newark's Ironbound District. Book your tour: ${BOOKING_FORM_URL}`;
-  try {
-    await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, message: msg, key: TEXTBELT_KEY }),
-    });
-    console.log('SMS sent to lead:', phone);
-  } catch(e) { console.error('SMS error:', e.message); }
+  const result = await sendSMS(phone, msg, { optOut: true });
+  console.log('SMS sent to lead:', phone, result.success);
 }
 
 // Send AI email to lead

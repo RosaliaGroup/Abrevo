@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const { sendSMS } = require("./lib/sms");
 
 exports.handler = async function (event) {
   if (event.httpMethod !== "POST") {
@@ -73,20 +74,14 @@ ${additional_notes}
     console.error("Email error:", emailErr.message);
   }
 
-  // --- SEND TEXT TO ANA VIA TEXTBELT ---
+  // --- SEND TEXT ALERT TO ANA (internal) ---
+  // NOTE: recipient is still the "ANA_PHONE_NUMBER_HERE" placeholder from the
+  // original code — this alert has never actually delivered. Set a real number
+  // to enable it. Left as-is here to avoid changing delivery behavior.
   try {
     const smsBody = `New Showing!\n${full_name}\n${phone}\n${type}\n${preferred_date} at ${preferred_time}`;
-    const textbeltRes = await fetch("https://textbelt.com/text", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        phone: "ANA_PHONE_NUMBER_HERE", // Replace with Ana's number e.g. +12015551234
-        message: smsBody,
-        key: process.env.TEXTBELT_KEY_2,
-      }),
-    });
-    const smsResult = await textbeltRes.json();
-    console.log("Textbelt result:", smsResult);
+    const smsResult = await sendSMS("ANA_PHONE_NUMBER_HERE", smsBody);
+    console.log("Ana alert SMS:", smsResult.success ? "sent" : smsResult.error);
   } catch (smsErr) {
     console.error("SMS error:", smsErr.message);
   }

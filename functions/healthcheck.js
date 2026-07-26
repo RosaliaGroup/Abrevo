@@ -3,8 +3,6 @@ const nodemailer = require('nodemailer');
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const VAPI_KEY = process.env.VAPI_KEY;
-const TEXTBELT_KEY_1 = process.env.TEXTBELT_KEY;
-const TEXTBELT_KEY_2 = process.env.TEXTBELT_KEY_2;
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
 const ALERT_EMAIL = 'ana@rosaliagroup.com';
@@ -37,16 +35,6 @@ async function testBookEndpoint() {
     return { name: 'book', ok: r.status < 500, status: r.status };
   } catch(e) {
     return { name: 'book', ok: false, error: e.message };
-  }
-}
-
-async function testTextbelt(key, label) {
-  try {
-    const r = await fetch(`https://textbelt.com/quota/${key}`);
-    const data = await r.json();
-    return { label, credits: data.quotaRemaining ?? 0 };
-  } catch (e) {
-    return { label, credits: -1, error: e.message };
   }
 }
 
@@ -110,8 +98,6 @@ Full Report:
   Readmail: ${record.readmail_ok ? 'OK' : 'FAIL'}
   Autocall: ${record.autocall_ok ? 'OK' : 'FAIL'}
   Inventory: ${record.inventory_ok ? 'OK' : 'FAIL'}
-  SMS Key 1 (book.js): ${record.sms_key1_credits} credits
-  SMS Key 2 (readmail/outreach): ${record.sms_key2_credits} credits
   Vapi Calls Today: ${record.vapi_calls_today}
   Voicemail %: ${record.vapi_voicemail_pct}%
   Hangup %: ${record.vapi_hangup_pct}%
@@ -152,17 +138,6 @@ exports.handler = async (event) => {
   if (!autocallTest.ok) errors.push(`Autocall DOWN (${autocallTest.error || 'HTTP ' + autocallTest.status})`);
   if (!inventoryTest.ok) errors.push(`Inventory DOWN (${inventoryTest.error || 'HTTP ' + inventoryTest.status})`);
 
-  // Test SMS credits
-  const [sms1, sms2] = await Promise.all([
-    testTextbelt(TEXTBELT_KEY_1, 'Key 1 (book.js)'),
-    testTextbelt(TEXTBELT_KEY_2, 'Key 2 (readmail)')
-  ]);
-
-  if (sms1.credits >= 0 && sms1.credits < 500) errors.push(`SMS Key 1 low: ${sms1.credits} credits`);
-  if (sms2.credits >= 0 && sms2.credits < 200) errors.push(`SMS Key 2 low: ${sms2.credits} credits`);
-  if (sms1.credits < 0) errors.push('SMS Key 1 check failed');
-  if (sms2.credits < 0) errors.push('SMS Key 2 check failed');
-
   // Test Vapi call quality
   const vapi = await testVapi();
   if (vapi.error) errors.push(`Vapi API error: ${vapi.error}`);
@@ -174,8 +149,6 @@ exports.handler = async (event) => {
     readmail_ok: readmailTest.ok,
     autocall_ok: autocallTest.ok,
     inventory_ok: inventoryTest.ok,
-    sms_key1_credits: Math.max(sms1.credits, 0),
-    sms_key2_credits: Math.max(sms2.credits, 0),
     vapi_calls_today: vapi.calls_today,
     vapi_voicemail_pct: vapi.voicemail_pct,
     vapi_hangup_pct: vapi.hangup_pct,

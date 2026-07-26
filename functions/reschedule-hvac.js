@@ -4,7 +4,7 @@ const nodemailer = require('nodemailer');
 const CALENDAR_ID = 'c_1f409dda06448aec70284831065590c2ea0c7763ea02fb641e32bea7b49f4b8d@group.calendar.google.com';
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
+const { sendSMS } = require('./lib/sms');
 const SALES_EMAIL = 'sales@mechanicalenterprise.com';
 const FROM_EMAIL = 'inquiries@rosaliagroup.com';
 
@@ -12,20 +12,6 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
 });
-
-async function sendSMS(phone, message) {
-  if (!phone) return;
-  let p = phone.toString().replace(/\D/g, '');
-  if (p.length === 10) p = '+1' + p;
-  else if (p.length === 11 && !p.startsWith('+')) p = '+' + p;
-  try {
-    await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: p, message, key: TEXTBELT_KEY }),
-    });
-  } catch(e) { console.error('SMS error:', e.message); }
-}
 
 exports.handler = async (event) => {
   const headers = {
@@ -115,7 +101,7 @@ exports.handler = async (event) => {
 
     // Send SMS confirmation
     if (normalizedPhone) {
-      await sendSMS(normalizedPhone, `Hi ${customerName.split(' ')[0]}! Your Mechanical Enterprise appointment has been rescheduled to ${new_date} at ${new_time}. Questions? Call (862) 419-1763`);
+      await sendSMS(normalizedPhone, `Hi ${customerName.split(' ')[0]}! Your Mechanical Enterprise appointment has been rescheduled to ${new_date} at ${new_time}. Questions? Call (862) 419-1763`, { optOut: true });
     }
 
     // Notify sales team

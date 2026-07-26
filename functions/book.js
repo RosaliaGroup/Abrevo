@@ -87,7 +87,7 @@ const CLIENTS = {
   }
 };
 
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY_2;
+const { sendSMS } = require('./lib/sms');
 
 // Email transporter
 const transporter = nodemailer.createTransport({
@@ -97,28 +97,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.GMAIL_PASS_INQUIRIES,
   },
 });
-
-async function sendSMS(phone, message) {
-  if (!phone) return { success: false };
-  // Normalize phone - add +1 if needed
-  let normalizedPhone = phone.toString().replace(/\D/g, '');
-  if (normalizedPhone.length === 10) normalizedPhone = '+1' + normalizedPhone;
-  else if (normalizedPhone.length === 11) normalizedPhone = '+' + normalizedPhone;
-  else normalizedPhone = '+' + normalizedPhone;
-
-  const response = await fetch('https://textbelt.com/text', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      phone: normalizedPhone,
-      message,
-      key: TEXTBELT_KEY,
-    }),
-  });
-  const result = await response.json();
-  console.log('SMS response:', JSON.stringify(result));
-  return result;
-}
 
 function formatPhone(raw) {
   if (!raw) return '';
@@ -407,7 +385,7 @@ exports.handler = async (event) => {
     if (data.phone) {
       const callerMsg = `Your appointment is confirmed!\n\n${propertyAddress}\n${displayDate} at ${displayTime}\n\nRosalia Group will be in touch. See you then!`;
       try {
-        const smsResult = await sendSMS(data.phone, callerMsg);
+        const smsResult = await sendSMS(data.phone, callerMsg, { optOut: true });
         console.log('Caller SMS sent:', smsResult.success);
       } catch (err) {
         console.error('Caller SMS error:', err.message);

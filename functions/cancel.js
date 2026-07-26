@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY_2;
+const { sendSMS } = require('./lib/sms');
 const ANA_PHONE = '+12014970225';
 
 const transporter = nodemailer.createTransport({
@@ -13,19 +13,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-async function sendSMS(phone, message) {
-  try {
-    const res = await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
-    });
-    return res.json();
-  } catch (err) {
-    console.error('SMS error:', err.message);
-    return { success: false };
-  }
-}
 
 exports.handler = async (event) => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
@@ -100,7 +87,7 @@ exports.handler = async (event) => {
 
     // Step 4: SMS to lead
     const leadMsg = `Your appointment at ${propertyAddress} on ${displayDate} at ${displayTime} has been cancelled. Book a new tour anytime at book.rosaliagroup.com — Rosalia Group (862) 333-1681`;
-    await sendSMS(normalizedPhone, leadMsg);
+    await sendSMS(normalizedPhone, leadMsg, { optOut: true });
 
     // Step 5: Notify Ana
     const teamMsg = `Appointment Cancelled!\n\nName: ${booking.full_name}\nPhone: ${normalizedPhone}\nEmail: ${booking.email || 'N/A'}\nProperty: ${propertyAddress}\nWas: ${displayDate} at ${displayTime}\nReason: ${reason || 'Not specified'}`;

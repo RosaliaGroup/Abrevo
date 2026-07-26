@@ -188,7 +188,7 @@ function getIron65MediaLink(unitNumber) {
   return 'https://properties.rosaliagroup.com/properties/iron65.html';
 }
 
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
+const { sendSMS } = require('./lib/sms');
 
 const VAPI_KEY = process.env.VAPI_KEY;
 
@@ -1099,14 +1099,10 @@ WAIT (if already responded or no action needed)`;
   const smsReply = stripIncentives(replyMatch[1].trim());
   console.log(`GV: sending SMS reply to ${gv.callerPhone}: "${smsReply.slice(0, 80)}"`);
 
-  // Send SMS via Textbelt
-  if (TEXTBELT_KEY) {
-    await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: gv.callerPhone, message: smsReply, key: TEXTBELT_KEY }),
-    });
-    console.log('GV: SMS reply sent');
+  // Send SMS reply via Telnyx
+  {
+    const smsResult = await sendSMS(gv.callerPhone, smsReply, { optOut: true });
+    console.log('GV: SMS reply sent:', smsResult.success);
   }
 
   // Log activity
@@ -1547,19 +1543,13 @@ async function triggerCall(phone, leadName) {
   }
 }
 
-async function sendSMS(phone, leadName, property, bookingUrl) {
-  if (!TEXTBELT_KEY) return;
+async function buildAndSendLeadText(phone, leadName, property, bookingUrl) {
   const firstName = leadName?.split(' ')[0] || 'there';
   const url = bookingUrl || BOOKING_FORM_URL;
   const msg = `Hi ${firstName}! Rosalia Group here. We replied to your inquiry${property ? ' about ' + property : ''}. Book a tour: ${url}`;
-  try {
-    await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, message: msg, key: TEXTBELT_KEY }),
-    });
-    console.log('SMS sent to:', phone);
-  } catch (err) { console.error('SMS error:', err.message); }
+  const result = await sendSMS(phone, msg, { optOut: true });
+  console.log('SMS sent to:', phone, result.success);
+  return result;
 }
 
 async function saveLead(fromEmail, fromName, subject, body, replyText, phone, client) {
@@ -2256,7 +2246,7 @@ exports.handler = async (event) => {
                                 (etDay === 6) ? (etHour >= 10 && etHour < 17) :
                                 (etHour >= 11 && etHour < 17);
             const smsBookingUrl = leadClient === 'iron65' ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
-            await sendSMS(phone, realName || fromName, '', smsBookingUrl);
+            await buildAndSendLeadText(phone, realName || fromName, '', smsBookingUrl);
             if (callAllowed) {
               await triggerCall(phone, realName || fromName);
             }
@@ -2380,7 +2370,7 @@ exports.handler = async (event) => {
           const shouldSendSMS = !hadPhone || !isReply;
           if (shouldSendSMS) {
             if (isReply && !hadPhone) console.log('Phone newly provided in reply — sending SMS immediately:', phone);
-            await sendSMS(phone, realName || fromName, propertyName, smsBookingUrl);
+            await buildAndSendLeadText(phone, realName || fromName, propertyName, smsBookingUrl);
             if (callAllowed) {
               await triggerCall(phone, realName || fromName);
               console.log('Call triggered during business hours for:', realName || fromName);
@@ -2403,17 +2393,9 @@ exports.handler = async (event) => {
     }
 
     // Alert Ana if AI replies are failing (likely dead API key or rate limit)
-    if (results.aiFailures >= 3 && TEXTBELT_KEY) {
+    if (results.aiFailures >= 3) {
       try {
-        await fetch('https://textbelt.com/text', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone: '+16462269189',
-            message: `⚠️ Rosalia AI Alert: ${results.aiFailures} emails got empty AI replies this run. Check ANTHROPIC_API_KEY or API status.`,
-            key: TEXTBELT_KEY,
-          }),
-        });
+        await sendSMS('+16462269189', `⚠️ Rosalia AI Alert: ${results.aiFailures} emails got empty AI replies this run. Check ANTHROPIC_API_KEY or API status.`);
         console.log('AI failure alert SMS sent to Ana');
       } catch (err) { console.error('AI alert SMS error:', err.message); }
     }
@@ -2444,7 +2426,7 @@ exports.extractPhone = extractPhone;
 exports.generateReply = generateReply;
 exports.sendReply = sendReply;
 exports.saveLead = saveLead;
-exports.sendSMS = sendSMS;
+exports.buildAndSendLeadText = buildAndSendLeadText;
 exports.triggerCall = triggerCall;
 exports.notifyAna = notifyAna;
 exports.syslog = syslog;

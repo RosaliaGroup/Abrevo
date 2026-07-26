@@ -6,7 +6,7 @@ const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
 const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
+const { sendSMS } = require('./lib/sms');
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -55,17 +55,8 @@ async function sendFollowUpSMS(lead, attempt) {
   const msg = attempt === 2
     ? `Hi ${firstName}! Still looking for an apartment? We have units available. Book a tour: ${bookingUrl}`
     : `Hi ${firstName}! Last chance — tours filling up fast. Book now: ${bookingUrl}`;
-  try {
-    let p = lead.phone.toString().replace(/\D/g, '');
-    if (p.length === 10) p = '+1' + p;
-    else if (p.length === 11) p = '+' + p;
-    await fetch('https://textbelt.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: p, message: msg, key: TEXTBELT_KEY }),
-    });
-    console.log(`Follow-up SMS #${attempt} sent to:`, lead.phone);
-  } catch (e) { console.error('Follow-up SMS error:', e.message); }
+  const result = await sendSMS(lead.phone, msg, { optOut: true });
+  console.log(`Follow-up SMS #${attempt} sent to:`, lead.phone, result.success);
 }
 
 exports.handler = async () => {

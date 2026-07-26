@@ -1,27 +1,27 @@
 // ============================================================
 // sms-campaign-hvac.js
-// Mechanical Enterprise HVAC — Textbelt SMS Outreach Campaign
+// Mechanical Enterprise HVAC — Telnyx SMS Outreach Campaign
 // ============================================================
 // USAGE:
-//   node sms-campaign-hvac.js --dry-run         (preview + credit check)
+//   node sms-campaign-hvac.js --dry-run         (preview only)
 //   node sms-campaign-hvac.js --limit 20        (send first 20)
 //   node sms-campaign-hvac.js                   (send all 'new')
 //
-// TEXTBELT KEY: stored in TEXTBELT_KEY env var
-// NOTE: ~42 credits remaining — top up before full run at https://textbelt.com
-//       1,100 texts ≈ $55 at $0.05/text (bulk pricing available)
+// SMS goes through functions/lib/sms.js (Telnyx). Set SMS_DRY_RUN=true in the
+// environment to log-only without hitting the provider.
 //
 // COMPLIANCE:
-//   - "Reply STOP" included in every message (required)
+//   - Opt-out ("Reply STOP to unsubscribe") is appended automatically by
+//     lib/sms.js when { optOut: true } is passed — do NOT hardcode it here.
 //   - Best send times: Tue–Thu 10am–7pm EST
 // ============================================================
 
 const https = require('https');
 const fs    = require('fs');
+const { sendSMS } = require('./lib/sms');
 
 // ─── CONFIG ────────────────────────────────────────────────
 const CONFIG = {
-  TEXTBELT_KEY:  process.env.TEXTBELT_KEY,
   SUPABASE_URL:  process.env.SUPABASE_URL || 'YOUR_SUPABASE_URL',
   SUPABASE_KEY:  process.env.SUPABASE_KEY || 'YOUR_SUPABASE_SERVICE_KEY',
   SOURCE:        'hvac-list-07105',
@@ -39,10 +39,11 @@ function getLimitArg() {
 }
 
 // ─── SMS TEMPLATES ─────────────────────────────────────────
+// NOTE: opt-out language is appended automatically by lib/sms.js ({ optOut: true }).
 const TEMPLATES = [
-  (l) => `Hi ${fn(l.name)}, your home at ${addr(l.page)} may qualify for a FREE heating checkup from Mechanical Enterprise. Homes built ${yr(l.message)} often need attention. Book: ${CONFIG.BOOKING_URL} Reply STOP to opt out.`,
-  (l) => `${fn(l.name)} - Is your heating system 15+ yrs old? Mechanical Enterprise is offering FREE assessments to NJ homeowners this month. No cost, no obligation. ${CONFIG.BOOKING_URL} Reply STOP`,
-  (l) => `Hi ${fn(l.name)}! Older HVAC systems can waste $300-500/yr on energy. Mechanical Enterprise offers a FREE home heating checkup - honest, no pressure. ${CONFIG.BOOKING_URL} Reply STOP`,
+  (l) => `Hi ${fn(l.name)}, your home at ${addr(l.page)} may qualify for a FREE heating checkup from Mechanical Enterprise. Homes built ${yr(l.message)} often need attention. Book: ${CONFIG.BOOKING_URL}`,
+  (l) => `${fn(l.name)} - Is your heating system 15+ yrs old? Mechanical Enterprise is offering FREE assessments to NJ homeowners this month. No cost, no obligation. ${CONFIG.BOOKING_URL}`,
+  (l) => `Hi ${fn(l.name)}! Older HVAC systems can waste $300-500/yr on energy. Mechanical Enterprise offers a FREE home heating checkup - honest, no pressure. ${CONFIG.BOOKING_URL}`,
 ];
 
 function fn(name) {
@@ -55,34 +56,6 @@ function yr(msg)    { const m = msg?.match(/Year Built: (\d{4})/); return m ? m[
 function getMsg(lead, i) {
   const msg = TEMPLATES[i % TEMPLATES.length](lead);
   return msg.length > 320 ? TEMPLATES[1](lead) : msg;
-}
-
-// ─── TEXTBELT ──────────────────────────────────────────────
-function checkCredits() {
-  return new Promise((resolve, reject) => {
-    https.get(`https://textbelt.com/quota/${CONFIG.TEXTBELT_KEY}`, res => {
-      let buf = '';
-      res.on('data', c => buf += c);
-      res.on('end', () => { try { resolve(JSON.parse(buf)); } catch { resolve({}); } });
-    }).on('error', reject);
-  });
-}
-
-function sendSMS(phone, message) {
-  return new Promise((resolve, reject) => {
-    const data = JSON.stringify({ phone, message, key: CONFIG.TEXTBELT_KEY });
-    const req = https.request({
-      hostname: 'textbelt.com', path: '/text', method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
-    }, res => {
-      let buf = '';
-      res.on('data', c => buf += c);
-      res.on('end', () => { try { resolve(JSON.parse(buf)); } catch { resolve({ success: false, error: buf }); } });
-    });
-    req.on('error', reject);
-    req.write(data);
-    req.end();
-  });
 }
 
 // ─── SUPABASE ──────────────────────────────────────────────
@@ -119,17 +92,9 @@ async function updateStatus(id, status, tbId) {
 
 // ─── MAIN ──────────────────────────────────────────────────
 async function main() {
-  console.log('\n📱 Mechanical Enterprise — HVAC SMS Campaign (Textbelt)');
+  console.log('\n📱 Mechanical Enterprise — HVAC SMS Campaign (Telnyx)');
   console.log(`🔁 Mode: ${CONFIG.DRY_RUN ? 'DRY RUN' : 'LIVE SEND'}`);
   if (CONFIG.LIMIT) console.log(`🔢 Limit: ${CONFIG.LIMIT}`);
-
-  const quota = await checkCredits();
-  console.log(`💳 Credits remaining: ${quota.quotaRemaining ?? 'unknown'}\n`);
-
-  if (!CONFIG.DRY_RUN && (quota.quotaRemaining ?? 999) < 10) {
-    console.log('❌ Not enough credits. Top up at https://textbelt.com');
-    return;
-  }
 
   const leads = await fetchLeads();
   console.log(`✅ ${leads.length} leads ready\n`);
@@ -141,7 +106,7 @@ async function main() {
       const msg = getMsg(l,i);
       console.log(`To: ${l.phone} (${l.name})\n[${msg.length} chars]: ${msg}\n`);
     });
-    console.log(`💳 Credits needed: ${CONFIG.LIMIT || leads.length} | Available: ${quota.quotaRemaining ?? 'unknown'}`);
+    console.log(`📨 Would send: ${CONFIG.LIMIT || leads.length}`);
     console.log('\n✅ Dry run done. Remove --dry-run to send.');
     return;
   }
@@ -154,11 +119,11 @@ async function main() {
     process.stdout.write(`[${i+1}/${leads.length}] ${lead.name} (${lead.phone})... `);
 
     try {
-      const res = await sendSMS(lead.phone, msg);
+      const res = await sendSMS(lead.phone, msg, { optOut: true });
       if (res.success) {
-        console.log(`✅ (ID:${res.textId} | credits left:${res.quotaRemaining})`);
-        await updateStatus(lead.id, 'sms-sent', res.textId);
-        results.push({...lead, status:'sms-sent', tbId:res.textId});
+        console.log(`✅ (ID:${res.id})`);
+        await updateStatus(lead.id, 'sms-sent', res.id);
+        results.push({...lead, status:'sms-sent', smsId:res.id});
         sent++;
       } else {
         const err = res.error || 'failed';
@@ -166,10 +131,6 @@ async function main() {
         await updateStatus(lead.id, 'sms-failed', null);
         results.push({...lead, status:'sms-failed', error:err});
         failed++;
-        if (err.toLowerCase().includes('quota') || err.toLowerCase().includes('credit')) {
-          console.log('\n💳 Out of credits! Top up at https://textbelt.com and re-run.');
-          break;
-        }
       }
     } catch(e) {
       console.log(`❌ ${e.message}`);
@@ -183,12 +144,17 @@ async function main() {
   // Save report
   const ts   = new Date().toISOString().slice(0,19).replace(/[:.]/g,'-');
   const file = `sms-report-${ts}.csv`;
-  const lines = ['id,name,phone,status,textbelt_id,error'];
-  results.forEach(r => lines.push([r.id,`"${r.name}"`,r.phone,r.status,r.tbId||'',r.error||''].join(',')));
+  const lines = ['id,name,phone,status,sms_id,error'];
+  results.forEach(r => lines.push([r.id,`"${r.name}"`,r.phone,r.status,r.smsId||'',r.error||''].join(',')));
   fs.writeFileSync(file, lines.join('\n'));
 
   console.log(`\n🎉 Done! Sent: ${sent} | Failed: ${failed} | Report: ${file}`);
   console.log('💡 Run email-campaign-hvac.js next for the 503 leads with real emails.');
 }
 
-main().catch(e => { console.error('\n❌ Fatal:', e.message); process.exit(1); });
+// Only auto-run when invoked directly as a CLI (`node sms-campaign-hvac.js`),
+// never when loaded/bundled as a Netlify function — prevents an accidental
+// live campaign on cold-start or an HTTP hit to this file's function URL.
+if (require.main === module) {
+  main().catch(e => { console.error('\n❌ Fatal:', e.message); process.exit(1); });
+}

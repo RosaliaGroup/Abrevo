@@ -15,6 +15,7 @@
  */
 const crypto = require("crypto");
 const auth = require("./lib/auth");
+const { sendSMS } = require("./lib/sms");
 
 const ENV = () => ({
   URL: process.env.SUPABASE_URL,
@@ -472,8 +473,6 @@ exports.handler = async (event) => {
     // ----- cancel-link SMS (require CSRF; fixed template; server-owned key) -----
     if (route === "/sms/cancel-link" && method === "POST") {
       if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
-      const key = process.env.TEXTBELT_KEY;
-      if (!key) return json(500, { ok: false, error: "server_not_configured" });
       let body; try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { ok: false, error: "invalid_json" }); }
       const phone = normalizePhone(body.phone);
       if (!phone) return json(400, { ok: false, error: "invalid_phone" });
@@ -490,15 +489,7 @@ exports.handler = async (event) => {
           return json(429, { ok: false, error: "rate_limited" });
       } catch { /* if the guard store is unreachable, do not block a legitimate send */ }
       const message = `Hi ${firstName(body.name)}, here is your appointment management link: ${url} — you can reschedule or cancel here.`;
-      let provider;
-      try {
-        const r = await fetch("https://textbelt.com/text", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone, message, key }),
-        });
-        provider = await r.json().catch(() => ({}));
-      } catch { return json(502, { ok: false, error: "provider_failed" }); }
+      const provider = await sendSMS(phone, message, { optOut: true });
       // Record the attempt regardless (best-effort) for rate/dup tracking.
       fetch(`${e.URL}/rest/v1/sms_sends`, {
         method: "POST", headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),

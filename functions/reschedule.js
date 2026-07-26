@@ -3,7 +3,7 @@ const nodemailer = require('nodemailer');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY;
+const { sendSMS } = require('./lib/sms');
 const GOOGLE_CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
 const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
 const ANA_PHONE = '+12014970225';
@@ -32,15 +32,6 @@ async function sendEmail(to, subject, html) {
     console.error('Email error:', err.message);
     return { success: false, error: err.message };
   }
-}
-
-async function sendSMS(phone, message) {
-  const res = await fetch('https://textbelt.com/text', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone, message, key: TEXTBELT_KEY }),
-  });
-  return res.json();
 }
 
 async function getCalendarClient() {
@@ -185,7 +176,7 @@ exports.handler = async (event) => {
 
     // Text caller
     const callerMsg = `Appointment rescheduled!\n\n📍 ${booking.type}\n📅 ${new_date} at ${new_time}\n\nQuestions? Call (862) 333-1681`;
-    const r1 = await sendSMS(normalizedPhone, callerMsg);
+    const r1 = await sendSMS(normalizedPhone, callerMsg, { optOut: true });
     console.log('Caller SMS:', JSON.stringify(r1));
 
     // Text Ana
