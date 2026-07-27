@@ -88,6 +88,7 @@ const CLIENTS = {
 };
 
 const { sendSMS } = require('./lib/sms');
+const { getPropertyMedia } = require('./lib/propertyMedia');
 
 // Email transporter
 const transporter = nodemailer.createTransport({
@@ -381,14 +382,31 @@ exports.handler = async (event) => {
       console.error('Supabase error:', err.message);
     }
 
-    // 3. Send SMS to caller
+    // 3. Send SMS to caller (lead) — tour confirmation with reschedule link
     if (data.phone) {
-      const callerMsg = `Your appointment is confirmed!\n\n${propertyAddress}\n${displayDate} at ${displayTime}\n\nRosalia Group will be in touch. See you then!`;
+      const rescheduleUrl = isIron65(propertyAddress)
+        ? 'https://book.rosaliagroup.com/iron65-reschedule'
+        : 'https://book.rosaliagroup.com/reschedule';
+      const callerMsg = `Your tour is confirmed!\n${propertyAddress}\n${displayDate} at ${displayTime}\nNeed to reschedule? ${rescheduleUrl}`;
       try {
         const smsResult = await sendSMS(data.phone, callerMsg, { optOut: true });
         console.log('Caller SMS sent:', smsResult.success);
       } catch (err) {
         console.error('Caller SMS error:', err.message);
+      }
+
+      // Second text to the lead only: property photos/video (sent after they book)
+      try {
+        const unitNumber = data.unit || data.unit_number || null;
+        const mediaLink = getPropertyMedia(propertyAddress, data.apartment_size || '', unitNumber);
+        if (mediaLink) {
+          const mediaResult = await sendSMS(data.phone, `Here are photos and a video tour of the home:\n${mediaLink}`, { optOut: true });
+          console.log('Caller media SMS sent:', mediaResult.success);
+        } else {
+          console.log('No media link matched — skipping media SMS for:', propertyAddress);
+        }
+      } catch (err) {
+        console.error('Caller media SMS error:', err.message);
       }
     }
 
