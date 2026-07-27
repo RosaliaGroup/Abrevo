@@ -146,6 +146,19 @@
   status = 302
   force = true
 
+# Branded property media links -> photos redirector function
+[[redirects]]
+  from = "/photos/*"
+  to = "/.netlify/functions/photos/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://book.rosaliagroup.com/photos/*"
+  to = "/.netlify/functions/photos/:splat"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/crm"
   to = "/crm.html"

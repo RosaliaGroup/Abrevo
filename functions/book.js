@@ -88,7 +88,7 @@ const CLIENTS = {
 };
 
 const { sendSMS } = require('./lib/sms');
-const { getPropertyMedia } = require('./lib/propertyMedia');
+const { getBrandedMediaLink } = require('./lib/propertyMedia');
 
 // Email transporter
 const transporter = nodemailer.createTransport({
@@ -398,7 +398,7 @@ exports.handler = async (event) => {
       // Second text to the lead only: property photos/video, 3-4s after the first.
       // A failed media text must never fail the booking.
       const unitNumber = data.unit || data.unit_number || null;
-      const mediaLink = getPropertyMedia(propertyAddress, data.apartment_size || '', unitNumber);
+      const mediaLink = getBrandedMediaLink(propertyAddress, data.apartment_size || '', unitNumber);
       console.log('Booking media:', propertyAddress, '→', mediaLink || 'NONE');
       if (mediaLink) {
         try {

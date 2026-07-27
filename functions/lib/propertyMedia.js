@@ -116,4 +116,86 @@ function getIron65MediaLink(unitNumber) {
   return 'https://properties.rosaliagroup.com/properties/iron65.html';
 }
 
-module.exports = { getPropertyMedia, getIron65MediaLink, IRON65_MODELS, PROPERTY_MEDIA };
+// --- Branded photo links ---------------------------------------------------
+// Every media destination gets a stable slug, served from
+// https://book.rosaliagroup.com/photos/<slug> (see functions/photos.js), so a
+// lead never sees a raw Drive URL. Building/model URLs are REFERENCED from the
+// maps above (one copy each); only the inline-literal destinations that live
+// inside getPropertyMedia are named here (that function stays untouched).
+const PHOTOS_BASE = 'https://book.rosaliagroup.com/photos/';
+
+const SLUGS = {
+  // Buildings / property pages
+  'iron65':          PROPERTY_MEDIA['iron 65'],
+  '39-madison':      PROPERTY_MEDIA['39 madison'],
+  '502-market':      PROPERTY_MEDIA['502 market'],
+  '486-market':      PROPERTY_MEDIA['486 market'],
+  '556-market':      PROPERTY_MEDIA['556 market'],
+  '74-webster':      PROPERTY_MEDIA['74 webster'],
+  '11-thomas':       PROPERTY_MEDIA['11 thomas'],
+  '164-university':  PROPERTY_MEDIA['164 university'],
+  'other-listings':  PROPERTY_MEDIA['136 s 7th'],
+  '289-halsey':      PROPERTY_MEDIA['289 halsey'],
+  '276-duncan':      PROPERTY_MEDIA['276 duncan'],
+  '440-elizabeth':   PROPERTY_MEDIA['440 elizabeth'],
+  'the-elks':        PROPERTY_MEDIA['the elks'],
+  '180-ferry':       PROPERTY_MEDIA['180 ferry'],
+  '80-freeman':      PROPERTY_MEDIA['80 freeman'],
+  // Iron 65 unit models (all 16 folders)
+  'iron65-00': IRON65_MODELS['00'],
+  'iron65-01': IRON65_MODELS['01'],
+  'iron65-02': IRON65_MODELS['02'],
+  'iron65-03': IRON65_MODELS['03'],
+  'iron65-04': IRON65_MODELS['04'],
+  'iron65-05': IRON65_MODELS['05'],
+  'iron65-06': IRON65_MODELS['06'],
+  'iron65-07': IRON65_MODELS['07'],
+  'iron65-08': IRON65_MODELS['08'],
+  'iron65-09': IRON65_MODELS['09'],
+  'iron65-10': IRON65_MODELS['10'],
+  'iron65-11': IRON65_MODELS['11'],
+  'iron65-12': IRON65_MODELS['12'],
+  'iron65-loft':      IRON65_MODELS['loft'],
+  'iron65-duplex':    IRON65_MODELS['duplex'],
+  'iron65-amenities': IRON65_MODELS['amenities'],
+  // Bed-type / unit-variant destinations that are inline literals inside
+  // getPropertyMedia (kept identical to the values in that function).
+  'iron65-studio':        'https://drive.google.com/file/d/1Ufb0l-4L-uNxpzIBKIA2g2upR2YsWMI-/view',
+  'iron65-1br':           'https://drive.google.com/file/d/15QalYV80cwWyJ6W8r0DGmmHXV7121yoe/view',
+  '39-madison-floorplan': 'https://drive.google.com/file/d/1XKjfX9SNN8Gf7yvP_w3VKhGHM79_FlLU/view',
+  '39-madison-2br':       'https://drive.google.com/file/d/1WmD2LsDCbjE26LBv-qAxodSpK40NcWqi/view',
+  '502-market-1br':       'https://drive.google.com/drive/folders/1g0v-wXqjGRPwyd_0ZMW4e9DV-4-bDFS0',
+  '502-market-2br':       'https://drive.google.com/drive/folders/1Q_dfJG97uFZHCC_4fuGZt0o1M0qZmD_B',
+};
+
+// Reverse index (URL -> slug), built at load so getBrandedMediaLink can wrap
+// getPropertyMedia without a second hand-maintained copy of the URLs.
+const URL_TO_SLUG = {};
+for (const [slug, url] of Object.entries(SLUGS)) {
+  if (url && !(url in URL_TO_SLUG)) URL_TO_SLUG[url] = slug;
+}
+
+// slug -> underlying Drive/properties URL, or null for an unknown slug.
+function resolveSlug(slug) {
+  if (!slug) return null;
+  return Object.prototype.hasOwnProperty.call(SLUGS, slug) ? SLUGS[slug] : null;
+}
+
+// Same inputs as getPropertyMedia, but returns a branded /photos/<slug> URL,
+// or null when getPropertyMedia finds no match.
+function getBrandedMediaLink(property, message, unitNumber) {
+  const url = getPropertyMedia(property, message, unitNumber);
+  if (!url) return null;
+  const slug = URL_TO_SLUG[url];
+  return slug ? PHOTOS_BASE + slug : null;
+}
+
+module.exports = {
+  getPropertyMedia,
+  getIron65MediaLink,
+  IRON65_MODELS,
+  PROPERTY_MEDIA,
+  SLUGS,
+  resolveSlug,
+  getBrandedMediaLink,
+};
