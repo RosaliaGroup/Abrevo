@@ -1,9 +1,12 @@
 const nodemailer = require('nodemailer');
+const { sendSMS } = require('./lib/sms');
+const auth = require('./lib/auth');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
+const CONFIRM_SECRET = process.env.CONFIRM_SECRET;
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -77,8 +80,10 @@ exports.handler = async () => {
 
     for (const booking of bookings) {
       try {
-        if (!booking.email || !booking.email.includes('@')) {
-          console.log('Skipping booking — invalid email:', booking.id, booking.full_name);
+        const hasEmail = !!(booking.email && booking.email.includes('@'));
+        const phone = booking.phone;
+        if (!hasEmail && !phone) {
+          console.log('Skipping booking — no email or phone:', booking.id, booking.full_name);
           continue;
         }
 
@@ -105,6 +110,9 @@ exports.handler = async () => {
         const manageUrl = isIron65(propertyAddress)
           ? 'https://book.rosaliagroup.com/iron65-reschedule'
           : 'https://book.rosaliagroup.com/reschedule';
+
+        // One-tap confirm URL (verified by functions/confirm.js)
+        const confirmUrl = `https://book.rosaliagroup.com/confirm?id=${encodeURIComponent(booking.id)}&t=${auth.confirmToken(booking.id, CONFIRM_SECRET)}`;
 
         // Build email HTML — same dark gold styling as book.js
         const emailHtml = `
@@ -145,7 +153,10 @@ exports.handler = async () => {
               <tr><td style="padding:20px 28px;">
                 <div style="color:#C9A84C;font-size:14px;line-height:1.7;">⚠️ Please confirm your tour at least 3 hours before your appointment time.</div>
                 <div style="color:#999;font-size:13px;line-height:1.7;margin-top:8px;">If we don't hear from you by <strong style="color:#E8E8E8;">${deadlineDisplay}</strong>, we may need to cancel and offer your slot to another prospective tenant.</div>
-                <div style="color:#E8E8E8;font-size:14px;line-height:1.7;margin-top:12px;">To confirm: simply reply <strong style="color:#C9A84C;">YES</strong> to this email, or call us at <strong>(862) 419-1763</strong>.</div>
+                <div style="text-align:center;margin-top:18px;">
+                  <a href="${confirmUrl}" style="display:inline-block;background:#C9A84C;color:#0A0A0A;font-size:12px;letter-spacing:3px;text-transform:uppercase;padding:14px 32px;text-decoration:none;font-weight:bold;border-radius:2px;">Confirm My Tour</a>
+                </div>
+                <div style="color:#999;font-size:13px;line-height:1.7;margin-top:12px;text-align:center;">or call us at <strong style="color:#E8E8E8;">(862) 419-1763</strong>.</div>
               </td></tr>
             </table>
             <p style="color:#999;font-size:13px;line-height:1.7;margin:0 0 30px 0;">Need to reschedule? Reply to this email or use the link below.</p>
@@ -167,47 +178,70 @@ exports.handler = async () => {
 </body>
 </html>`;
 
-        // a. Send reminder email to lead
-        await transporter.sendMail({
-          from: '"Rosalia Group" <inquiries@rosaliagroup.com>',
-          to: booking.email,
-          cc: 'inquiries@rosaliagroup.com',
-          subject: `Confirm your tour tomorrow at ${propertyShort} — ${displayTime}`,
-          html: emailHtml,
-        });
-        console.log('Reminder sent to:', booking.email);
+        // a. Reminder email to lead (only when there's a valid email)
+        let emailOk = false;
+        if (hasEmail) {
+          try {
+            await transporter.sendMail({
+              from: '"Rosalia Group" <inquiries@rosaliagroup.com>',
+              to: booking.email,
+              cc: 'inquiries@rosaliagroup.com',
+              subject: `Confirm your tour tomorrow at ${propertyShort} — ${displayTime}`,
+              html: emailHtml,
+            });
+            emailOk = true;
+            console.log('Reminder email sent to:', booking.email);
+          } catch (e) {
+            console.error('Reminder email failed:', booking.id, e.message);
+          }
+        }
 
-        // b. Create task for team
-        await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
-          method: 'POST',
-          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-          body: JSON.stringify({
-            lead_name: booking.full_name,
-            lead_email: booking.email,
-            lead_phone: booking.phone,
-            task_type: 'appointment_verification',
-            description: `Tour tomorrow: ${propertyAddress}, ${displayDate} at ${displayTime}. Lead: ${booking.full_name} — ${booking.email} — ${formatPhone(booking.phone)}. Confirmation deadline: ${deadlineDisplay} (3 hours before tour). Action: If lead has not confirmed by deadline, call them OR cancel and rebook the slot.`,
-            status: 'open',
-          }),
-        });
-        console.log('Task created for:', booking.full_name);
+        // b. Reminder text to lead (only when there's a phone) — ONE link (confirm),
+        //    kept to a single 160-char segment. Reschedule lives on the confirm page.
+        let r = { success: false };
+        if (phone) {
+          const smsText = `Hi ${firstName}! Your tour at ${propertyShort} is tomorrow ${displayTime}.\nConfirm: ${confirmUrl}`;
+          r = await sendSMS(phone, smsText, { optOut: true });
+        }
 
-        // c. Send team notification email
-        await transporter.sendMail({
-          from: `"Rosalia AI System" <${GMAIL_USER}>`,
-          to: GMAIL_USER,
-          subject: `Tour Tomorrow: ${booking.full_name} — ${propertyShort} at ${displayTime}`,
-          text: `Tour reminder sent for tomorrow's appointment.\n\nLead: ${booking.full_name}\nEmail: ${booking.email}\nPhone: ${formatPhone(booking.phone)}\nProperty: ${propertyAddress}\nTime: ${displayTime}\n\nConfirmation deadline: ${deadlineDisplay}\nAction: If no confirmation by deadline, call the lead or cancel and rebook.\n\nTask created in dashboard.`,
-        });
+        // c. Team task + notification (internal; wrapped so it never blocks dedupe)
+        try {
+          await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
+            method: 'POST',
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+            body: JSON.stringify({
+              lead_name: booking.full_name,
+              lead_email: booking.email,
+              lead_phone: booking.phone,
+              task_type: 'appointment_verification',
+              description: `Tour tomorrow: ${propertyAddress}, ${displayDate} at ${displayTime}. Lead: ${booking.full_name} — ${booking.email || 'no email'} — ${formatPhone(booking.phone)}. Confirmation deadline: ${deadlineDisplay} (3 hours before tour). Action: If lead has not confirmed by deadline, call them OR cancel and rebook the slot.`,
+              status: 'open',
+            }),
+          });
+          await transporter.sendMail({
+            from: `"Rosalia AI System" <${GMAIL_USER}>`,
+            to: GMAIL_USER,
+            subject: `Tour Tomorrow: ${booking.full_name} — ${propertyShort} at ${displayTime}`,
+            text: `Tour reminder for tomorrow's appointment.\n\nLead: ${booking.full_name}\nEmail: ${booking.email || 'N/A'}\nPhone: ${formatPhone(booking.phone)}\nProperty: ${propertyAddress}\nTime: ${displayTime}\nChannels — email: ${emailOk}, sms: ${r.success}\n\nConfirmation deadline: ${deadlineDisplay}\nAction: If no confirmation by deadline, call the lead or cancel and rebook.\n\nTask created in dashboard.`,
+          });
+        } catch (e) {
+          console.error('Team task/notify failed:', booking.id, e.message);
+        }
 
-        // d. Mark reminder as sent
-        await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${booking.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-          body: JSON.stringify({ reminder_sent_at: new Date().toISOString() }),
-        });
+        // d. Dedupe: stamp reminder_sent_at ONLY if at least one lead channel
+        //    succeeded, so a total failure is retried by the next (2PM/8PM) run.
+        if (emailOk || r.success) {
+          await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${booking.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+            body: JSON.stringify({ reminder_sent_at: new Date().toISOString() }),
+          });
+          sent++;
+        } else {
+          console.log('Reminder', booking.id, 'both channels failed — leaving reminder_sent_at null for retry');
+        }
 
-        sent++;
+        console.log('Reminder', booking.id, 'email:', emailOk, 'sms:', r.success);
       } catch (err) {
         console.error('Error processing reminder for:', booking.full_name, err.message);
         errors++;

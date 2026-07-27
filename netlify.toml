@@ -159,6 +159,19 @@
   status = 200
   force = true
 
+# One-tap tour confirmation endpoint
+[[redirects]]
+  from = "/confirm"
+  to = "/.netlify/functions/confirm"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://book.rosaliagroup.com/confirm"
+  to = "/.netlify/functions/confirm"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/crm"
   to = "/crm.html"

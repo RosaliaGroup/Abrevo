@@ -83,6 +83,12 @@ function verifyCsrf(sessionToken, provided, secret) {
   return timingEqualStr(provided, csrfToken(sessionToken, secret));
 }
 
+// ---- Booking confirm token: b64url(HMAC-SHA256(id, secret)) truncated to 16 ----
+// Used by the day-before reminder (mint) and functions/confirm.js (verify).
+function confirmToken(id, secret) {
+  return b64url(crypto.createHmac("sha256", secret).update(String(id)).digest()).slice(0, 16);
+}
+
 // ---- Cookies ----
 function parseCookies(header) {
   const out = {};
@@ -120,5 +126,7 @@ module.exports = {
   hashPassword, verifyPassword,
   signSession, verifySession,
   csrfToken, verifyCsrf,
+  confirmToken,
+  b64url, timingEqualStr,
   parseCookies, sessionSetCookie, sessionClearCookie, sessionTokenFromEvent, getClientIp, header,
 };
