@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const TELNYX_PUBLIC_KEY = process.env.TELNYX_PUBLIC_KEY;
+const MAX_TIMESTAMP_AGE_SEC = 300; // reject signed requests older than 5 min (replay guard)
 
 // Verify a Telnyx Ed25519 webhook signature over `${timestamp}|${rawBody}`.
 // Telnyx gives the public key as base64-encoded raw 32 bytes; wrap it in a DER
@@ -38,11 +39,25 @@ exports.handler = async (event) => {
     ? Buffer.from(event.body || '', 'base64').toString('utf8')
     : (event.body || '');
 
-  // Signature check: enforce only when the public key is configured.
+  // Signature check: enforce only when the public key is configured. When enforced,
+  // a MISSING signature/timestamp is rejected just like an invalid one — an unsigned
+  // POST must never be accepted. A validly-signed but stale request is a replay.
   if (TELNYX_PUBLIC_KEY) {
-    if (!sig || !ts || !verifyTelnyxSignature(TELNYX_PUBLIC_KEY, sig, ts, rawBody)) {
-      console.warn('SMS status: rejected — bad or missing Telnyx signature');
-      return { statusCode: 403, headers: { 'Content-Type': 'text/plain' }, body: 'bad signature' };
+    let reason = null;
+    if (!sig || !ts) {
+      reason = 'missing signature headers';
+    } else if (!verifyTelnyxSignature(TELNYX_PUBLIC_KEY, sig, ts, rawBody)) {
+      reason = 'invalid signature';
+    } else {
+      const tsNum = parseInt(ts, 10);
+      const ageSec = Math.floor(Date.now() / 1000) - tsNum;
+      if (!Number.isFinite(tsNum) || ageSec > MAX_TIMESTAMP_AGE_SEC) {
+        reason = 'stale timestamp';
+      }
+    }
+    if (reason) {
+      console.log('SMS status rejected:', reason);
+      return { statusCode: 403, headers: { 'Content-Type': 'text/plain' }, body: 'forbidden' };
     }
   } else {
     console.warn('SMS status: TELNYX_PUBLIC_KEY unset — accepting webhook unverified');
