@@ -184,6 +184,13 @@
   status = 200
   force = true
 
+# Telnyx delivery-receipt webhook
+[[redirects]]
+  from = "/sms-status"
+  to = "/.netlify/functions/sms-status"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/crm"
   to = "/crm.html"
