@@ -38,6 +38,13 @@ function parseTime(timeStr) {
   return { hours, minutes };
 }
 
+// Compact form for SMS: "9AM" (drops :00 minutes, no space before AM/PM, no day suffix)
+function formatTimeShort(hours, minutes) {
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const h = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
+  return minutes ? `${h}:${String(minutes).padStart(2, '0')}${period}` : `${h}${period}`;
+}
+
 // Format hours/minutes back to "12:00 PM" display
 function formatTime(hours, minutes) {
   const period = hours >= 12 ? 'PM' : 'AM';
@@ -104,6 +111,8 @@ exports.handler = async () => {
           deadlineDay = 'tonight';
         }
         const deadlineDisplay = `${formatTime(deadlineHours, apptMinutes)} ${deadlineDay}`;
+        // SMS variant of the SAME deadline: "9AM" (no minutes/space/day suffix).
+        const shortDeadline = formatTimeShort(deadlineHours, apptMinutes);
 
         // Ensure a short_code exists (older rows may predate it); mint + save if missing.
         let code = booking.short_code;
@@ -204,18 +213,19 @@ exports.handler = async () => {
           }
         }
 
-        // b. Reminder text to lead (only when there's a phone). Both links, no https://
-        //    prefix to save characters. HARD CAP: final body <= 160 AFTER lib/sms.js
-        //    appends the opt-out line — truncate first name (12) and property (14, then
-        //    further) until it fits, so it never splits into a second billable segment.
+        // b. Reminder text to lead (only when there's a phone). Both links + the
+        //    confirmation deadline, no https:// prefix to save characters. With both links
+        //    and the deadline this no longer fits one segment, so the ceiling is 306 (two
+        //    segments) — we'd rather pay for a second segment than mangle the property name.
+        //    The truncation loop stays only as a safety net at 306.
         let r = { success: false };
         if (phone) {
           const OPTOUT = ' Reply STOP to unsubscribe.'.length; // appended by lib/sms.js
           const first = (firstName || 'there').slice(0, 12);
-          let propShort = (propertyShort || '').slice(0, 14);
-          const build = (p) => `Hi ${first}! Tour at ${p} tomorrow ${displayTime}. Confirm: book.rosaliagroup.com/c/${code} Reschedule: book.rosaliagroup.com/r/${code}`;
+          let propShort = propertyShort || '';
+          const build = (p) => `Hi ${first}! Tour at ${p} tomorrow ${displayTime}. Please confirm by ${shortDeadline}: book.rosaliagroup.com/c/${code} Reschedule: book.rosaliagroup.com/r/${code}`;
           let msg = build(propShort);
-          while (msg.length + OPTOUT > 160 && propShort.length > 0) {
+          while (msg.length + OPTOUT > 306 && propShort.length > 0) {
             propShort = propShort.slice(0, -1).trim();
             msg = build(propShort);
           }
