@@ -395,18 +395,19 @@ exports.handler = async (event) => {
         console.error('Caller SMS error:', err.message);
       }
 
-      // Second text to the lead only: property photos/video (sent after they book)
-      try {
-        const unitNumber = data.unit || data.unit_number || null;
-        const mediaLink = getPropertyMedia(propertyAddress, data.apartment_size || '', unitNumber);
-        if (mediaLink) {
-          const mediaResult = await sendSMS(data.phone, `Here are photos and a video tour of the home:\n${mediaLink}`, { optOut: true });
+      // Second text to the lead only: property photos/video, 3-4s after the first.
+      // A failed media text must never fail the booking.
+      const unitNumber = data.unit || data.unit_number || null;
+      const mediaLink = getPropertyMedia(propertyAddress, data.apartment_size || '', unitNumber);
+      console.log('Booking media:', propertyAddress, '→', mediaLink || 'NONE');
+      if (mediaLink) {
+        try {
+          await new Promise(res => setTimeout(res, 3500));
+          const mediaResult = await sendSMS(data.phone, `Here are photos and video of ${propertyAddress}: ${mediaLink}`, { optOut: true });
           console.log('Caller media SMS sent:', mediaResult.success);
-        } else {
-          console.log('No media link matched — skipping media SMS for:', propertyAddress);
+        } catch (err) {
+          console.error('Caller media SMS error:', err.message);
         }
-      } catch (err) {
-        console.error('Caller media SMS error:', err.message);
       }
     }
 
