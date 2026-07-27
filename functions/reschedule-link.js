@@ -38,7 +38,7 @@ exports.handler = async (event) => {
   let booking = null;
   try {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/bookings?short_code=ilike.${encodeURIComponent(code)}&select=id,type,property,property_address&limit=1`,
+      `${SUPABASE_URL}/rest/v1/bookings?short_code=ilike.${encodeURIComponent(code)}&select=id,type&limit=1`,
       { headers: SB_H }
     );
     const rows = await r.json();
@@ -52,7 +52,7 @@ exports.handler = async (event) => {
     return redirect(RESCHEDULE);
   }
 
-  const propertyAddress = booking.type || booking.property_address || booking.property || '';
+  const propertyAddress = booking.type || '';
   const base = isIron65(propertyAddress) ? IRON65_RESCHEDULE : RESCHEDULE;
   const target = `${base}?code=${encodeURIComponent(code)}`;
   console.log('Reschedule link:', code, booking.id, '->', target);

@@ -96,7 +96,7 @@ exports.handler = async (event) => {
   let booking = null;
   try {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/bookings?short_code=ilike.${encodeURIComponent(code)}&select=id,preferred_date,preferred_time,type,property,property_address,confirmed_at&limit=1`,
+      `${SUPABASE_URL}/rest/v1/bookings?short_code=ilike.${encodeURIComponent(code)}&select=id,preferred_date,preferred_time,type,confirmed_at&limit=1`,
       { headers: SB_H }
     );
     const rows = await r.json();
@@ -126,7 +126,7 @@ exports.handler = async (event) => {
     }
   }
 
-  const propertyAddress = booking.type || booking.property_address || booking.property || 'your tour';
+  const propertyAddress = booking.type || 'your tour';
   const displayDate = formatDate(booking.preferred_date);
   const displayTime = booking.preferred_time || 'your scheduled time';
   const rescheduleUrl = `https://book.rosaliagroup.com/r/${code}`;
