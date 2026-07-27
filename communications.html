@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rosalia Group — Communications</title>
+<style>
+  :root{--bg:#0f1115;--surface:#171a21;--surface2:#1f232c;--border:#2a2f3a;--text:#e8eaed;--muted:#9aa3b2;--gold:#c9a86a;--blue:#4a90d9;--green:#3fb950;--red:#e5534b;--amber:#d29922;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column}
+  header{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+  header h1{font-size:16px;margin:0;font-weight:600}
+  header .sub{color:var(--muted);font-size:12px}
+  .layout{flex:1;display:flex;min-height:0}
+  .list{width:320px;border-right:1px solid var(--border);overflow-y:auto;background:var(--surface)}
+  .newconv{padding:10px;border-bottom:1px solid var(--border);display:flex;gap:6px}
+  .newconv input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px}
+  .btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px 12px;cursor:pointer;font-size:13px}
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .conv{padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer}
+  .conv:hover{background:var(--surface2)}
+  .conv.active{background:var(--surface2);border-left:3px solid var(--gold)}
+  .conv .row1{display:flex;justify-content:space-between;align-items:baseline}
+  .conv .phone{font-weight:600;font-size:14px}
+  .conv .time{color:var(--muted);font-size:11px}
+  .conv .preview{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .conv .ctx{margin-top:4px}
+  .tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:10px;background:#243; color:#8fd;border:1px solid #365;margin-right:4px}
+  .tag.optout{background:#3a2426;color:#f7a;border-color:#633}
+  .thread{flex:1;display:flex;flex-direction:column;min-width:0}
+  .thread .head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+  .messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+  .msg{max-width:70%;padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.35}
+  .msg.inbound{align-self:flex-start;background:var(--surface2);border:1px solid var(--border);border-bottom-left-radius:4px}
+  .msg.outbound{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px}
+  .msg .meta{font-size:10px;opacity:.75;margin-top:4px;display:flex;gap:8px;justify-content:flex-end}
+  .msg.inbound .meta{justify-content:flex-start}
+  .status{text-transform:capitalize}
+  .status.failed{color:#ffd0cc}
+  .compose{border-top:1px solid var(--border);padding:12px;display:flex;gap:8px}
+  .compose textarea{flex:1;resize:none;height:44px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px}
+  .banner{padding:8px 12px;border-radius:6px;margin:8px 16px;font-size:13px}
+  .banner.err{background:#3a2426;color:#f7a;border:1px solid #633}
+  .banner.optout{background:#33290f;color:#f0c674;border:1px solid #5a4}
+  .empty{color:var(--muted);margin:auto;text-align:center;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Communications</h1>
+  <span class="sub">Internal SMS · Telnyx · server-owned</span>
+</header>
+<div class="banner err" id="auth-banner" style="display:none;margin:8px 16px">Your session could not be verified. Please sign in again.</div>
+<div class="layout">
+  <aside class="list">
+    <div class="newconv">
+      <input id="new-phone" placeholder="New: phone number" />
+      <button class="btn" id="new-btn">Start</button>
+    </div>
+    <div class="banner err" id="list-err" style="display:none;margin:8px 10px"></div>
+    <div id="conv-list"></div>
+  </aside>
+  <main class="thread">
+    <div id="thread-body" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="empty" id="thread-empty">Select or start a conversation</div>
+    </div>
+  </main>
+</div>
+
+<script>
+// Server-owned endpoint. No Supabase or Telnyx credentials exist in this page.
+// Mutations carry the operator's session-bound CSRF token (X-CSRF-Token),
+// obtained once from the existing /api/auth/session endpoint. The __session
+// cookie is HttpOnly and is never read by JS; the CSRF token lives only in
+// memory and is never logged, stored, or placed in a URL.
+const API = '/.netlify/functions/communications';
+const SESSION_API = '/api/auth/session';
+const state = { conversations: [], active: null, messages: [] };
+let __csrf = null;    // in-memory only
+let __authed = false;
+
+// ---- session / auth state (fail closed) ----
+function setAuthState(authed) {
+  __authed = authed;
+  if (!authed) __csrf = null;   // never keep a stale token
+  const banner = document.getElementById('auth-banner'); if (banner) banner.style.display = authed ? 'none' : 'block';
+  const optedOut = !!(state.active && state.active.opted_out_at);
+  const nb = document.getElementById('new-btn'); if (nb) nb.disabled = !authed;
+  const sb = document.getElementById('send-btn'); if (sb) sb.disabled = !authed || optedOut;
+  const ta = document.getElementById('compose-text'); if (ta) ta.disabled = !authed || optedOut;
+}
+function canMutate() { return __authed && !!__csrf; }
+
+async function bootstrapSession() {
+  try {
+    const res = await fetch(SESSION_API, { credentials: 'same-origin' });
+    if (res.status === 401) { setAuthState(false); return false; }
+    const s = await res.json().catch(() => ({}));
+    if (s && s.ok && s.csrfToken) { __csrf = s.csrfToken; setAuthState(true); return true; }
+  } catch (e) {}
+  setAuthState(false); return false;
+}
+
+// ---- single request helper: reads = GET (no CSRF); mutations = POST (+CSRF) ----
+async function api(action, { method='GET', query={}, body=null } = {}) {
+  const isMutation = method !== 'GET';
+  if (isMutation && !canMutate()) {
+    // fail closed — never emit a mutation without a verified token
+    return { ok:false, error:{ code:'no_session', message:'Your session could not be verified. Please sign in again.' } };
+  }
+  let url = API;
+  const opts = { method, credentials:'same-origin', headers:{} };
+  if (method === 'GET') { url += '?' + new URLSearchParams({ action, ...query }).toString(); }
+  else {
+    opts.headers['Content-Type'] = 'application/json'; // only when a JSON body is present
+    opts.headers['X-CSRF-Token'] = __csrf;             // header only — never in URL/body/log
+    opts.body = JSON.stringify({ action, ...(body||{}) });
+  }
+  let res;
+  try { res = await fetch(url, opts); }
+  catch (e) { return { ok:false, error:{ code:'network', message:'Network error. Please try again.' } }; }
+  if (res.status === 401) { onAuthLost(); return { ok:false, status:401, error:{ code:'unauthenticated', message:'Your session expired. Please sign in again.' } }; }
+  if (res.status === 403) { return { ok:false, status:403, error:{ code:'forbidden', message:'This request could not be verified. Refresh the page or sign in again.' } }; }
+  let data = {}; try { data = await res.json(); } catch (e) {}
+  return data;
+}
+function onAuthLost() { setAuthState(false); }  // clears __csrf and disables mutation controls
+
+// ---- pure thread helpers (mirror functions/_lib/commThreadModel.js) ----
+function messageKey(m){ return (m && (m.id || m.provider_message_id || m.tempId)) || null; }
+function orderThread(ms){ return [...ms].sort((a,b)=>{ const ta=String(a.created_at||''),tb=String(b.created_at||''); if(ta<tb)return -1; if(ta>tb)return 1; return String(messageKey(a)).localeCompare(String(messageKey(b))); }); }
+function mergeMessages(existing, incoming){
+  const byKey=new Map(), byIdem=new Map();
+  const put=(m)=>{ const k=messageKey(m);
+    if(m.idempotency_key && byIdem.has(m.idempotency_key)){ const pk=byIdem.get(m.idempotency_key); const prev=byKey.get(pk); const confirmed=m.id?m:(prev&&prev.id?prev:m); byKey.delete(pk); byKey.set(messageKey(confirmed),confirmed); byIdem.set(m.idempotency_key,messageKey(confirmed)); return; }
+    if(k!=null&&byKey.has(k)) byKey.set(k,{...byKey.get(k),...m}); else if(k!=null) byKey.set(k,m);
+    if(m.idempotency_key) byIdem.set(m.idempotency_key, messageKey(byKey.get(k)||m)); };
+  existing.forEach(put); incoming.forEach(put);
+  return orderThread([...byKey.values()]);
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtTime(t){ if(!t)return ''; const d=new Date(t); return isNaN(d)?'':d.toLocaleString(); }
+
+function ctxTags(conv){
+  let h='';
+  (conv.links||[]).forEach(l=>{ h += `<span class="tag">${esc(l.entity_type)} #${esc(l.entity_id)}</span>`; });
+  if(conv.opted_out_at) h += `<span class="tag optout">opted out</span>`;
+  return h;
+}
+
+function renderList(){
+  const el=document.getElementById('conv-list');
+  el.innerHTML = state.conversations.map(c=>`
+    <div class="conv ${state.active&&state.active.id===c.id?'active':''}" data-id="${esc(c.id)}">
+      <div class="row1"><span class="phone">${esc(c.normalized_phone)}</span><span class="time">${esc(fmtTime(c.last_message_at))}</span></div>
+      <div class="preview">${esc(c.last_message_preview||'No messages yet')}</div>
+      <div class="ctx">${ctxTags(c)}</div>
+    </div>`).join('') || '<div class="empty" style="padding:20px">No conversations yet</div>';
+  el.querySelectorAll('.conv').forEach(n=> n.onclick=()=> openThread(n.dataset.id));
+}
+
+function renderThread(){
+  const conv=state.active; const body=document.getElementById('thread-body');
+  if(!conv){ body.innerHTML='<div class="empty" id="thread-empty">Select or start a conversation</div>'; return; }
+  const optedOut = !!conv.opted_out_at;
+  const canSend = __authed && !optedOut;
+  body.innerHTML = `
+    <div class="head"><div><strong>${esc(conv.normalized_phone)}</strong><div class="ctx" style="margin-top:4px">${ctxTags(conv)}</div></div></div>
+    ${optedOut?'<div class="banner optout">This contact has opted out. Sending is disabled.</div>':''}
+    <div class="banner err" id="thread-err" style="display:none"></div>
+    <div class="messages" id="messages"></div>
+    <div class="compose">
+      <textarea id="compose-text" placeholder="${optedOut?'Sending disabled (opted out)':'Type a message…'}" ${canSend?'':'disabled'}></textarea>
+      <button class="btn primary" id="send-btn" ${canSend?'':'disabled'}>Send</button>
+    </div>`;
+  renderMessages();
+  if(canSend){ document.getElementById('send-btn').onclick=doSend; }
+}
+function showThreadErr(msg){ const e=document.getElementById('thread-err'); if(e){ e.style.display='block'; e.textContent=msg; } }
+function showListErr(msg){ const e=document.getElementById('list-err'); if(e){ e.style.display='block'; e.textContent=msg; } }
+
+function renderMessages(){
+  const el=document.getElementById('messages'); if(!el) return;
+  el.innerHTML = state.messages.map(m=>`
+    <div class="msg ${m.direction==='inbound'?'inbound':'outbound'}">
+      <div>${esc(m.body)}</div>
+      <div class="meta"><span>${esc(fmtTime(m.created_at))}</span>${m.direction==='outbound'?`<span class="status ${esc(m.status)}">${esc(m.status||'')}</span>`:''}</div>
+    </div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function loadConversations(){
+  const r=await api('listConversations',{query:{limit:50}});
+  if(r.ok){ state.conversations=r.conversations; renderList(); }
+}
+
+async function openThread(id){
+  const r=await api('thread',{query:{conversationId:id,limit:100}});
+  if(!r.ok){ return; }
+  state.active=r.conversation; state.messages=orderThread(r.messages||[]);
+  renderList(); renderThread();
+}
+
+async function doSend(){
+  if(!canMutate()){ showThreadErr('Your session could not be verified. Please sign in again.'); setAuthState(false); return; }
+  const conv=state.active; const ta=document.getElementById('compose-text');
+  const text=ta.value.trim(); if(!text) return;
+  const idem = 'ui-'+conv.id+'-'+Date.now();
+  // optimistic bubble (no duplicate: reconciled by idempotency_key on confirm)
+  const optimistic={ tempId:idem, idempotency_key:idem, direction:'outbound', body:text, status:'queued', created_at:new Date().toISOString() };
+  state.messages=mergeMessages(state.messages,[optimistic]); renderMessages(); ta.value='';
+  const r=await api('send',{method:'POST',body:{conversationId:conv.id,body:text,idempotencyKey:idem}});
+  if(r.ok && r.message){ state.messages=mergeMessages(state.messages,[r.message]); renderMessages(); return; }
+  // failed — roll back the optimistic bubble and show a safe message. No auto-retry.
+  state.messages = state.messages.filter(m=>m.tempId!==idem); renderMessages();
+  showThreadErr((r.error&&r.error.message)||'Send failed');
+}
+
+async function startConversation(){
+  if(!canMutate()){ setAuthState(false); return; }
+  const inp=document.getElementById('new-phone'); const phone=inp.value.trim(); if(!phone) return;
+  const r=await api('findOrCreate',{method:'POST',body:{phone}});
+  if(!r.ok){ showListErr((r.error&&r.error.message)||'Could not start conversation.'); return; }
+  document.getElementById('list-err').style.display='none';
+  inp.value=''; await loadConversations(); openThread(r.conversation.id);
+}
+
+document.getElementById('new-btn').onclick=startConversation;
+// Fail closed: verify the operator session (and obtain the CSRF token) before
+// any data loads. Reads also require the session server-side.
+(async function init(){ const ok = await bootstrapSession(); if(ok){ await loadConversations(); } })();
+</script>
+</body>
+</html>
