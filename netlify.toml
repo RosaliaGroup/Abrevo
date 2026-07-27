@@ -159,16 +159,28 @@
   status = 200
   force = true
 
-# One-tap tour confirmation endpoint
+# Short-code tour links: confirm (/c/<code>) + reschedule (/r/<code>)
 [[redirects]]
-  from = "/confirm"
-  to = "/.netlify/functions/confirm"
+  from = "/c/*"
+  to = "/.netlify/functions/confirm/:splat"
   status = 200
   force = true
 
 [[redirects]]
-  from = "https://book.rosaliagroup.com/confirm"
-  to = "/.netlify/functions/confirm"
+  from = "https://book.rosaliagroup.com/c/*"
+  to = "/.netlify/functions/confirm/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/r/*"
+  to = "/.netlify/functions/reschedule-link/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://book.rosaliagroup.com/r/*"
+  to = "/.netlify/functions/reschedule-link/:splat"
   status = 200
   force = true
 

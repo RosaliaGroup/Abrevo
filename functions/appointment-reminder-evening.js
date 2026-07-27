@@ -1,12 +1,11 @@
+const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { sendSMS } = require('./lib/sms');
-const auth = require('./lib/auth');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
-const CONFIRM_SECRET = process.env.CONFIRM_SECRET;
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -106,13 +105,22 @@ exports.handler = async () => {
         }
         const deadlineDisplay = `${formatTime(deadlineHours, apptMinutes)} ${deadlineDay}`;
 
-        // Manage Appointment URL
-        const manageUrl = isIron65(propertyAddress)
-          ? 'https://book.rosaliagroup.com/iron65-reschedule'
-          : 'https://book.rosaliagroup.com/reschedule';
+        // Ensure a short_code exists (older rows may predate it); mint + save if missing.
+        let code = booking.short_code;
+        if (!code) {
+          code = crypto.randomBytes(4).toString('hex').toUpperCase();
+          try {
+            await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${booking.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+              body: JSON.stringify({ short_code: code }),
+            });
+          } catch (e) { console.error('short_code backfill failed:', booking.id, e.message); }
+        }
 
-        // One-tap confirm URL (verified by functions/confirm.js)
-        const confirmUrl = `https://book.rosaliagroup.com/confirm?id=${encodeURIComponent(booking.id)}&t=${auth.confirmToken(booking.id, CONFIRM_SECRET)}`;
+        // Branded short-code links: confirm (/c) and reschedule (/r)
+        const confirmUrl = `https://book.rosaliagroup.com/c/${code}`;
+        const manageUrl = `https://book.rosaliagroup.com/r/${code}`;
 
         // Build email HTML — same dark gold styling as book.js
         const emailHtml = `
@@ -196,12 +204,23 @@ exports.handler = async () => {
           }
         }
 
-        // b. Reminder text to lead (only when there's a phone) — ONE link (confirm),
-        //    kept to a single 160-char segment. Reschedule lives on the confirm page.
+        // b. Reminder text to lead (only when there's a phone). Both links, no https://
+        //    prefix to save characters. HARD CAP: final body <= 160 AFTER lib/sms.js
+        //    appends the opt-out line — truncate first name (12) and property (14, then
+        //    further) until it fits, so it never splits into a second billable segment.
         let r = { success: false };
         if (phone) {
-          const smsText = `Hi ${firstName}! Your tour at ${propertyShort} is tomorrow ${displayTime}.\nConfirm: ${confirmUrl}`;
-          r = await sendSMS(phone, smsText, { optOut: true });
+          const OPTOUT = ' Reply STOP to unsubscribe.'.length; // appended by lib/sms.js
+          const first = (firstName || 'there').slice(0, 12);
+          let propShort = (propertyShort || '').slice(0, 14);
+          const build = (p) => `Hi ${first}! Tour at ${p} tomorrow ${displayTime}. Confirm: book.rosaliagroup.com/c/${code} Reschedule: book.rosaliagroup.com/r/${code}`;
+          let msg = build(propShort);
+          while (msg.length + OPTOUT > 160 && propShort.length > 0) {
+            propShort = propShort.slice(0, -1).trim();
+            msg = build(propShort);
+          }
+          console.log('Reminder SMS length:', msg.length);
+          r = await sendSMS(phone, msg, { optOut: true });
         }
 
         // c. Team task + notification (internal; wrapped so it never blocks dedupe)

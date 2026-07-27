@@ -87,6 +87,7 @@ const CLIENTS = {
   }
 };
 
+const crypto = require('crypto');
 const { sendSMS } = require('./lib/sms');
 const { getBrandedMediaLink } = require('./lib/propertyMedia');
 
@@ -349,9 +350,28 @@ exports.handler = async (event) => {
       }
     }
 
-    // 2. Save to Supabase
+    // 2. Save to Supabase (with a unique short_code that powers the /c and /r links)
     try {
-      const supabaseRes = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
+      const genCode = () => crypto.randomBytes(4).toString('hex').toUpperCase();
+      const row = {
+        full_name: data.full_name,
+        phone: data.phone,
+        email: data.email,
+        type: data.type,
+        preferred_date: data.preferred_date,
+        preferred_time: data.preferred_time,
+        budget: data.budget,
+        apartment_size: data.apartment_size,
+        preferred_area: data.preferred_area,
+        move_in_date: data.move_in_date,
+        income_qualifies: data.income_qualifies,
+        credit_qualifies: data.credit_qualifies,
+        additional_notes: data.additional_notes,
+        client: clientId,
+        calendar_event_id: calendarEvent?.id,
+        short_code: genCode(),
+      };
+      const insert = () => fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -359,25 +379,15 @@ exports.handler = async (event) => {
           'Authorization': `Bearer ${SUPABASE_KEY}`,
           'Prefer': 'return=representation',
         },
-        body: JSON.stringify({
-          full_name: data.full_name,
-          phone: data.phone,
-          email: data.email,
-          type: data.type,
-          preferred_date: data.preferred_date,
-          preferred_time: data.preferred_time,
-          budget: data.budget,
-          apartment_size: data.apartment_size,
-          preferred_area: data.preferred_area,
-          move_in_date: data.move_in_date,
-          income_qualifies: data.income_qualifies,
-          credit_qualifies: data.credit_qualifies,
-          additional_notes: data.additional_notes,
-          client: clientId,
-          calendar_event_id: calendarEvent?.id,
-        }),
+        body: JSON.stringify(row),
       });
-      console.log('Saved to Supabase');
+      let supabaseRes = await insert();
+      if (supabaseRes.status === 409) {
+        // short_code unique collision — regenerate once and retry
+        row.short_code = genCode();
+        supabaseRes = await insert();
+      }
+      console.log('Saved to Supabase', supabaseRes.status, 'short_code', row.short_code);
     } catch (err) {
       console.error('Supabase error:', err.message);
     }
