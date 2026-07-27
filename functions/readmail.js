@@ -78,6 +78,7 @@ Ana Haynes | Rosalia Group
 const { getPropertyMedia } = require('./lib/propertyMedia');
 
 const { sendSMS } = require('./lib/sms');
+const { getGoogleCredentials } = require('./lib/googleCreds');
 
 const VAPI_KEY = process.env.VAPI_KEY;
 
@@ -1098,7 +1099,7 @@ async function getLeadContext(email, name) {
 async function getCalendarAppointment(leadName) {
   try {
     const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
-    const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
+    const credentials = await getGoogleCredentials();
     if (!credentials.client_email) return null;
     const { google } = require('googleapis');
     const auth = new google.auth.JWT(

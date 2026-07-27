@@ -5,6 +5,7 @@ const CALENDAR_ID = 'c_1f409dda06448aec70284831065590c2ea0c7763ea02fb641e32bea7b
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const { sendSMS } = require('./lib/sms');
+const { getGoogleCredentials } = require('./lib/googleCreds');
 const SALES_EMAIL = 'sales@mechanicalenterprise.com';
 const FROM_EMAIL = 'inquiries@rosaliagroup.com';
 
@@ -60,7 +61,7 @@ exports.handler = async (event) => {
     // Update Google Calendar event if found
     if (eventId) {
       try {
-        const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
+        const credentials = await getGoogleCredentials();
         const auth = new google.auth.JWT(
           credentials.client_email, null, credentials.private_key,
           ['https://www.googleapis.com/auth/calendar']

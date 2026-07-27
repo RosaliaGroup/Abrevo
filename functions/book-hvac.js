@@ -5,6 +5,7 @@ const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const { sendSMS } = require('./lib/sms');
+const { getGoogleCredentials } = require('./lib/googleCreds');
 const SALES_EMAIL = 'sales@mechanicalenterprise.com';
 const FROM_EMAIL = 'inquiries@rosaliagroup.com';
 
@@ -14,7 +15,7 @@ const transporter = nodemailer.createTransport({
 });
 
 async function createCalendarEvent(booking) {
-  const googleCredentials = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
+  const googleCredentials = await getGoogleCredentials();
   if (!googleCredentials.client_email) { return 'NO_CREDS'; }
   
   const auth = new google.auth.GoogleAuth({

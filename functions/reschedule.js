@@ -4,7 +4,7 @@ const nodemailer = require('nodemailer');
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const { sendSMS } = require('./lib/sms');
-const GOOGLE_CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
+const { getGoogleCredentials } = require('./lib/googleCreds');
 const CALENDAR_ID = '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com';
 const ANA_PHONE = '+12014970225';
 const NOTIFY_EMAIL = 'inquiries@rosaliagroup.com';
@@ -36,7 +36,7 @@ async function sendEmail(to, subject, html) {
 
 async function getCalendarClient() {
   const auth = new google.auth.GoogleAuth({
-    credentials: GOOGLE_CREDENTIALS,
+    credentials: await getGoogleCredentials(),
     scopes: ['https://www.googleapis.com/auth/calendar'],
   });
   return google.calendar({ version: 'v3', auth });

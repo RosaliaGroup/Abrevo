@@ -66,30 +66,25 @@ const CLIENTS = {
     notifyPhone: '+12014970225',
     notifyEmail: 'inquiries@rosaliagroup.com',
     notifyName: 'Ana',
-    teamName: 'Rosalia Group',
-    googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
-  },
+    teamName: 'Rosalia Group',  },
   abrevo: {
     calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com',
     notifyPhone: '+12014970225',
     notifyEmail: 'hello@abrevo.co',
     notifyName: 'Ana',
-    teamName: 'Abrevo',
-    googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
-  },
+    teamName: 'Abrevo',  },
   florostone: {
     calendarId: '4fcabed77eab22c25e9ff8440251d5836faaa66b7f8164b94134d439fab62398@group.calendar.google.com',
     notifyPhone: '+12014970225',
     notifyEmail: 'info@florostone.com',
     notifyName: 'FloroStone Team',
-    teamName: 'FloroStone Realty',
-    googleCredentials: JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}'),
-  }
+    teamName: 'FloroStone Realty',  }
 };
 
 const crypto = require('crypto');
 const { sendSMS } = require('./lib/sms');
 const { getBrandedMediaLink } = require('./lib/propertyMedia');
+const { getGoogleCredentials } = require('./lib/googleCreds');
 
 // Email transporter
 const transporter = nodemailer.createTransport({
@@ -141,7 +136,7 @@ async function createCalendarEvent(client, data) {
   }
 
   const auth = new google.auth.GoogleAuth({
-    credentials: client.googleCredentials,
+    credentials: await getGoogleCredentials(),
     scopes: ['https://www.googleapis.com/auth/calendar'],
   });
 

@@ -1,11 +1,12 @@
 const { google } = require('googleapis');
+const { getGoogleCredentials } = require('./lib/googleCreds');
 
 const SPREADSHEET_IDS = [
   '17JZID4T1Vz7JOuCkztNNm73gLCnAwlLGWx3gRMUyCJI'
 ];
 
-function getAuth() {
-  const creds = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
+async function getAuth() {
+  const creds = await getGoogleCredentials();
   return new google.auth.GoogleAuth({
     credentials: creds,
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
@@ -46,7 +47,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const auth = getAuth();
+    const auth = await getAuth();
     const sheets = google.sheets({ version: 'v4', auth });
     const results = await Promise.all(
       SPREADSHEET_IDS.map((id, i) => readSheet(sheets, id, i))
