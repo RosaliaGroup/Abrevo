@@ -76,6 +76,8 @@ async function saveToSupabase(fubPerson) {
     if (Array.isArray(existing) && existing.length > 0) {
       // Update existing
       const existingLead = existing[0];
+      // Phone-arrival: the row had no phone and FUB now supplies one.
+      const phoneArrived = !existingLead.phone && !!normalizedPhone;
       const newNote = `[${new Date().toLocaleDateString()}] FUB sync: stage=${stage || 'N/A'}, source=${source}`;
       const mergedNotes = existingLead.notes ? existingLead.notes + '\n' + newNote : newNote;
       await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${existingLead.id}`, {
@@ -88,7 +90,7 @@ async function saveToSupabase(fubPerson) {
         }),
       });
       console.log('Updated existing lead:', existingLead.id, name);
-      return { ...existingLead, _action: 'updated' };
+      return { ...existingLead, phone: existingLead.phone || normalizedPhone, _action: 'updated', _phoneArrived: phoneArrived, _newPhone: normalizedPhone };
     }
   }
 
@@ -157,9 +159,26 @@ function isFelipeLead(assignedTo) {
   return (assignedTo || '').toLowerCase().includes('felipe');
 }
 
-// Send SMS to lead
-async function sendSMSToLead(phone, leadName, property, assignedTo) {
+// Send SMS to lead. Dedupes on leads.outreach_sms_at so a lead is texted once
+// across the created / phone-arrived / sweep paths (fubsync runs every minute).
+async function sendSMSToLead(leadId, phone, leadName, property, assignedTo) {
   if (!phone) return;
+
+  // Backstop: skip if this lead was already texted.
+  if (leadId) {
+    try {
+      const chk = await fetch(
+        `${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}&select=outreach_sms_at`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+      );
+      const rows = await chk.json();
+      if (Array.isArray(rows) && rows[0] && rows[0].outreach_sms_at) {
+        console.log('SMS skip (already sent):', leadId, phone);
+        return;
+      }
+    } catch (e) { /* if the check fails, fall through and attempt the send */ }
+  }
+
   const firstName = (leadName || '').split(' ')[0] || 'there';
   let msg;
   if (isFelipeLead(assignedTo)) {
@@ -169,6 +188,15 @@ async function sendSMSToLead(phone, leadName, property, assignedTo) {
   }
   const result = await sendSMS(phone, msg, { optOut: true });
   console.log('SMS sent to lead:', phone, result.success);
+
+  // Stamp on success so the dedupe/sweep never re-texts this lead.
+  if (result.success && leadId) {
+    await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+      body: JSON.stringify({ outreach_sms_at: new Date().toISOString() }),
+    });
+  }
 }
 
 // Send AI email to lead
@@ -251,6 +279,77 @@ async function notifyAna(newLeads) {
   } catch (err) { console.error('Email notify error:', err.message); }
 }
 
+// Business-hours gate for the Jessica outbound call (Eastern Time).
+function callAllowedNow() {
+  const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const etHour = nowET.getHours();
+  const etDay = nowET.getDay();
+  if (etDay >= 1 && etDay <= 5) return etHour >= 9 && etHour < 18;
+  if (etDay === 6) return etHour >= 10 && etHour < 17;
+  if (etDay === 0) return etHour >= 11 && etHour < 17;
+  return false;
+}
+
+// Extract an assigned agent name from a lead's notes ("Assigned to: X"), used
+// as a fallback for sweep rows where the FUB assignment isn't a column value.
+function assignedFromNotes(notes) {
+  const m = (notes || '').match(/Assigned to:\s*([^|\n]+)/i);
+  return m ? m[1].trim() : null;
+}
+
+// Shared SMS + business-hours call for one lead. NOT email -- email is only
+// sent on the created path (already-created leads were emailed at intake). SMS
+// dedupes via outreach_sms_at, so this is safe to run across all three paths.
+async function smsAndCall(lead) {
+  if (lead.phone) {
+    await sendSMSToLead(lead.id, lead.phone, lead.name, lead.property, lead.assignedTo);
+    if (callAllowedNow()) {
+      await triggerJessicaCall(lead.phone, lead.name);
+      await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${lead.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+        body: JSON.stringify({ called_at: new Date().toISOString(), status: 'contacted' }),
+      });
+    }
+  }
+  await new Promise(r => setTimeout(r, 1000));
+}
+
+// Safety-net sweep: any non-Mechanical lead with a phone but no outreach_sms_at,
+// created in the last 7 days, gets routed outreach. Catches phones added by ANY
+// path (manual Supabase entry, CINC merge, FUB update). The `client` column is
+// inconsistently populated (iron65, building addresses, NULL, even corrupted
+// rows), so we can't allowlist Rosalia; instead we EXCLUDE Mechanical/HVAC
+// (client='mechanical') -- the only thing that must never be texted here.
+// PostgREST neq drops NULLs, so NULL client is explicitly re-included. Capped at
+// 10/run so a backlog drains gradually instead of blasting texts at once.
+async function sweepPendingPhones() {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  let rows = [];
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/leads?phone=not.is.null&outreach_sms_at=is.null` +
+      `&created_at=gt.${encodeURIComponent(sevenDaysAgo)}` +
+      `&or=(client.neq.mechanical,client.is.null)` +
+      `&order=created_at.asc&limit=10` +
+      `&select=id,name,phone,property,assigned_to,notes`,
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+    );
+    rows = await res.json();
+    if (!Array.isArray(rows)) rows = [];
+  } catch (e) { console.error('Sweep query error:', e.message); return; }
+
+  console.log('FUB sweep: ' + rows.length + ' pending phone lead(s)');
+  for (const row of rows) {
+    try {
+      const assignedTo = row.assigned_to || assignedFromNotes(row.notes);
+      const lead = { id: row.id, name: row.name, phone: row.phone, property: row.property || null, assignedTo };
+      console.log('FUB sweep outreach:', lead.name, '| agent:', assignedTo || 'unassigned', '→', isFelipeLead(assignedTo) ? 'rosalia' : 'iron65');
+      await smsAndCall(lead);
+    } catch (e) { console.error('Sweep outreach error:', e.message); }
+  }
+}
+
 
 // -- HANDLER --
 // Two modes:
@@ -289,6 +388,7 @@ exports.handler = async (event) => {
 
     const results = { created: 0, updated: 0, skipped: 0, errors: 0 };
     const newLeads = [];
+    const phoneArrivedLeads = [];
 
     for (const person of people) {
       try {
@@ -302,6 +402,15 @@ exports.handler = async (event) => {
           });
         } else if (saved?._action === 'updated') {
           results.updated++;
+          // Phone arrived on an existing lead -> text it on this pass.
+          if (saved._phoneArrived) {
+            phoneArrivedLeads.push({
+              id: saved.id, name: saved.name,
+              phone: saved._newPhone || saved.phone,
+              property: person.propertyAddress || null,
+              assignedTo: person.assignedTo?.name || null,
+            });
+          }
         } else {
           results.skipped++;
         }
@@ -314,7 +423,7 @@ exports.handler = async (event) => {
     // Notify Ana only if new leads were created
     if (newLeads.length > 0) {
       await notifyAna(newLeads);
-      
+
       // For each new lead: send email, SMS, and trigger call during business hours
       for (const lead of newLeads) {
         try {
@@ -325,33 +434,23 @@ exports.handler = async (event) => {
           if (lead.email && !lead.email.includes('incomplete-')) {
             await sendEmailToLead(lead.email, lead.name, lead.source, lead.property, lead.assignedTo, lead.phone);
           }
-          // Send SMS if they have a phone
-          if (lead.phone) {
-            await sendSMSToLead(lead.phone, lead.name, lead.property, lead.assignedTo);
-          }
-          // Trigger Jessica call during business hours
-          if (lead.phone) {
-            const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-            const etHour = nowET.getHours();
-            const etDay = nowET.getDay();
-            let callAllowed = false;
-            if (etDay >= 1 && etDay <= 5) callAllowed = etHour >= 9 && etHour < 18;
-            else if (etDay === 6) callAllowed = etHour >= 10 && etHour < 17;
-            else if (etDay === 0) callAllowed = etHour >= 11 && etHour < 17;
-            if (callAllowed) {
-              await triggerJessicaCall(lead.phone, lead.name);
-              // Mark as called
-              await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${lead.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-                body: JSON.stringify({ called_at: new Date().toISOString(), status: 'contacted' }),
-              });
-            }
-          }
-          await new Promise(r => setTimeout(r, 1000));
+          // SMS (deduped + stamped) + business-hours call
+          await smsAndCall(lead);
         } catch(e) { console.error('Lead outreach error:', e.message); }
       }
     }
+
+    // Late-arriving phone numbers on existing leads: same routing, SMS + call.
+    for (const lead of phoneArrivedLeads) {
+      try {
+        const isFelipe = isFelipeLead(lead.assignedTo);
+        console.log('FUB phone-arrived outreach:', lead.name, '| agent:', lead.assignedTo || 'unassigned', '→', isFelipe ? 'rosalia' : 'iron65');
+        await smsAndCall(lead);
+      } catch(e) { console.error('Phone-arrived outreach error:', e.message); }
+    }
+
+    // Safety-net sweep for phones added by any other path.
+    await sweepPendingPhones();
 
     console.log('Sync results:', JSON.stringify(results));
 
