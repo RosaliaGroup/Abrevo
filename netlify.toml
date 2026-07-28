@@ -16,6 +16,9 @@
 [functions."fubsync"]
   schedule = "* * * * *"
   node_bundler = "nft"
+[functions."missedcalls"]
+  schedule = "* * * * *"
+  node_bundler = "nft"
 [functions."autocall"]
   schedule = "* * * * *"
   node_bundler = "nft"
