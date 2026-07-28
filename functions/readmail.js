@@ -801,7 +801,7 @@ function isLead(subject, body, from) {
 function extractPhone(text) {
   // Strip email addresses first to avoid extracting digits from relay addresses
   const cleaned = (text || '').replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '');
-  const match = cleaned.match(/(\(?\d{3}\)?[\s\-.]?\d{3}[\s\-.]?\d{4})/);
+  const match = cleaned.match(/(\(?\d{3}\)?[\s.\-]{0,3}\d{3}[\s.\-]{0,3}\d{4})/);
   if (!match) return null;
   let p = match[1].replace(/\D/g, '');
   if (p.length === 10) p = '+1' + p;
@@ -1236,8 +1236,14 @@ async function generateReply(from, subject, body, previousReply, leadContext, ca
       break;
     }
   }
-  const firstName = leadName ? leadName.split(' ')[0] : '';
-  const nameGreeting = firstName ? `The lead's name is ${firstName}. Start your reply with "Hi ${firstName},"` : 'Start with a warm greeting.';
+  // Prefer a real person's name; never greet a business/display name as a first
+  // name (e.g. "Rentals Ironbound" must not become "Hi Rentals,").
+  const rawLeadName = (leadName || '').trim();
+  const BUSINESS_NAME_RE = /\b(rentals?|propert(?:y|ies)|realty|management|leasing|team|llc|inc|company|realtors?|estates?)\b/i;
+  const firstName = (rawLeadName && !BUSINESS_NAME_RE.test(rawLeadName)) ? rawLeadName.split(/\s+/)[0] : '';
+  const nameGreeting = firstName
+    ? `The lead's name is ${firstName}. Start your reply with "Hi ${firstName},"`
+    : 'Start with a warm, general greeting: "Hi there,". Do not use a company or business name as a first name.';
 
   // Strip AppFolio/platform boilerplate before sending to AI
   const cleanBody = (body || '')
@@ -1973,6 +1979,12 @@ exports.handler = async (event) => {
           // Webflow/Resipointe replies come from lead's Gmail — signature contains office numbers
           if (!isWebflowLead(from, subject)) {
             phone = extractPhone(body + ' ' + subject);
+            // Narrow fallback: if the plain-text part had no phone, try the
+            // HTML-derived text (covers HTML-only emails where parsed.text is
+            // empty or lacks the number).
+            if (!phone && strippedHtml && strippedHtml !== body) {
+              phone = extractPhone(strippedHtml + ' ' + subject);
+            }
           }
         }
         // AppFolio: extract real lead email from reply-to early (before checkEmail)
