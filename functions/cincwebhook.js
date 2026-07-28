@@ -1,12 +1,12 @@
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const { sendSMS } = require('./lib/sms');
+const { getBookingLink } = require('./lib/propertyMedia');
 const RESPOND_URL = 'https://abrevo.co/.netlify/functions/respondRosalia';
 const VAPI_API_KEY = process.env.VAPI_API_KEY;
 const VAPI_PHONE_ID = process.env.VAPI_PHONE_ID;
 const JESSICA_ASSISTANT_ID = process.env.JESSICA_ASSISTANT_ID;
 const ANA_PHONE = '+16462269189';
-const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/iron65';
 
 // -- BUSINESS HOURS CHECK (Eastern Time) --
 // Weekdays: 9AM-6PM | Weekends: 10AM-5PM
@@ -137,7 +137,7 @@ exports.handler = async (event) => {
     if (withinHours) {
       // 3 -- SMS to lead with booking link
       if (lead.phone) {
-        const bookingLink = `${BOOKING_FORM_URL}?phone=${encodeURIComponent(lead.phone)}`;
+        const bookingLink = getBookingLink(lead.property, lead.phone);
         const smsText = `Hi ${lead.name?.split(' ')[0] || 'there'}! Thanks for your interest in Rosalia Group rentals. View available apartments and schedule a tour: ${bookingLink} -- Ana, Rosalia Group (551) 249-9795`;
         const smsResult = await sendSMS(lead.phone, smsText, { optOut: true });
         console.log('Lead SMS:', JSON.stringify(smsResult));

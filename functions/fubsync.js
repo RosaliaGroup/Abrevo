@@ -6,6 +6,7 @@ const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
 const { sendSMS } = require('./lib/sms');
+const { getBookingLink } = require('./lib/propertyMedia');
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/iron65';
 const FUB_BASE = 'https://api.followupboss.com/v1';
 const FUB_AUTH = 'Basic ' + Buffer.from((process.env.FUB_API_KEY || '') + ':').toString('base64');
@@ -149,22 +150,46 @@ async function saveToSupabase(fubPerson) {
 
 // -- NOTIFY ANA --
 
+// Agent-based routing: leads assigned to Felipe get Rosalia Group treatment
+// with a property-specific booking link; everyone else (including unassigned)
+// keeps the Iron 65 treatment exactly as before.
+function isFelipeLead(assignedTo) {
+  return (assignedTo || '').toLowerCase().includes('felipe');
+}
+
 // Send SMS to lead
-async function sendSMSToLead(phone, leadName) {
+async function sendSMSToLead(phone, leadName, property, assignedTo) {
   if (!phone) return;
   const firstName = (leadName || '').split(' ')[0] || 'there';
-  const msg = `Hi ${firstName}! Alex from Iron 65 Luxury Apartments here. We received your inquiry and would love to show you our brand new building in Newark's Ironbound District. Book your tour: ${BOOKING_FORM_URL}`;
+  let msg;
+  if (isFelipeLead(assignedTo)) {
+    msg = `Hi ${firstName}! Rosalia Group here — we got your inquiry${property ? ' about ' + property : ''}. Book a tour: ${getBookingLink(property, phone)}`;
+  } else {
+    msg = `Hi ${firstName}! Alex from Iron 65 Luxury Apartments here. We received your inquiry and would love to show you our brand new building in Newark's Ironbound District. Book your tour: ${BOOKING_FORM_URL}`;
+  }
   const result = await sendSMS(phone, msg, { optOut: true });
   console.log('SMS sent to lead:', phone, result.success);
 }
 
 // Send AI email to lead
-async function sendEmailToLead(email, leadName, source) {
+async function sendEmailToLead(email, leadName, source, property, assignedTo, phone) {
   if (!email || email.includes('incomplete-') || !ANTHROPIC_KEY) return;
   try {
     const firstName = (leadName || '').split(' ')[0] || 'there';
-    const prompt = `Write a short warm email (max 3 sentences) to ${firstName} who just inquired about Iron 65 Luxury Apartments in Newark NJ from ${source || 'an ad'}. They are interested in luxury apartments. Ask for their move-in timeline and best phone number. End with booking link: ${BOOKING_FORM_URL}. No markdown. Sign off as: Iron 65 Leasing Team | (862) 333-1681 | inquiries@rosaliagroup.com`;
-    
+    const felipe = isFelipeLead(assignedTo);
+
+    let prompt, fromName, subject;
+    if (felipe) {
+      const bookingLink = getBookingLink(property, phone);
+      prompt = `Write a short warm email (max 3 sentences) to ${firstName} who just inquired${property ? ' about ' + property : ''} with Rosalia Group, a luxury apartment group in Newark NJ, from ${source || 'an ad'}. Ask for their move-in timeline and best phone number. End with booking link: ${bookingLink}. No markdown. Sign off as: Rosalia Group | (551) 249-9795 | inquiries@rosaliagroup.com`;
+      fromName = 'Rosalia Group Leasing';
+      subject = 'Your Rosalia Group Inquiry -- Let\'s Schedule Your Tour';
+    } else {
+      prompt = `Write a short warm email (max 3 sentences) to ${firstName} who just inquired about Iron 65 Luxury Apartments in Newark NJ from ${source || 'an ad'}. They are interested in luxury apartments. Ask for their move-in timeline and best phone number. End with booking link: ${BOOKING_FORM_URL}. No markdown. Sign off as: Iron 65 Leasing Team | (862) 333-1681 | inquiries@rosaliagroup.com`;
+      fromName = 'Iron 65 Leasing Team';
+      subject = 'Your Iron 65 Inquiry -- Let\'s Schedule Your Tour';
+    }
+
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
@@ -176,9 +201,9 @@ async function sendEmailToLead(email, leadName, source) {
 
     const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_PASS } });
     await transporter.sendMail({
-      from: `"Iron 65 Leasing Team" <${GMAIL_USER}>`,
+      from: `"${fromName}" <${GMAIL_USER}>`,
       to: email,
-      subject: 'Your Iron 65 Inquiry -- Let\'s Schedule Your Tour',
+      subject,
       text: emailBody,
     });
     console.log('Email sent to lead:', email);
@@ -270,7 +295,11 @@ exports.handler = async (event) => {
         const saved = await saveToSupabase(person);
         if (saved?._action === 'created') {
           results.created++;
-          newLeads.push({ id: saved.id, name: saved.name, email: saved.email, phone: saved.phone, source: saved.source });
+          newLeads.push({
+            id: saved.id, name: saved.name, email: saved.email, phone: saved.phone, source: saved.source,
+            property: person.propertyAddress || null,
+            assignedTo: person.assignedTo?.name || null,
+          });
         } else if (saved?._action === 'updated') {
           results.updated++;
         } else {
@@ -289,13 +318,16 @@ exports.handler = async (event) => {
       // For each new lead: send email, SMS, and trigger call during business hours
       for (const lead of newLeads) {
         try {
+          const isFelipe = isFelipeLead(lead.assignedTo);
+          console.log('FUB route:', lead.name, '| agent:', lead.assignedTo || 'unassigned', '→', isFelipe ? 'rosalia' : 'iron65');
+
           // Send AI email if they have an email
           if (lead.email && !lead.email.includes('incomplete-')) {
-            await sendEmailToLead(lead.email, lead.name, lead.source);
+            await sendEmailToLead(lead.email, lead.name, lead.source, lead.property, lead.assignedTo, lead.phone);
           }
           // Send SMS if they have a phone
           if (lead.phone) {
-            await sendSMSToLead(lead.phone, lead.name);
+            await sendSMSToLead(lead.phone, lead.name, lead.property, lead.assignedTo);
           }
           // Trigger Jessica call during business hours
           if (lead.phone) {

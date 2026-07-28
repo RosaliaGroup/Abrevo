@@ -88,6 +88,8 @@
     .notice-box.visible { display: block; animation: fadeUp 0.3s ease both; }
     .notice-cosigner { background: rgba(255, 191, 0, 0.08); border: 1px solid rgba(255, 191, 0, 0.25); color: #FFBF00; }
     .notice-ballantine { background: rgba(201, 168, 76, 0.1); border: 1px solid rgba(201, 168, 76, 0.3); color: var(--gold-light); }
+    .notice-preselect { background: rgba(201, 168, 76, 0.1); border: 1px solid rgba(201, 168, 76, 0.3); color: var(--gold-light); }
+    .notice-preselect a { color: var(--gold); text-decoration: underline; cursor: pointer; }
     .notice-confirm { background: rgba(201, 168, 76, 0.06); border-left: 3px solid var(--gold); border-radius: 2px; padding: 12px 14px; font-size: 12px; line-height: 1.5; color: var(--text-muted); margin-top: 4px; }
     .specialist-section { display: none; }
     .specialist-section.visible { display: block; animation: fadeUp 0.4s ease both; }
@@ -207,6 +209,11 @@
           </div>
 
           <div class="section-label" style="margin-top:4px">Tour Appointment</div>
+
+          <div id="preselectNote" class="notice-box notice-preselect">
+            Booking a tour at <strong id="preselectLabel"></strong>
+            &middot; <a href="#" id="preselectChange">change</a>
+          </div>
 
           <div class="form-row">
             <div class="field">
@@ -388,6 +395,25 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
     { label: '82-90 Wilson Place, Orange NJ', value: '82-90 Wilson Place, Orange NJ', minIncome: 5550, creditMin: 625, cosignerMin: 600 }
   ];
 
+  // Copy of functions/lib/propertyMedia.js PROPERTY_SLUGS. Values MUST match the
+  // PROPERTIES[].value strings above byte-for-byte or the prefill silently fails.
+  var PROPERTY_SLUGS = {
+    '486-market':     '486 Market St - River Pointe, Newark NJ',
+    '502-market':     '502 Market St, Newark NJ',
+    'iron-pointe':    '39 Madison St - Iron Pointe, Newark NJ',
+    '556-market':     '556 Market St, Newark NJ',
+    '289-halsey':     '289 Halsey St, Newark NJ',
+    'ballantine':     '77 Christie St — The Ballantine, Newark NJ',
+    '1369-south':     '1369 South Ave, Plainfield NJ',
+    'the-elks':       '475 Main St - The Elks, Orange NJ',
+    '303-washington': '303 Washington St, Newark NJ',
+    'wilson-place':   '82-90 Wilson Place, Orange NJ'
+  };
+
+  // When set from a valid ?property= slug, the flow is locked to this one
+  // building and its qualification thresholds gate the form.
+  var preselectedProperty = null;
+
   var incomeEl = document.getElementById('income');
   var creditEl = document.getElementById('credit');
   var propertyEl = document.getElementById('property_name');
@@ -425,8 +451,11 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
     var qualifiedCosigner = [];
     var hasCosigner = false;
 
-    for (var i = 0; i < PROPERTIES.length; i++) {
-      var p = PROPERTIES[i];
+    // When a property is preselected, only its thresholds gate the form.
+    var activeProperties = preselectedProperty ? [preselectedProperty] : PROPERTIES;
+
+    for (var i = 0; i < activeProperties.length; i++) {
+      var p = activeProperties[i];
       var incomeOk = incomeVal >= p.minIncome;
       var creditFull = creditVal >= p.creditMin;
       var creditCosigner = creditVal >= p.cosignerMin && creditVal < p.creditMin;
@@ -473,6 +502,13 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
     if (hasCosigner) {
       cosignerNotice.classList.add('visible');
     }
+
+    // Lock the dropdown to the preselected building and recalc per-building notices.
+    if (preselectedProperty) {
+      propertyEl.value = preselectedProperty.value;
+      propertyEl.disabled = true;
+      propertyEl.dispatchEvent(new Event('change'));
+    }
   }
 
   function showBooking() {
@@ -494,6 +530,31 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
     document.getElementById('sp_income').value = incomeText;
     document.getElementById('sp_credit').value = creditText;
   }
+
+  // Resolve ?property=<slug> against the slug map; unknown/malformed -> ignore.
+  var propertyParam = params.get('property');
+  if (propertyParam) {
+    var wantValue = PROPERTY_SLUGS[propertyParam.toLowerCase()];
+    if (wantValue) {
+      for (var pp = 0; pp < PROPERTIES.length; pp++) {
+        if (PROPERTIES[pp].value === wantValue) { preselectedProperty = PROPERTIES[pp]; break; }
+      }
+    }
+    if (preselectedProperty) {
+      // textContent-only assignment keeps param-derived text out of the raw DOM.
+      document.getElementById('preselectLabel').textContent = preselectedProperty.label;
+      document.getElementById('preselectNote').classList.add('visible');
+    }
+  }
+
+  // "change" clears the preselection and restores the full property dropdown.
+  document.getElementById('preselectChange').addEventListener('click', function(e) {
+    e.preventDefault();
+    preselectedProperty = null;
+    document.getElementById('preselectNote').classList.remove('visible');
+    propertyEl.disabled = false;
+    filterProperties();
+  });
 
   incomeEl.addEventListener('change', filterProperties);
   creditEl.addEventListener('change', filterProperties);

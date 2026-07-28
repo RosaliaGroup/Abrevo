@@ -190,6 +190,84 @@ function getBrandedMediaLink(property, message, unitNumber) {
   return slug ? PHOTOS_BASE + slug : null;
 }
 
+// --- Booking-form deep links --------------------------------------------
+// PROPERTY_SLUGS maps a URL-safe booking slug to the EXACT `value` string in
+// booking-rosalia.html's PROPERTIES array. These must match byte-for-byte:
+// booking-rosalia.html carries a copy of this map and uses it to pre-select
+// the property <select>; any mismatch silently drops the prefill.
+const PROPERTY_SLUGS = {
+  '486-market':     '486 Market St - River Pointe, Newark NJ',
+  '502-market':     '502 Market St, Newark NJ',
+  'iron-pointe':    '39 Madison St - Iron Pointe, Newark NJ',
+  '556-market':     '556 Market St, Newark NJ',
+  '289-halsey':     '289 Halsey St, Newark NJ',
+  'ballantine':     '77 Christie St — The Ballantine, Newark NJ',
+  '1369-south':     '1369 South Ave, Plainfield NJ',
+  'the-elks':       '475 Main St - The Elks, Orange NJ',
+  '303-washington': '303 Washington St, Newark NJ',
+  'wilson-place':   '82-90 Wilson Place, Orange NJ',
+};
+
+const BOOK_BASE = 'https://book.rosaliagroup.com';
+
+// Free-form property text -> booking slug. Keys are guaranteed to exist in
+// PROPERTY_SLUGS. Order is not significant (buildings are distinguished by
+// their street number / name).
+const BOOKING_SLUG_MATCHERS = [
+  ['502-market',     /502\s*market/],
+  ['486-market',     /486\s*market/],
+  ['556-market',     /556\s*market/],
+  ['iron-pointe',    /iron\s*pointe|39\s*madison/],
+  ['289-halsey',     /289\s*halsey/],
+  ['ballantine',     /ballantine|77\s*christie/],
+  ['1369-south',     /1369\s*south/],
+  ['the-elks',       /the\s*elks|475\s*main/],
+  ['303-washington', /303\s*washington/],
+  ['wilson-place',   /wilson\s*place/],
+];
+
+function matchBookingSlug(text) {
+  for (const [slug, re] of BOOKING_SLUG_MATCHERS) {
+    if (re.test(text)) return slug;
+  }
+  return null;
+}
+
+// Build a booking-form URL for a lead.
+//   Iron 65 / McWhorter -> /iron65
+//   known building       -> /book?property=<slug>
+//   no match / no prop   -> /book
+// Phone (when truthy) is appended as an encoded &phone=/?phone= param; a falsy
+// phone is omitted entirely (never "phone=undefined").
+function getBookingLink(property, phone) {
+  const phoneQ = phone ? 'phone=' + encodeURIComponent(phone) : '';
+
+  // Normalize using the same alias rules as getPropertyMedia.
+  const text = (property || '').toLowerCase()
+    .replace(/28\s*jefferson/g, 'iron pointe')
+    .replace(/6\s*madison\b/g, '486 market')
+    .replace(/500\s*market/g, '502 market')
+    .replace(/554\s*market/g, '556 market')
+    .replace(/65a?\s*mcwhorter/g, 'iron 65')
+    .replace(/65\s*iron\b/g, 'iron 65');
+
+  // Iron 65 / McWhorter -> dedicated form.
+  if (text.includes('iron 65') || text.includes('mcwhorter') || text.includes('iron65')) {
+    return BOOK_BASE + '/iron65' + (phoneQ ? '?' + phoneQ : '');
+  }
+
+  // Known building -> property-specific /book link.
+  if (property) {
+    const slug = matchBookingSlug(text);
+    if (slug) {
+      return BOOK_BASE + '/book?property=' + slug + (phoneQ ? '&' + phoneQ : '');
+    }
+  }
+
+  // No property or no match -> generic /book link.
+  return BOOK_BASE + '/book' + (phoneQ ? '?' + phoneQ : '');
+}
+
 module.exports = {
   getPropertyMedia,
   getIron65MediaLink,
@@ -198,4 +276,6 @@ module.exports = {
   SLUGS,
   resolveSlug,
   getBrandedMediaLink,
+  PROPERTY_SLUGS,
+  getBookingLink,
 };

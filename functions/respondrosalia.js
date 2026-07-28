@@ -2,10 +2,9 @@ const nodemailer = require('nodemailer');
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const { sendSMS } = require('./lib/sms');
+const { getBookingLink: buildBookingLink } = require('./lib/propertyMedia');
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const ANA_PHONE = '+16462269189';
-const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
-const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
 
 const GMAIL_USER = process.env.GMAIL_USER || 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES || process.env.GMAIL_PASS;
@@ -57,9 +56,7 @@ function detectCategory(lead) {
 }
 
 function getBookingLink(lead) {
-  const prop = (lead.property || lead.source || '').toLowerCase();
-  const isIron65 = prop.includes('iron 65') || prop.includes('iron65') || prop.includes('mcwhorter');
-  return isIron65 ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
+  return buildBookingLink(lead.property || lead.source || '', lead.phone);
 }
 
 async function generateReply(lead) {
