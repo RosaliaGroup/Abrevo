@@ -216,14 +216,17 @@ const BOOK_BASE = 'https://book.rosaliagroup.com';
 const BOOKING_SLUG_MATCHERS = [
   ['502-market',     /502\s*market/],
   ['486-market',     /486\s*market/],
-  ['556-market',     /556\s*market/],
-  ['iron-pointe',    /iron\s*pointe|39\s*madison/],
+  // 556-557 Market (range listing) -> 556-market
+  ['556-market',     /556(?:[\s-]*557)?\s*market/],
+  // 39-40 Madison (range listing) -> Iron Pointe
+  ['iron-pointe',    /iron\s*pointe|39(?:[\s-]*40)?\s*madison/],
   ['289-halsey',     /289\s*halsey/],
   ['ballantine',     /ballantine|77\s*christie/],
   ['1369-south',     /1369\s*south/],
   ['the-elks',       /the\s*elks|475\s*main/],
   ['303-washington', /303\s*washington/],
-  ['wilson-place',   /wilson\s*place/],
+  // 82-90 Wilson Place: any of the individual door numbers -> the one slug.
+  ['wilson-place',   /wilson\s*place|\b(?:82|84|86|88|90)[\s-]*wilson/],
 ];
 
 function matchBookingSlug(text) {

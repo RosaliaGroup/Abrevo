@@ -7,23 +7,31 @@ const GMAIL_USER = 'inquiries@rosaliagroup.com';
 const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
 const { sendSMS } = require('./lib/sms');
 const { getBookingLink } = require('./lib/propertyMedia');
+const { fubAccounts, DEFAULT_ACCT_LABEL } = require('./lib/fubAccounts');
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/iron65';
 const FUB_BASE = 'https://api.followupboss.com/v1';
-const FUB_AUTH = 'Basic ' + Buffer.from((process.env.FUB_API_KEY || '') + ':').toString('base64');
 
 const VAPI_KEY = process.env.VAPI_KEY;
 const JESSICA_PHONE_ID = '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 const JESSICA_OUTBOUND_ASSISTANT_ID = '35f4e4a2-aabc-47be-abfc-630cf6a85d58';
 
-async function fetchNewFUBLeads(hoursBack = 24) {
+// Warn when a FUB account is running low on API budget (shared header check).
+function logRateLimit(res, acctLabel) {
+  const rem = res.headers.get('x-ratelimit-remaining') || res.headers.get('x-rate-limit-remaining');
+  if (rem != null && Number(rem) < 20) {
+    console.warn(`FUB rate limit low (${acctLabel}): ${rem} remaining`);
+  }
+}
+
+async function fetchNewFUBLeads(hoursBack, auth, acctLabel) {
   const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
-  
+
   // FUB doesn't support createdAfter filter -- fetch recent and filter by date
   const res = await fetch(
     `${FUB_BASE}/people?sort=created&direction=desc&limit=50`,
     {
       headers: {
-        Authorization: FUB_AUTH,
+        Authorization: auth,
         'Content-Type': 'application/json',
       },
     }
@@ -31,16 +39,38 @@ async function fetchNewFUBLeads(hoursBack = 24) {
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`FUB API error ${res.status}: ${err}`);
+    throw new Error(`FUB API error ${res.status} (${acctLabel}): ${err}`);
   }
 
+  logRateLimit(res, acctLabel);
   const data = await res.json();
   const allPeople = data.people || [];
   const people = allPeople.filter(p => {
     if (!p.created) return false;
     return new Date(p.created) >= since;
   });
-  console.log('FUB: ' + allPeople.length + ' total, ' + people.length + ' within last ' + hoursBack + 'h');
+  console.log('FUB (' + acctLabel + '): ' + allPeople.length + ' total, ' + people.length + ' within last ' + hoursBack + 'h');
+  // Tag each person with its source account for downstream routing/traceability.
+  people.forEach(p => { p._acct = acctLabel; });
+  return people;
+}
+
+// Pull recent leads from every configured FUB account. Accounts with an unset
+// key are skipped with a warning (never crash the whole sync).
+async function fetchAllAccounts(hoursBack) {
+  const people = [];
+  for (const acct of fubAccounts()) {
+    if (!acct.auth) {
+      console.warn(`FUB account ${acct.label}: key unset -- skipping`);
+      continue;
+    }
+    try {
+      const ppl = await fetchNewFUBLeads(hoursBack, acct.auth, acct.label);
+      people.push(...ppl);
+    } catch (e) {
+      console.error(`FUB account ${acct.label} pull error:`, e.message);
+    }
+  }
   return people;
 }
 
@@ -56,6 +86,7 @@ async function saveToSupabase(fubPerson) {
   const price = fubPerson.price || null;
   const stage = fubPerson.stage || null;
   const assignedTo = fubPerson.assignedTo?.name || null;
+  const acct = fubPerson._acct || DEFAULT_ACCT_LABEL;
 
   // Normalize phone
   let normalizedPhone = null;
@@ -78,7 +109,7 @@ async function saveToSupabase(fubPerson) {
       const existingLead = existing[0];
       // Phone-arrival: the row had no phone and FUB now supplies one.
       const phoneArrived = !existingLead.phone && !!normalizedPhone;
-      const newNote = `[${new Date().toLocaleDateString()}] FUB sync: stage=${stage || 'N/A'}, source=${source}`;
+      const newNote = `[${new Date().toLocaleDateString()}] FUB sync: acct=${acct}, stage=${stage || 'N/A'}, source=${source}`;
       const mergedNotes = existingLead.notes ? existingLead.notes + '\n' + newNote : newNote;
       await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${existingLead.id}`, {
         method: 'PATCH',
@@ -111,6 +142,7 @@ async function saveToSupabase(fubPerson) {
   // Insert new lead
   const notes = [
     `Source: FUB`,
+    `Account: ${acct}`,
     source && `Lead source: ${source}`,
     stage && `Stage: ${stage}`,
     price && `Price: $${Number(price).toLocaleString()}`,
@@ -152,11 +184,13 @@ async function saveToSupabase(fubPerson) {
 
 // -- NOTIFY ANA --
 
-// Agent-based routing: leads assigned to Felipe get Rosalia Group treatment
-// with a property-specific booking link; everyone else (including unassigned)
-// keeps the Iron 65 treatment exactly as before.
-function isFelipeLead(assignedTo) {
-  return (assignedTo || '').toLowerCase().includes('felipe');
+// Agent-based routing (single rule across both FUB accounts): leads assigned to
+// Felipe OR the "Rosalia Group Listings" house assignee get Rosalia Group
+// treatment with a property-specific booking link; everyone else (including
+// unassigned) keeps the Iron 65 treatment.
+function isRosaliaLead(assignedTo) {
+  const a = (assignedTo || '').toLowerCase();
+  return a.includes('felipe') || a.includes('rosalia');
 }
 
 // Send SMS to lead. Dedupes on leads.outreach_sms_at so a lead is texted once
@@ -181,7 +215,7 @@ async function sendSMSToLead(leadId, phone, leadName, property, assignedTo) {
 
   const firstName = (leadName || '').split(' ')[0] || 'there';
   let msg;
-  if (isFelipeLead(assignedTo)) {
+  if (isRosaliaLead(assignedTo)) {
     msg = `Hi ${firstName}! Rosalia Group here — we got your inquiry${property ? ' about ' + property : ''}. Book a tour: ${getBookingLink(property, phone)}`;
   } else {
     msg = `Hi ${firstName}! Alex from Iron 65 Luxury Apartments here. We received your inquiry and would love to show you our brand new building in Newark's Ironbound District. Book your tour: ${BOOKING_FORM_URL}`;
@@ -204,10 +238,10 @@ async function sendEmailToLead(email, leadName, source, property, assignedTo, ph
   if (!email || email.includes('incomplete-') || !ANTHROPIC_KEY) return;
   try {
     const firstName = (leadName || '').split(' ')[0] || 'there';
-    const felipe = isFelipeLead(assignedTo);
+    const rosalia = isRosaliaLead(assignedTo);
 
     let prompt, fromName, subject;
-    if (felipe) {
+    if (rosalia) {
       const bookingLink = getBookingLink(property, phone);
       prompt = `Write a short warm email (max 3 sentences) to ${firstName} who just inquired${property ? ' about ' + property : ''} with Rosalia Group, a luxury apartment group in Newark NJ, from ${source || 'an ad'}. Ask for their move-in timeline and best phone number. End with booking link: ${bookingLink}. No markdown. Sign off as: Rosalia Group | (551) 249-9795 | inquiries@rosaliagroup.com`;
       fromName = 'Rosalia Group Leasing';
@@ -344,7 +378,7 @@ async function sweepPendingPhones() {
     try {
       const assignedTo = row.assigned_to || assignedFromNotes(row.notes);
       const lead = { id: row.id, name: row.name, phone: row.phone, property: row.property || null, assignedTo };
-      console.log('FUB sweep outreach:', lead.name, '| agent:', assignedTo || 'unassigned', '→', isFelipeLead(assignedTo) ? 'rosalia' : 'iron65');
+      console.log('FUB sweep outreach:', lead.name, '| agent:', assignedTo || 'unassigned', '→', isRosaliaLead(assignedTo) ? 'rosalia' : 'iron65');
       await smsAndCall(lead);
     } catch (e) { console.error('Sweep outreach error:', e.message); }
   }
@@ -370,6 +404,10 @@ exports.handler = async (event) => {
       // FUB webhook wraps person in event.person or event.data
       const person = body.person || body.data || body;
       if (person && (person.id || person.firstName || person.emails)) {
+        // Which account fired this webhook: configure each FUB account's webhook
+        // URL as /fubsync?acct=<label>. Missing param -> the default account so
+        // the existing webhook keeps working until dashboards are updated.
+        person._acct = event.queryStringParameters?.acct || DEFAULT_ACCT_LABEL;
         people = [person];
       } else {
         return {
@@ -379,11 +417,11 @@ exports.handler = async (event) => {
         };
       }
     } else {
-      // GET mode -- pull from FUB API
+      // GET mode -- pull from every configured FUB account
       const hoursBack = parseInt(event.queryStringParameters?.hours || '24');
-      console.log(`Fetching FUB leads from last ${hoursBack} hours...`);
-      people = await fetchNewFUBLeads(hoursBack);
-      console.log(`Found ${people.length} people in FUB`);
+      console.log(`Fetching FUB leads from last ${hoursBack} hours (all accounts)...`);
+      people = await fetchAllAccounts(hoursBack);
+      console.log(`Found ${people.length} people across FUB accounts`);
     }
 
     const results = { created: 0, updated: 0, skipped: 0, errors: 0 };
@@ -399,6 +437,7 @@ exports.handler = async (event) => {
             id: saved.id, name: saved.name, email: saved.email, phone: saved.phone, source: saved.source,
             property: person.propertyAddress || null,
             assignedTo: person.assignedTo?.name || null,
+            acct: person._acct || DEFAULT_ACCT_LABEL,
           });
         } else if (saved?._action === 'updated') {
           results.updated++;
@@ -409,6 +448,7 @@ exports.handler = async (event) => {
               phone: saved._newPhone || saved.phone,
               property: person.propertyAddress || null,
               assignedTo: person.assignedTo?.name || null,
+              acct: person._acct || DEFAULT_ACCT_LABEL,
             });
           }
         } else {
@@ -427,8 +467,8 @@ exports.handler = async (event) => {
       // For each new lead: send email, SMS, and trigger call during business hours
       for (const lead of newLeads) {
         try {
-          const isFelipe = isFelipeLead(lead.assignedTo);
-          console.log('FUB route:', lead.name, '| agent:', lead.assignedTo || 'unassigned', '→', isFelipe ? 'rosalia' : 'iron65');
+          const isRosalia = isRosaliaLead(lead.assignedTo);
+          console.log('FUB route:', lead.name, '| acct:', lead.acct || DEFAULT_ACCT_LABEL, '| agent:', lead.assignedTo || 'unassigned', '→', isRosalia ? 'rosalia' : 'iron65');
 
           // Send AI email if they have an email
           if (lead.email && !lead.email.includes('incomplete-')) {
@@ -443,8 +483,8 @@ exports.handler = async (event) => {
     // Late-arriving phone numbers on existing leads: same routing, SMS + call.
     for (const lead of phoneArrivedLeads) {
       try {
-        const isFelipe = isFelipeLead(lead.assignedTo);
-        console.log('FUB phone-arrived outreach:', lead.name, '| agent:', lead.assignedTo || 'unassigned', '→', isFelipe ? 'rosalia' : 'iron65');
+        const isRosalia = isRosaliaLead(lead.assignedTo);
+        console.log('FUB phone-arrived outreach:', lead.name, '| acct:', lead.acct || DEFAULT_ACCT_LABEL, '| agent:', lead.assignedTo || 'unassigned', '→', isRosalia ? 'rosalia' : 'iron65');
         await smsAndCall(lead);
       } catch(e) { console.error('Phone-arrived outreach error:', e.message); }
     }
