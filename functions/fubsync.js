@@ -8,6 +8,7 @@ const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
 const { sendSMS } = require('./lib/sms');
 const { getBookingLink } = require('./lib/propertyMedia');
 const { fubAccounts, DEFAULT_ACCT_LABEL } = require('./lib/fubAccounts');
+const { cleanName } = require('./lib/leadName');
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/iron65';
 const FUB_BASE = 'https://api.followupboss.com/v1';
 
@@ -283,7 +284,7 @@ async function triggerJessicaCall(phone, leadName) {
       body: JSON.stringify({
         phoneNumberId: JESSICA_PHONE_ID,
         assistantId: JESSICA_OUTBOUND_ASSISTANT_ID,
-        customer: { number: phone, name: leadName || undefined },
+        customer: { number: phone, name: cleanName(leadName, 40) || undefined },
         assistantOverrides: {
           variableValues: {
             today: today,

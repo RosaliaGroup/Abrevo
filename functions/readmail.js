@@ -1431,7 +1431,7 @@ async function triggerCall(phone, leadName) {
       body: JSON.stringify({
         phoneNumberId: VAPI_PHONE_ID,
         assistantId: VAPI_ASSISTANT_ID,
-        customer: { number: phone, name: leadName || undefined },
+        customer: { number: phone, name: cleanName(leadName, 40) || undefined },
       }),
     });
     const data = await res.json();
@@ -1736,8 +1736,8 @@ MESSAGE: [your SMS reply if ACTION is REPLY, otherwise leave blank]` }]
           body: JSON.stringify({
             phoneNumberId: '2e2b6713-f631-4e9e-95fa-3418ecc77c0a',
             assistantId: '1cae5323-6b83-4434-8461-6330472da140',
-            customer: { number: gv.callerPhone, name: lead?.name || undefined },
-            assistantOverrides: { variableValues: { lead_name: lead?.name||'', lead_property: lead?.property||'' } }
+            customer: { number: gv.callerPhone, name: cleanName(lead?.name, 40) || undefined },
+            assistantOverrides: { variableValues: { lead_name: cleanName(lead?.name, 40), lead_property: lead?.property||'' } }
           })
         });
         console.log(`GV callback call triggered to ${gv.callerPhone}`);
@@ -1808,8 +1808,8 @@ MESSAGE: [your SMS reply if ACTION is REPLY, otherwise leave blank]` }]
           body: JSON.stringify({
             phoneNumberId: '2e2b6713-f631-4e9e-95fa-3418ecc77c0a',
             assistantId: '1cae5323-6b83-4434-8461-6330472da140',
-            customer: { number: gv.callerPhone, name: lead?.name||undefined },
-            assistantOverrides: { variableValues: { lead_name: lead?.name||'', lead_property: lead?.property||'', missed_call: 'true' } }
+            customer: { number: gv.callerPhone, name: cleanName(lead?.name, 40) || undefined },
+            assistantOverrides: { variableValues: { lead_name: cleanName(lead?.name, 40), lead_property: lead?.property||'', missed_call: 'true' } }
           })
         });
         console.log(`GV voicemail callback call triggered to ${gv.callerPhone}`);
