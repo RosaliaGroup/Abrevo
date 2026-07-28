@@ -137,7 +137,7 @@ CRITICAL RULES:
 - Your #1 goal in every email is to schedule a tour as quickly as possible  regardless of which property they ask about
 - NEVER mention promotions, specials, discounts, concessions, free months, waived fees, rent credits, reduced deposits, or move-in incentives — under ANY circumstances, even if the lead asks directly, even if a previous email mentioned one. There are NO active incentives in this system. If a lead asks about specials, deals, promotions, or discounts, reply ONLY with: "Our leasing team will go over current pricing and any available offers at your tour" then send the booking link
 - Never invent, infer, or combine offers. If information is not explicitly written in this knowledge base, do not state it — say the leasing agent will confirm at the tour
-- ALWAYS use the lead's first name in the greeting  never say "Hi there"  use "Hi [Name]" using the name from the FROM field
+- GREETING: Use the lead's first name only when it is a real person's name. Do NOT use a business or organization display name (e.g. one containing words like Rentals, Properties, Realty, Management, Leasing, Team, LLC, Company) as a personal greeting. When no reliable person name is available, greet with "Hi there,". Follow the specific greeting instruction provided for this lead below.
 - Do NOT proactively mention or discuss other properties  only answer what was asked, then push to book the tour
 - For ANY property inquiry regardless of address — always send https://book.rosaliagroup.com/book as the booking link. The form allows any property to be entered. Never qualify or filter by property address. Never say the property isn't ours or we don't manage it
 - For ANY property or unit questions, always say "Our leasing agent will be best able to answer that at your tour" then send booking link
@@ -185,7 +185,7 @@ CRITICAL RULES:
 - Ask for phone number if not provided
 - NEVER confirm or deny existing appointments you don't have record of  say "let me confirm with our leasing team and we will reach out shortly"
 - Sign off as: Rosalia Group | Inquiries Team | (862) 333-1681 | inquiries@rosaliagroup.com
-- IMPORTANT: Never tell a lead that a property is outside our portfolio or not one of our properties. For ANY property inquiry — whether it is in our knowledge base or not — greet them by first name, acknowledge their interest in that specific address in ONE sentence, then send the booking link https://book.rosaliagroup.com/book. The booking form allows any property address to be entered so all inquiries should be funneled there. Never qualify or filter by property address.
+- IMPORTANT: Never tell a lead that a property is outside our portfolio or not one of our properties. For ANY property inquiry — whether it is in our knowledge base or not — greet them (using their first name only if it is a real person's name — otherwise "Hi there,"), acknowledge their interest in that specific address in ONE sentence, then send the booking link https://book.rosaliagroup.com/book. The booking form allows any property address to be entered so all inquiries should be funneled there. Never qualify or filter by property address.
 
 PROPERTY KNOWLEDGE BASE:
 # ROSALIA GROUP  KNOWLEDGE BASE
@@ -1948,7 +1948,12 @@ exports.handler = async (event) => {
           console.log('Webflow/Iron65 lead detected - from:', from, 'subject:', subject);
           const p = parseWebflowEmail(body, subject);
           console.log('Parsed lead:', JSON.stringify(p));
-          if (p.phone) phone = p.phone;
+          // Primary: parseWebflowEmail (labeled fields). Fallback: the generic
+          // extractor for free-text phones ("My number 862-423-9396") that the
+          // label parser misses. Narrow HTML/subject fallback mirrors the
+          // reviewed generic path. A labeled phone still takes precedence.
+          phone = p.phone || extractPhone(body)
+            || (strippedHtml && strippedHtml !== body ? extractPhone(strippedHtml + ' ' + subject) : null);
           if (p.email) realEmail = p.email;
           if (p.name) realName = p.name;
           // Detect Iron 65 from sender or subject/body
