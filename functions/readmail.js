@@ -80,6 +80,7 @@ const { getPropertyMedia } = require('./lib/propertyMedia');
 
 const { sendSMS } = require('./lib/sms');
 const { getGoogleCredentials } = require('./lib/googleCreds');
+const { cleanName } = require('./lib/leadName');
 
 const VAPI_KEY = process.env.VAPI_KEY;
 
@@ -670,6 +671,10 @@ function parseWebflowEmail(body, subject) {
       if (p.length >= 11) lead.phone = p;
     }
   }
+
+  // Greedy [^\n\r]+ captures above swallow the rest of a single-line inline
+  // Webflow body into name -- strip any trailing form fields before saving.
+  if (lead.name) lead.name = cleanName(lead.name);
 
   return lead;
 }

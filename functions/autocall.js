@@ -6,6 +6,8 @@ const VAPI_PHONE_ID = '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 const JESSICA_ASSISTANT_ID = '35f4e4a2-aabc-47be-abfc-630cf6a85d58';
 const JESSICA_PHONE_ID = '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 const { sendSMS } = require('./lib/sms');
+const { isSkipNumber } = require('./lib/skipNumbers');
+const { cleanName } = require('./lib/leadName');
 const ANA_PHONE = '+16462269189';
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
 const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
@@ -91,6 +93,15 @@ async function updateLeadStatus(leadId, status, attempts) {
   });
 }
 
+// Permanently exclude a lead from calling/texting (own business line, etc.).
+async function markDnc(leadId) {
+  await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+    body: JSON.stringify({ status: 'dnc' }),
+  });
+}
+
 async function sendLeadSMS(phone, leadName, bookingUrl, attemptNumber) {
   const firstName = (leadName || '').split(' ')[0] || 'there';
 
@@ -159,19 +170,34 @@ exports.handler = async (event) => {
 
     for (const lead of leads) {
       try {
+        // Never call/text our own business, callback, or Telnyx sender lines.
+        if (isSkipNumber(lead.phone)) {
+          console.log(`autocall skip (own/business line): ${lead.name} | ${lead.phone} -> marking dnc`);
+          await markDnc(lead.id);
+          results.skipped++;
+          continue;
+        }
+
         const isIron65 = lead.client === 'iron65';
         const assistantId = isIron65 ? JESSICA_ASSISTANT_ID : VAPI_ASSISTANT_ID;
         const phoneId = isIron65 ? JESSICA_PHONE_ID : VAPI_PHONE_ID;
         const bookingUrl = isIron65 ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
         const attempts = (lead.call_attempts || 0) + 1;
 
-        console.log(`Calling: ${lead.name} | ${lead.phone} | attempt ${attempts}/${MAX_CALL_ATTEMPTS}`);
+        // Vapi rejects customer.name > 40 chars; some leads have a whole form
+        // body stuffed into name. Derive a clean, bounded name for the call.
+        const callName = cleanName(lead.name, 40);
+        if (callName !== String(lead.name || '').trim()) {
+          console.log(`autocall: sanitized caller name (lead ${lead.id}): ${JSON.stringify(String(lead.name || '').slice(0, 80))} -> ${JSON.stringify(callName)}`);
+        }
+
+        console.log(`Calling: ${callName} | ${lead.phone} | attempt ${attempts}/${MAX_CALL_ATTEMPTS}`);
 
         // Trigger call
-        const callId = await triggerCall(lead.phone, lead.name, assistantId, phoneId, lead.property);
+        const callId = await triggerCall(lead.phone, callName, assistantId, phoneId, lead.property);
 
         // Send SMS after every missed call attempt
-        await sendLeadSMS(lead.phone, lead.name, bookingUrl, attempts);
+        await sendLeadSMS(lead.phone, callName, bookingUrl, attempts);
 
         // Update lead - mark call attempt but keep status as 'new' until they answer
         const newStatus = attempts >= MAX_CALL_ATTEMPTS ? 'contacted' : lead.status || 'new';
