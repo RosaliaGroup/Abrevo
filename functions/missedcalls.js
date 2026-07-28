@@ -15,18 +15,8 @@ const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const { sendSMS, toE164, mask } = require('./lib/sms');
 const { fubAccounts } = require('./lib/fubAccounts');
+const { isSkipNumber } = require('./lib/skipNumbers');
 const FUB_BASE = 'https://api.followupboss.com/v1';
-
-const ANA_PHONE = '+16462269189';
-// Our own / team / Telnyx numbers -- never text-back a call logged from one of
-// these (e.g. Ana's own inbound calls, or our sending line).
-const TEAM_NUMBERS = new Set([
-  ANA_PHONE,
-  toE164(process.env.TELNYX_FROM_ROSALIA) || '+12014269354', // Rosalia Telnyx sender
-  '+15512499795', // Rosalia Group line (551) 249-9795
-  '+18623331681', // Iron 65 line (862) 333-1681
-  '+16404009681', // Rosalia account's own business line (toNumber)
-].filter(Boolean));
 
 const IRON65_TEXTBACK =
   'Sorry we missed your call! Iron 65 Luxury Apartments here — book your tour anytime: ' +
@@ -148,7 +138,7 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
   const seed = event.queryStringParameters?.seed === 'true';
 
-  const results = { texted: 0, seeded: 0, dupCall: 0, dupPhone: 0, noNumber: 0, team: 0, notMissed: 0, errors: 0 };
+  const results = { texted: 0, seeded: 0, dupCall: 0, dupPhone: 0, noNumber: 0, team: 0, notMissed: 0, errors: 0, accountErrors: 0, pulled: {} };
   let loggedRaw = false;
 
   try {
@@ -165,10 +155,25 @@ exports.handler = async (event) => {
     }
 
     for (const acct of fubAccounts()) {
-      if (!acct.auth) { console.warn(`FUB account ${acct.label}: key unset -- skipping`); continue; }
+      if (!acct.auth) {
+        // INFO-level so it shows in the default Netlify log view.
+        console.log(`Missed-call: account ${acct.label} key unset -- skipping`);
+        results.pulled[acct.label] = 'unset';
+        continue;
+      }
       let calls = [];
-      try { calls = await fetchRecentCalls(acct.auth, acct.label); }
-      catch (e) { console.error(e.message); continue; }
+      try {
+        calls = await fetchRecentCalls(acct.auth, acct.label);
+      } catch (e) {
+        // Account-level pull failure: count it AND log at INFO so empty-vs-errored
+        // is visible without digging into error-only logs.
+        console.log(`Missed-call: account ${acct.label} pull FAILED -- ${e.message}`);
+        results.accountErrors++;
+        results.pulled[acct.label] = 'error';
+        continue;
+      }
+      results.pulled[acct.label] = calls.length;
+      console.log(`Missed-call: account ${acct.label} pulled ${calls.length} call(s)`);
 
       for (const call of calls) {
         try {
@@ -187,7 +192,7 @@ exports.handler = async (event) => {
           const phone = toE164(rawNum);
           if (!phone) { logDecision(String(rawNum), acct.label, 'no-number'); results.noNumber++; continue; }
 
-          if (TEAM_NUMBERS.has(phone)) { logDecision(phone, acct.label, 'team'); results.team++; continue; }
+          if (isSkipNumber(phone)) { logDecision(phone, acct.label, 'team'); results.team++; continue; }
 
           // Layer 1 dedupe: this exact call already handled.
           if (await alreadyTextedCall(fubCallId)) { logDecision(phone, acct.label, 'dup-call'); results.dupCall++; continue; }
