@@ -5,9 +5,14 @@
  * - Server-only. No client-side Telnyx calls, ever.
  * - Credentials come ONLY from the environment; nothing is hardcoded:
  *     TELNYX_API_KEY
- *     TELNYX_FROM_NUMBER   (E.164 sender)
+ *     TELNYX_FROM_ROSALIA  (E.164 sender — Rosalia's Telnyx number). NOTE: we
+ *       deliberately do NOT read TELNYX_FROM_NUMBER, which holds another tenant's
+ *       number (see functions/lib/sms.js); Rosalia traffic must never send from it.
  * - `transport` (an fetch-compatible fn) is injectable so tests exercise request
  *   construction and failure handling with NO real network I/O.
+ * - `opts.statusWebhookUrl` (optional) routes Telnyx delivery receipts to a
+ *   per-message webhook (with use_profile_webhooks:false). The Communications
+ *   wiring (commContext) sets this to the telnyx-status endpoint.
  * - This foundation does not perform any production send on its own during
  *   Phase 1; higher layers decide when to call sendSms, and Phase 1 wiring only
  *   ever uses a mock transport.
@@ -17,8 +22,9 @@ const TELNYX_MESSAGES_URL = 'https://api.telnyx.com/v2/messages';
 
 function createTelnyxClient(opts = {}) {
   const apiKey = opts.apiKey || process.env.TELNYX_API_KEY || null;
-  const fromNumber = opts.fromNumber || process.env.TELNYX_FROM_NUMBER || null;
+  const fromNumber = opts.fromNumber || process.env.TELNYX_FROM_ROSALIA || null;
   const transport = opts.transport || (typeof fetch !== 'undefined' ? fetch : null);
+  const statusWebhookUrl = opts.statusWebhookUrl || null;
 
   function isConfigured() {
     return Boolean(apiKey && fromNumber);
@@ -52,13 +58,19 @@ function createTelnyxClient(opts = {}) {
     if (!isConfigured()) {
       return { success: false, status: 'unconfigured', providerMessageId: null,
         errorCode: 'telnyx_not_configured',
-        errorMessage: 'TELNYX_API_KEY / TELNYX_FROM_NUMBER missing' };
+        errorMessage: 'TELNYX_API_KEY / TELNYX_FROM_ROSALIA missing' };
     }
     if (!transport) {
       return { success: false, status: 'no_transport', providerMessageId: null,
         errorCode: 'no_transport', errorMessage: 'no fetch/transport available' };
     }
     const payload = { from: fromNumber, to, text };
+    if (statusWebhookUrl) {
+      // Route delivery receipts to the per-message webhook (telnyx-status),
+      // not the messaging-profile webhook (which is the inbound handler).
+      payload.webhook_url = statusWebhookUrl;
+      payload.use_profile_webhooks = false;
+    }
     try {
       const res = await transport(TELNYX_MESSAGES_URL, {
         method: 'POST',
