@@ -42,6 +42,28 @@ test('sendSms constructs the correct Telnyx request (mock transport, no network)
   assert.equal(res.providerMessageId, 'msg_123');
 });
 
+test('sendSms adds per-message delivery webhook only when statusWebhookUrl is set', async () => {
+  const STATUS = 'https://app.abrevo.co/.netlify/functions/telnyx-status';
+  // with statusWebhookUrl -> webhook_url + use_profile_webhooks:false in payload
+  const withCalls = [];
+  const withClient = createTelnyxClient({ apiKey: 'k', fromNumber: '+15551230000',
+    statusWebhookUrl: STATUS, transport: async (u, o) => { withCalls.push(o); return mockResponse(200, { data: { id: 'm1' } }); } });
+  await withClient.sendSms({ to: '+15551234567', text: 'hi' });
+  const withBody = JSON.parse(withCalls[0].body);
+  assert.equal(withBody.webhook_url, STATUS);
+  assert.equal(withBody.use_profile_webhooks, false);
+  assert.equal(withBody.from, '+15551230000');
+
+  // without statusWebhookUrl -> payload carries no webhook fields
+  const noCalls = [];
+  const noClient = createTelnyxClient({ apiKey: 'k', fromNumber: '+15551230000',
+    transport: async (u, o) => { noCalls.push(o); return mockResponse(200, { data: { id: 'm2' } }); } });
+  await noClient.sendSms({ to: '+15551234567', text: 'hi' });
+  const noBody = JSON.parse(noCalls[0].body);
+  assert.equal('webhook_url' in noBody, false);
+  assert.equal('use_profile_webhooks' in noBody, false);
+});
+
 test('unconfigured client does not call the transport', async () => {
   let called = false;
   const transport = async () => { called = true; return mockResponse(200, {}); };

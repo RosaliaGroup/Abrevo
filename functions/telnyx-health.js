@@ -3,7 +3,7 @@
  * Telnyx health / config diagnostic — NON-SENDING, OPERATOR-AUTHENTICATED.
  *
  * This handler reports whether the server-side Telnyx configuration is present
- * and well-formed (TELNYX_API_KEY present, TELNYX_FROM_NUMBER present + E.164).
+ * and well-formed (TELNYX_API_KEY present, TELNYX_FROM_ROSALIA present + E.164).
  * That output reveals whether credentials EXIST, so it is an administrative
  * diagnostic and is protected by the Rosalia operator session gate (same gate as
  * functions/api.js). It is NOT a public endpoint.
