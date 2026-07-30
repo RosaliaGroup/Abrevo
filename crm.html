@@ -103,9 +103,10 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 .form-group label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;letter-spacing:0.04em}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 /* Lead detail tabs */
-.detail-tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0}
-.detail-tab{padding:8px 16px;font-size:13px;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
-.detail-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.detail-tabs{display:flex;gap:2px;margin-bottom:18px;border-bottom:1px solid var(--border);padding-bottom:0}
+.detail-tab{padding:12px 22px;font-size:15px;font-weight:500;letter-spacing:.01em;color:var(--text);opacity:.62;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:opacity .15s,color .15s;user-select:none}
+.detail-tab:hover{opacity:1;color:var(--gold)}
+.detail-tab.active{color:var(--gold);opacity:1;border-bottom-color:var(--gold)}
 .detail-panel{display:none}
 .detail-panel.active{display:block}
 /* Action btns */
@@ -423,8 +424,13 @@ tr:hover td{background:rgba(201,168,76,0.03)}
   </div>
   <div class="detail-panel" id="detail-activity">
     <div id="ld-activity-list" style="max-height:300px;overflow-y:auto"></div>
+    <div style="margin-top:10px;text-align:right"><a href="#" onclick="event.preventDefault();closeModal('lead-detail-modal');showPage('sequences')" style="font-size:12px">View all follow-ups &rarr;</a></div>
   </div>
   <div class="detail-panel" id="detail-tasks">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <button class="btn btn-sm btn-gold" onclick="addTaskForLead()">+ Add Task</button>
+      <a href="#" onclick="event.preventDefault();closeModal('lead-detail-modal');showPage('tasks')" style="font-size:12px">View all tasks &rarr;</a>
+    </div>
     <div id="ld-tasks-list"></div>
   </div>
 </div>
@@ -508,7 +514,16 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 // ── HELPERS ──
 function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function fmtDate(d) { if (!d) return '-'; return new Date(d).toLocaleDateString(); }
-function fmtStamp(d){if(!d)return '-';var dt=new Date(d);var t=dt.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'});return dt.toDateString()===new Date().toDateString()?t:dt.toLocaleDateString([],{month:'numeric',day:'numeric'})+' '+t;}
+// Message/call timestamps need the TIME, not just the date — without it a burst
+// of sends one second apart is indistinguishable from three spread over a day.
+// Today's items show time only; older ones show a short date plus time.
+function fmtStamp(d) {
+  if (!d) return '-';
+  const dt = new Date(d);
+  const t = dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+  const isToday = dt.toDateString() === new Date().toDateString();
+  return isToday ? t : dt.toLocaleDateString([], { month: 'numeric', day: 'numeric' }) + ' ' + t;
+}
 function fmtPhone(p) { if (!p) return '-'; const d = p.replace(/\D/g,''); if (d.length===11 && d[0]==='1') return '('+d.slice(1,4)+') '+d.slice(4,7)+'-'+d.slice(7); if (d.length===10) return '('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6); return p; }
 function statusBadge(s) { const cls = {'new':'badge-new','contacted':'badge-contacted','touring':'badge-touring','applied':'badge-applied','closed':'badge-closed','lost':'badge-lost'}; return '<span class="badge '+(cls[s]||'badge-new')+'">'+esc(s||'new')+'</span>'; }
 function agentName(id) { const a = allAgents.find(a => a.id === id); return a ? a.name : 'Unassigned'; }
@@ -762,6 +777,17 @@ async function sendLeadMessage() {
   if (lead) await loadLeadMessages(lead);
 }
 
+// Open the existing Add Task modal with this lead pre-selected. The modal, its
+// validation and saveTask() already existed — they were just unreachable from a
+// lead card, so adding a task meant leaving the record and finding the lead again.
+function addTaskForLead() {
+  const sel = document.getElementById('at-lead');
+  if (sel && __ldLeadId) sel.value = __ldLeadId;
+  const t = document.getElementById('at-title'); if (t) t.value = '';
+  const d = document.getElementById('at-desc'); if (d) d.value = '';
+  openModal('add-task-modal');
+}
+
 function showDetailTab(tab) {
   document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.detail-panel').forEach(p => p.classList.remove('active'));
@@ -926,7 +952,12 @@ async function saveTask() {
   if (!data.title) return alert('Task title required');
   await apiSend('POST', '/tasks', data);
   closeModal('add-task-modal');
-  loadTasks();
+  await loadTasks();
+  // If a lead card is open behind the modal, refresh it so the new task shows.
+  if (__ldLeadId && document.getElementById('lead-detail-modal').classList.contains('open')) {
+    openLeadDetail(__ldLeadId);
+    showDetailTab('tasks');
+  }
 }
 
 async function saveAgent() {
