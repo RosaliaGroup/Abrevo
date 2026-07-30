@@ -47,9 +47,19 @@ function toE164(raw) {
   const original = String(raw).trim();
   const digits = original.replace(/\D/g, '');
 
-  if (digits.length === 10) return '+1' + digits;
-  if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+  // North American Numbering Plan: both the area code and the exchange are NXX,
+  // where N is 2-9. Without this check a bad 10-digit source value like
+  // "1347418501" became "+11347418501" (area code 134) and was handed to Telnyx
+  // as a real send — it can never deliver. Rejecting here fails fast instead.
+  const validNanp = (ten) => /^[2-9]\d{2}[2-9]\d{6}$/.test(ten);
+
+  if (digits.length === 10) return validNanp(digits) ? '+1' + digits : null;
+  if (digits.length === 11 && digits.startsWith('1')) {
+    const ten = digits.slice(1);
+    return validNanp(ten) ? '+' + digits : null;
+  }
   // Non-US numbers only if the caller was explicit about the country code.
+  // NANP rules don't apply, so these pass through on length alone as before.
   if (original.startsWith('+') && digits.length >= 11 && digits.length <= 15) {
     return '+' + digits;
   }
