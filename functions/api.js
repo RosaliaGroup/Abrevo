@@ -309,6 +309,14 @@ exports.handler = async (event) => {
     if (route === "/sequences" && method === "GET") {
       return json(200, { ok: true, data: await sbGet(`follow_up_sequences?select=*&order=name.asc&limit=100`) });
     }
+    // AI call history for one lead, from the calls table written by call-recap.js.
+    // Distinct from /vapi/calls, which proxies Vapi's own API and has no lead
+    // association. Transcript is deliberately excluded from the list payload —
+    // it can run to tens of KB per call and the CRM only renders the summary.
+    if (route === "/calls" && method === "GET") {
+      if (!validId(qs.lead_id)) return json(400, { ok: false, error: "bad_lead_id" });
+      return json(200, { ok: true, data: await sbGet(`calls?select=id,lead_id,assistant,caller_phone,caller_name,direction,duration_sec,ended_reason,outcome,summary,evaluation,recording_url,flags,created_at&lead_id=eq.${encodeURIComponent(qs.lead_id)}&order=created_at.desc&limit=20`) });
+    }
     if (route === "/activities" && method === "GET") {
       if (!validId(qs.lead_id)) return json(400, { ok: false, error: "bad_lead_id" });
       return json(200, { ok: true, data: await sbGet(`activities?select=id,lead_id,type,body,created_at&lead_id=eq.${encodeURIComponent(qs.lead_id)}&order=created_at.desc&limit=20`) });

@@ -405,12 +405,21 @@ tr:hover td{background:rgba(201,168,76,0.03)}
   <h2 id="ld-name" style="margin-bottom:4px">Lead</h2>
   <div id="ld-contact" style="color:var(--text-muted);font-size:13px;margin-bottom:20px"></div>
   <div class="detail-tabs">
-    <div class="detail-tab active" onclick="showDetailTab('info')">Info</div>
-    <div class="detail-tab" onclick="showDetailTab('activity')">Activity</div>
-    <div class="detail-tab" onclick="showDetailTab('tasks')">Tasks</div>
+    <div class="detail-tab active" data-tab="info" onclick="showDetailTab('info')">Info</div>
+    <div class="detail-tab" data-tab="messages" onclick="showDetailTab('messages')">Messages</div>
+    <div class="detail-tab" data-tab="activity" onclick="showDetailTab('activity')">Activity</div>
+    <div class="detail-tab" data-tab="tasks" onclick="showDetailTab('tasks')">Tasks</div>
   </div>
   <div class="detail-panel active" id="detail-info">
     <div id="ld-info-content" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"></div>
+  </div>
+  <div class="detail-panel" id="detail-messages">
+    <div id="ld-msg-err" style="display:none;background:rgba(255,80,80,.12);border:1px solid rgba(255,80,80,.35);color:#ff9a9a;padding:8px 10px;border-radius:6px;font-size:12px;margin-bottom:10px"></div>
+    <div id="ld-timeline" style="max-height:300px;overflow-y:auto;padding-right:4px"></div>
+    <div id="ld-compose" style="display:none;margin-top:12px;gap:8px">
+      <textarea id="ld-msg-text" rows="2" placeholder="Type a message…" style="width:100%;background:var(--bg-input,#12161c);color:inherit;border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical"></textarea>
+      <button class="btn btn-sm btn-green" id="ld-msg-send" style="margin-top:6px">Send text</button>
+    </div>
   </div>
   <div class="detail-panel" id="detail-activity">
     <div id="ld-activity-list" style="max-height:300px;overflow-y:auto"></div>
@@ -457,6 +466,8 @@ async function bootstrapSession() {
   showLoginGate(true); return false;
 }
 document.addEventListener('DOMContentLoaded', function () {
+  var _s = document.getElementById('ld-msg-send');
+  if (_s) _s.onclick = sendLeadMessage;
   bootstrapSession();
   var f = document.getElementById('login-form');
   if (f) f.addEventListener('submit', async function (ev) {
@@ -591,13 +602,161 @@ async function openLeadDetail(id) {
 
   showDetailTab('info');
   openModal('lead-detail-modal');
+  // Texts + calls load after the modal is shown so the panel never blocks it.
+  loadLeadMessages(lead);
+}
+
+// ── LEAD MESSAGES + CALLS (unified timeline) ──
+// Texts come from the Communications module (conversations/messages, same tables
+// the standalone inbox reads). Calls come from the calls table that call-recap.js
+// writes. Both are rendered in one chronological timeline so the whole history
+// with a lead reads in order.
+//
+// Auth: communications.js sits behind the same operator session cookie and the
+// same session-bound CSRF token this page already holds, so no separate login.
+const COMM_API = '/.netlify/functions/communications';
+let __ldConv = null;      // active conversation for the open lead
+let __ldLeadId = null;
+
+async function commApi(action, { method='GET', query={}, body=null } = {}) {
+  const qs = new URLSearchParams(Object.assign({ action }, query)).toString();
+  const opts = { method, credentials: 'same-origin', headers: {} };
+  if (body) {
+    opts.headers['Content-Type'] = 'application/json';
+    if (__csrf) opts.headers['X-CSRF-Token'] = __csrf;
+    opts.body = JSON.stringify(body);
+  }
+  try {
+    const res = await fetch(COMM_API + '?' + qs, opts);
+    if (res.status === 401) { showLoginGate(true); return { ok:false, error:{ message:'Session expired. Please sign in again.' } }; }
+    const j = await res.json().catch(()=>({}));
+    return (res.ok && j.ok !== false) ? Object.assign({ ok:true }, j) : { ok:false, error:j.error||{ message:'Request failed' } };
+  } catch (e) { return { ok:false, error:{ message:'Network error' } }; }
+}
+
+function ldMsgErr(msg) {
+  const e = document.getElementById('ld-msg-err');
+  if (!e) return;
+  if (!msg) { e.style.display='none'; return; }
+  e.style.display='block'; e.textContent = msg;
+}
+
+function fmtDuration(s) {
+  if (s == null) return '';
+  const m = Math.floor(s/60), r = Math.round(s%60);
+  return m ? m+'m '+r+'s' : r+'s';
+}
+
+function renderLeadTimeline(messages, calls) {
+  const items = [];
+  (messages||[]).forEach(m => items.push({ at: m.created_at, kind: 'msg', m }));
+  (calls||[]).forEach(c => items.push({ at: c.created_at, kind: 'call', c }));
+  items.sort((a,b) => String(a.at||'').localeCompare(String(b.at||'')));
+
+  const el = document.getElementById('ld-timeline');
+  if (!items.length) {
+    el.innerHTML = '<p style="color:var(--text-muted)">No texts or calls yet</p>';
+    return;
+  }
+  el.innerHTML = items.map(it => {
+    if (it.kind === 'msg') {
+      const m = it.m, out = m.direction === 'outbound';
+      return '<div style="margin:8px 0;display:flex;'+(out?'justify-content:flex-end':'')+'">'
+        + '<div style="max-width:80%;background:'+(out?'rgba(90,160,255,.14)':'rgba(255,255,255,.06)')+';border:1px solid var(--border);border-radius:8px;padding:8px 10px">'
+        + '<div style="font-size:13px;white-space:pre-wrap">'+esc(m.body||'')+'</div>'
+        + '<div style="font-size:11px;color:var(--text-muted);margin-top:4px">'+fmtDate(m.created_at)
+        + (out ? ' &middot; '+esc(m.status||'') : ' &middot; received') + '</div>'
+        + '</div></div>';
+    }
+    const c = it.c;
+    const flags = Array.isArray(c.flags) && c.flags.length
+      ? '<div style="font-size:11px;color:var(--red,#ff8080);margin-top:4px">'+c.flags.map(esc).join('<br>')+'</div>' : '';
+    return '<div style="margin:8px 0;padding:8px 10px;border-left:3px solid var(--green,#4caf50);background:rgba(255,255,255,.03);border-radius:6px">'
+      + '<div style="font-size:11px;color:var(--text-muted)">'+fmtDate(c.created_at)+' &middot; AI call &middot; '+esc(c.assistant||'')
+      + (c.duration_sec!=null?' &middot; '+fmtDuration(c.duration_sec):'')
+      + (c.outcome?' &middot; '+esc(c.outcome):'')+'</div>'
+      + '<div style="font-size:13px;margin-top:4px">'+esc(c.summary||'No summary')+'</div>'
+      + flags
+      + (c.recording_url?'<div style="margin-top:4px"><a href="'+esc(c.recording_url)+'" target="_blank" rel="noopener" style="font-size:12px">Listen to recording</a></div>':'')
+      + '</div>';
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function loadLeadMessages(lead) {
+  __ldConv = null; __ldLeadId = lead.id;
+  ldMsgErr('');
+  const timeline = document.getElementById('ld-timeline');
+  const compose = document.getElementById('ld-compose');
+  timeline.innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
+  compose.style.display = 'none';
+
+  // Calls don't need a phone — they're keyed on lead_id.
+  const calls = await apiGet('/calls?lead_id=' + encodeURIComponent(lead.id)) || [];
+
+  if (!lead.phone) {
+    renderLeadTimeline([], calls);
+    ldMsgErr('No phone number on this lead, so there is no text thread.');
+    return;
+  }
+
+  // findOrCreate also writes the lead link, so conversation_links gets populated
+  // as a side effect of simply opening the tab. The thread survives a later
+  // phone-number change because the link is by lead id, not by digits.
+  const fc = await commApi('findOrCreate', {
+    method: 'POST',
+    body: { phone: lead.phone, links: [{ type: 'lead', id: lead.id }] }
+  });
+  if (!fc.ok || !fc.conversation) {
+    renderLeadTimeline([], calls);
+    ldMsgErr((fc.error && fc.error.message) || 'Could not load the text thread.');
+    return;
+  }
+  __ldConv = fc.conversation;
+
+  const t = await commApi('thread', { query: { conversationId: __ldConv.id, limit: 100 } });
+  const msgs = (t.ok && t.messages) ? t.messages : [];
+  if (t.ok && t.conversation) __ldConv = t.conversation;
+
+  renderLeadTimeline(msgs, calls);
+
+  const optedOut = !!(__ldConv && __ldConv.opted_out_at);
+  if (optedOut) {
+    ldMsgErr('This contact replied STOP. Texting is disabled for them.');
+    compose.style.display = 'none';
+  } else {
+    compose.style.display = 'block';
+  }
+}
+
+async function sendLeadMessage() {
+  if (!__ldConv) { ldMsgErr('No thread open.'); return; }
+  const ta = document.getElementById('ld-msg-text');
+  const text = (ta.value || '').trim();
+  if (!text) return;
+  const btn = document.getElementById('ld-msg-send');
+  btn.disabled = true; ldMsgErr('');
+  const idem = 'crm-' + __ldConv.id + '-' + Date.now();
+  const r = await commApi('send', {
+    method: 'POST',
+    body: { conversationId: __ldConv.id, body: text, idempotencyKey: idem }
+  });
+  btn.disabled = false;
+  if (!r.ok) { ldMsgErr((r.error && r.error.message) || 'Send failed.'); return; }
+  ta.value = '';
+  const lead = allLeads.find(l => l.id === __ldLeadId);
+  if (lead) await loadLeadMessages(lead);
 }
 
 function showDetailTab(tab) {
   document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.detail-panel').forEach(p => p.classList.remove('active'));
-  document.querySelector('.detail-tab:nth-child('+(tab==='info'?1:tab==='activity'?2:3)+')').classList.add('active');
-  document.getElementById('detail-'+tab).classList.add('active');
+  // Was an nth-child ternary hardcoded to three tabs; a data attribute means
+  // adding a tab no longer silently highlights the wrong one.
+  const btn = document.querySelector('.detail-tab[data-tab="'+tab+'"]');
+  if (btn) btn.classList.add('active');
+  const panel = document.getElementById('detail-'+tab);
+  if (panel) panel.classList.add('active');
 }
 
 // ── PIPELINE ──

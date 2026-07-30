@@ -125,7 +125,7 @@ async function api(action, { method='GET', query={}, body=null } = {}) {
   let data = {}; try { data = await res.json(); } catch (e) {}
   return data;
 }
-function onAuthLost() { setAuthState(false); }  // clears __csrf and disables mutation controls
+function onAuthLost() { setAuthState(false); stopPolling(); }  // clears __csrf, disables mutation controls, halts polling
 
 // ---- pure thread helpers (mirror functions/_lib/commThreadModel.js) ----
 function messageKey(m){ return (m && (m.id || m.provider_message_id || m.tempId)) || null; }
@@ -163,6 +163,9 @@ function renderList(){
 function renderThread(){
   const conv=state.active; const body=document.getElementById('thread-body');
   if(!conv){ body.innerHTML='<div class="empty" id="thread-empty">Select or start a conversation</div>'; return; }
+  // This rebuilds the compose box, so carry over anything half-typed. Without
+  // this, a STOP arriving mid-sentence would silently discard the draft.
+  const prevDraft = (document.getElementById('compose-text')||{}).value || '';
   const optedOut = !!conv.opted_out_at;
   const canSend = __authed && !optedOut;
   body.innerHTML = `
@@ -175,19 +178,24 @@ function renderThread(){
       <button class="btn primary" id="send-btn" ${canSend?'':'disabled'}>Send</button>
     </div>`;
   renderMessages();
+  const ta = document.getElementById('compose-text');
+  if(ta && prevDraft && !ta.value) ta.value = prevDraft;
   if(canSend){ document.getElementById('send-btn').onclick=doSend; }
 }
 function showThreadErr(msg){ const e=document.getElementById('thread-err'); if(e){ e.style.display='block'; e.textContent=msg; } }
 function showListErr(msg){ const e=document.getElementById('list-err'); if(e){ e.style.display='block'; e.textContent=msg; } }
 
-function renderMessages(){
+function renderMessages(stick){
   const el=document.getElementById('messages'); if(!el) return;
+  // Default to pinning to the newest message. Polling passes stick=false when the
+  // reader has scrolled up into history, so incoming traffic doesn't yank them down.
+  const pin = stick === undefined ? true : !!stick;
   el.innerHTML = state.messages.map(m=>`
     <div class="msg ${m.direction==='inbound'?'inbound':'outbound'}">
       <div>${esc(m.body)}</div>
       <div class="meta"><span>${esc(fmtTime(m.created_at))}</span>${m.direction==='outbound'?`<span class="status ${esc(m.status)}">${esc(m.status||'')}</span>`:''}</div>
     </div>`).join('');
-  el.scrollTop = el.scrollHeight;
+  if(pin) el.scrollTop = el.scrollHeight;
 }
 
 async function loadConversations(){
@@ -226,10 +234,81 @@ async function startConversation(){
   inp.value=''; await loadConversations(); openThread(r.conversation.id);
 }
 
+// ---- live updates ------------------------------------------------------------
+// The inbox had no refresh at all: a reply you sent, and anything the lead sent
+// back, stayed invisible until a manual reload. This polls instead.
+//
+// Deliberate constraints:
+//   - Never calls renderThread() on a routine tick. That would rebuild the
+//     compose box and blow away a half-typed reply mid-keystroke. Ticks merge
+//     into state and re-render only the message list.
+//   - Skips entirely when the tab is hidden, so an inbox left open overnight
+//     doesn't burn thousands of function invocations.
+//   - Single in-flight guard: a slow response can't stack up overlapping polls.
+//   - Re-renders only on an actual change, compared by signature, so the list
+//     doesn't flicker every 5 seconds.
+const POLL_MS = 5000;
+let __pollTimer = null;
+let __polling = false;
+
+function listSig(cs){ return (cs||[]).map(c=>`${c.id}:${c.last_message_at||''}:${c.last_message_preview||''}`).join('|'); }
+// Includes status so a sent -> delivered transition repaints.
+function msgSig(ms){ return (ms||[]).map(m=>`${messageKey(m)}:${m.status||''}`).join('|'); }
+function nearBottom(el){ return !el || (el.scrollHeight - el.scrollTop - el.clientHeight) < 60; }
+
+async function pollTick(){
+  if(__polling || !__authed || document.visibilityState === 'hidden') return;
+  __polling = true;
+  try {
+    const r = await api('listConversations',{query:{limit:50}});
+    if(r.ok && Array.isArray(r.conversations) && listSig(r.conversations) !== listSig(state.conversations)){
+      state.conversations = r.conversations;
+      renderList();
+    }
+
+    if(state.active){
+      const t = await api('thread',{query:{conversationId:state.active.id,limit:100}});
+      if(t.ok){
+        const el = document.getElementById('messages');
+        const stick = nearBottom(el);
+        const before = msgSig(state.messages);
+        state.messages = mergeMessages(state.messages, t.messages||[]);
+
+        // An arriving STOP flips opted_out and must disable the composer, which
+        // needs the full rebuild. The draft is preserved by renderThread().
+        const wasOptedOut = !!state.active.opted_out_at;
+        state.active = t.conversation || state.active;
+        if(!!state.active.opted_out_at !== wasOptedOut) renderThread();
+        else if(msgSig(state.messages) !== before) renderMessages(stick);
+      }
+    }
+  } catch(e){
+    // Transient network/API failure: stay quiet and let the next tick retry.
+  } finally {
+    __polling = false;
+  }
+}
+
+// Timer APIs are guarded because communications.ui.test.js loads this script into
+// a vm sandbox that stubs only fetch/document/URLSearchParams/Date/console. Without
+// the typeof checks, merely loading the page would throw in the test harness.
+function startPolling(){
+  if (typeof setInterval !== 'function') return;
+  if(!__pollTimer) __pollTimer = setInterval(pollTick, POLL_MS);
+}
+function stopPolling(){
+  if(__pollTimer && typeof clearInterval === 'function') clearInterval(__pollTimer);
+  __pollTimer = null;
+}
+// Catch up immediately on refocus rather than waiting out the interval.
+if (document && typeof document.addEventListener === 'function') {
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') pollTick(); });
+}
+
 document.getElementById('new-btn').onclick=startConversation;
 // Fail closed: verify the operator session (and obtain the CSRF token) before
 // any data loads. Reads also require the session server-side.
-(async function init(){ const ok = await bootstrapSession(); if(ok){ await loadConversations(); } })();
+(async function init(){ const ok = await bootstrapSession(); if(ok){ await loadConversations(); startPolling(); } })();
 </script>
 </body>
 </html>
