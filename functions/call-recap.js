@@ -209,6 +209,99 @@ function buildHtml(ctx) {
 </body></html>`;
 }
 
+/**
+ * Write the call to Supabase so it shows on the lead's record in the CRM.
+ *
+ * Best-effort: this webhook's job is to acknowledge Vapi, so a database problem
+ * must never turn into a non-2xx (Vapi would retry and re-send the email).
+ * Every failure is logged and swallowed.
+ *
+ * The lead is matched on the last 10 digits of the caller's number — the
+ * canonical convention used everywhere else in this codebase (see
+ * findExistingLead in respondrosalia.js).
+ */
+async function logCall(ctx, { durationSec, endedReason } = {}) {
+  try {
+    const SUPABASE_URL = process.env.SUPABASE_URL || 'https://fhkgpepkwibxbxsepetd.supabase.co';
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+    if (!SUPABASE_KEY) {
+      console.warn('[call-recap] SUPABASE_SERVICE_KEY not set — call not logged');
+      return { logged: false, reason: 'missing_key' };
+    }
+
+    const h = {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+    };
+
+    const digits = String(ctx.caller || '').replace(/\D/g, '');
+    const last10 = digits.length >= 10 ? digits.slice(-10) : null;
+
+    // Best-effort lead match so the call appears on the right record.
+    let leadId = null;
+    if (last10) {
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/leads?phone=ilike.*${last10}*&select=id&order=created_at.desc&limit=1`,
+          { headers: h }
+        );
+        const rows = await r.json();
+        if (Array.isArray(rows) && rows.length) leadId = rows[0].id;
+      } catch (e) {
+        console.warn('[call-recap] lead lookup failed:', e.message);
+      }
+    }
+
+    const names = (ctx.acts || []).map((a) => String(a.name || '').toLowerCase());
+    const outcome = names.some((n) => /book/.test(n) && !/link/.test(n))
+      ? 'booked'
+      : names.some((n) => /reschedul/.test(n))
+      ? 'rescheduled'
+      : names.some((n) => /cancel/.test(n))
+      ? 'cancelled'
+      : 'no_action';
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/calls`, {
+      method: 'POST',
+      headers: { ...h, Prefer: 'return=representation' },
+      body: JSON.stringify({
+        vapi_call_id: ctx.callId || null,
+        lead_id: leadId,
+        assistant: ctx.assistant || null,
+        caller_phone: ctx.caller === 'unknown' ? null : ctx.caller,
+        caller_name: ctx.callerName || null,
+        direction: 'inbound',
+        duration_sec: durationSec === null || durationSec === undefined ? null : Math.round(durationSec),
+        ended_reason: endedReason || null,
+        outcome,
+        summary: ctx.summary || null,
+        evaluation: ctx.evaluation === null || ctx.evaluation === undefined ? null : String(ctx.evaluation),
+        transcript: ctx.transcript || null,
+        recording_url: ctx.recording || null,
+        flags: ctx.flags && ctx.flags.length ? ctx.flags : null,
+      }),
+    });
+
+    if (res.status === 409) {
+      // Duplicate vapi_call_id — Vapi retried an event we already stored.
+      console.log('[call-recap] call already logged, skipping duplicate');
+      return { logged: false, reason: 'duplicate' };
+    }
+    if (!res.ok) {
+      const body = await res.text();
+      console.warn(`[call-recap] call log failed (${res.status}): ${body.slice(0, 200)}`);
+      return { logged: false, reason: `http_${res.status}` };
+    }
+
+    console.log(`[call-recap] call logged | lead=${leadId || 'unmatched'} | outcome=${outcome}`);
+    return { logged: true, leadId, outcome };
+  } catch (err) {
+    console.warn('[call-recap] call log error:', err.message);
+    return { logged: false, reason: 'error' };
+  }
+}
+
 exports.handler = async (event) => {
   const ok = (body) => ({ statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || { received: true }) });
 
@@ -296,9 +389,13 @@ exports.handler = async (event) => {
     callId: pick(call.id, msg.callId),
   };
 
+  // Persist the call BEFORE the email step. Logging must not depend on mail
+  // config being present — the early return below used to drop the whole event.
+  const logged = await logCall(ctx, { durationSec, endedReason });
+
   if (!FROM_USER || !FROM_PASS) {
     console.error('[call-recap] GMAIL_USER or GMAIL_PASS_INQUIRIES not set — cannot email');
-    return ok({ received: true, emailed: false, error: 'missing_mail_config' });
+    return ok({ received: true, emailed: false, logged: logged.logged, error: 'missing_mail_config' });
   }
 
   const flagCount = ctx.flags.length;
@@ -317,7 +414,7 @@ exports.handler = async (event) => {
       html: buildHtml(ctx),
     });
     console.log(`[call-recap] emailed ${TO} | ${assistant} | ${ctx.caller} | flags=${flagCount}`);
-    return ok({ received: true, emailed: true, flags: flagCount });
+    return ok({ received: true, emailed: true, logged: logged.logged, flags: flagCount });
   } catch (err) {
     console.error('[call-recap] email failed:', err.message);
     return ok({ received: true, emailed: false, error: err.message });

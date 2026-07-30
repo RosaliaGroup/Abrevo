@@ -16,6 +16,16 @@
  * read `result.success` keep working without edits.
  */
 
+// Communications thread logging. Best-effort and never throws — see
+// _lib/threadLog.js. Loaded defensively so a bundling problem in the
+// Communications module can never take down platform SMS.
+let threadLog = null;
+try {
+  threadLog = require('../_lib/threadLog');
+} catch (err) {
+  console.warn('[sms] thread logging unavailable:', err.message);
+}
+
 const TELNYX_MESSAGES_URL = 'https://api.telnyx.com/v2/messages';
 
 const API_KEY = process.env.TELNYX_API_KEY;
@@ -70,7 +80,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * @param {object} options { from?: string, optOut?: boolean, profileId?: string, retries?: number }
  * @returns {Promise<{success:boolean,id:string|null,to:string|null,error:string|null,status:number|null,dryRun?:boolean}>}
  */
-async function sendSMS(to, text, options = {}) {
+async function sendViaTelnyx(to, text, options = {}) {
   const result = {
     success: false,
     id: null,
@@ -159,6 +169,73 @@ async function sendSMS(to, text, options = {}) {
       }
       await sleep(500 * attempt);
     }
+  }
+
+  return result;
+}
+
+/**
+ * Public sender. Same signature and same `{ success, ... }` return shape as
+ * before, so all existing call sites keep working untouched.
+ *
+ * Adds two things around the raw Telnyx call:
+ *
+ *   1. OPT-OUT ENFORCEMENT. Previously only the (unused) Communications path
+ *      checked opt-out, so every one of the platform's senders could text a
+ *      person who had replied STOP. Now a confirmed opt-out blocks the send and
+ *      is recorded on the thread. Fail-open: if the check itself errors, the
+ *      message is sent (a DB hiccup must not stop booking confirmations).
+ *
+ *   2. THREAD LOGGING. The outbound message is written to conversations/messages
+ *      so it appears in the Communications inbox and can be replied to. This is
+ *      best-effort and never blocks or fails a send.
+ *
+ * New optional options (all backwards compatible):
+ *   options.links      [{ type:'lead'|'booking', id }] — CRM linkage
+ *   options.leadId     shorthand for links:[{type:'lead',id}]
+ *   options.bookingId  shorthand for links:[{type:'booking',id}]
+ *   options.createdBy  origin tag for the conversation, e.g. 'book'
+ *   options.noThread   true to skip thread logging entirely
+ */
+async function sendSMS(to, text, options = {}) {
+  const links = Array.isArray(options.links) ? options.links.slice() : [];
+  if (options.leadId) links.push({ type: 'lead', id: options.leadId });
+  if (options.bookingId) links.push({ type: 'booking', id: options.bookingId });
+
+  const dest = toE164(to);
+
+  // 1. Opt-out gate (skipped when thread logging is unavailable or suppressed).
+  if (threadLog && dest && !options.noThread) {
+    const optedOut = await threadLog.isOptedOut(dest);
+    if (optedOut) {
+      console.log(`[sms] blocked, recipient opted out -> ${mask(dest)}`);
+      return {
+        success: false,
+        id: null,
+        to: dest,
+        from: null,
+        error: 'opted_out',
+        status: null,
+        provider: 'telnyx',
+        blocked: true,
+      };
+    }
+  }
+
+  // 2. Actual send (unchanged behaviour).
+  const result = await sendViaTelnyx(to, text, options);
+
+  // 3. Thread log. Uses the body as actually sent, including opt-out language.
+  if (threadLog && !options.noThread && result.to) {
+    let body = text === null || text === undefined ? '' : String(text).trim();
+    if (options.optOut) body = withOptOut(body);
+    await threadLog.logOutbound({
+      to: result.to,
+      body,
+      result,
+      links,
+      createdBy: options.createdBy || 'outbound',
+    });
   }
 
   return result;
