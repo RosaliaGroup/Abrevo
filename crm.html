@@ -508,6 +508,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 // ── HELPERS ──
 function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function fmtDate(d) { if (!d) return '-'; return new Date(d).toLocaleDateString(); }
+function fmtStamp(d){if(!d)return '-';var dt=new Date(d);var t=dt.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'});return dt.toDateString()===new Date().toDateString()?t:dt.toLocaleDateString([],{month:'numeric',day:'numeric'})+' '+t;}
 function fmtPhone(p) { if (!p) return '-'; const d = p.replace(/\D/g,''); if (d.length===11 && d[0]==='1') return '('+d.slice(1,4)+') '+d.slice(4,7)+'-'+d.slice(7); if (d.length===10) return '('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6); return p; }
 function statusBadge(s) { const cls = {'new':'badge-new','contacted':'badge-contacted','touring':'badge-touring','applied':'badge-applied','closed':'badge-closed','lost':'badge-lost'}; return '<span class="badge '+(cls[s]||'badge-new')+'">'+esc(s||'new')+'</span>'; }
 function agentName(id) { const a = allAgents.find(a => a.id === id); return a ? a.name : 'Unassigned'; }
@@ -677,7 +678,7 @@ function renderLeadTimeline(messages, calls) {
       return '<div style="margin:8px 0;display:flex;'+(out?'justify-content:flex-end':'')+'">'
         + '<div style="max-width:80%;background:'+(out?'rgba(90,160,255,.14)':'rgba(255,255,255,.06)')+';border:1px solid var(--border);border-radius:8px;padding:8px 10px">'
         + '<div style="font-size:13px;white-space:pre-wrap">'+esc(m.body||'')+'</div>'
-        + '<div style="font-size:11px;color:var(--text-muted);margin-top:4px">'+fmtDate(m.created_at)
+        + '<div style="font-size:11px;color:var(--text-muted);margin-top:4px">'+fmtStamp(m.created_at)
         + (out ? ' &middot; '+esc(m.status||'') : ' &middot; received') + '</div>'
         + '</div></div>';
     }
@@ -685,7 +686,7 @@ function renderLeadTimeline(messages, calls) {
     const flags = Array.isArray(c.flags) && c.flags.length
       ? '<div style="font-size:11px;color:var(--red,#ff8080);margin-top:4px">'+c.flags.map(esc).join('<br>')+'</div>' : '';
     return '<div style="margin:8px 0;padding:8px 10px;border-left:3px solid var(--green,#4caf50);background:rgba(255,255,255,.03);border-radius:6px">'
-      + '<div style="font-size:11px;color:var(--text-muted)">'+fmtDate(c.created_at)+' &middot; AI call &middot; '+esc(c.assistant||'')
+      + '<div style="font-size:11px;color:var(--text-muted)">'+fmtStamp(c.created_at)+' &middot; AI call &middot; '+esc(c.assistant||'')
       + (c.duration_sec!=null?' &middot; '+fmtDuration(c.duration_sec):'')
       + (c.outcome?' &middot; '+esc(c.outcome):'')+'</div>'
       + '<div style="font-size:13px;margin-top:4px">'+esc(c.summary||'No summary')+'</div>'
