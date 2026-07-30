@@ -75,6 +75,46 @@ function createCommApi({ repo, conversationService, smsService } = {}) {
     return { ok: true, conversation: { ...conv, links }, messages, limit: lim, offset: off, hasMore };
   }
 
+  // Read-only: a lead's linked conversation(s) and their merged, chronological
+  // message timeline. Resolves ONLY via existing entity links (entity_type
+  // 'lead'); never creates or links a conversation (that is a write path), and
+  // only returns messages from conversations explicitly linked to THIS lead, so
+  // one lead's messages can never surface under another. Empty state when the
+  // lead has no linked conversation.
+  async function getLeadThread({ leadId, limit, offset } = {}) {
+    if (leadId === null || leadId === undefined || String(leadId).length === 0) {
+      return err('missing_entity_id', 'leadId is required');
+    }
+    const lim = clampLimit(limit, 50);
+    const off = clampOffset(offset);
+    const linkRows = await repo.listConversationsByEntity('lead', String(leadId));
+    const seen = new Set();
+    const conversations = [];
+    const messages = [];
+    for (const link of linkRows) {
+      const cid = link.conversation_id;
+      if (!cid || seen.has(cid)) continue;
+      seen.add(cid);
+      const conv = await repo.getConversationById(cid);
+      if (!conv) continue;
+      conversations.push({
+        id: conv.id, normalized_phone: conv.normalized_phone, status: conv.status,
+        opted_out_at: conv.opted_out_at || null, last_message_at: conv.last_message_at || null,
+      });
+      const rows = await repo.listMessages(cid, { limit: lim, offset: off });
+      for (const m of rows) messages.push({ ...m, conversation_id: cid });
+    }
+    // Deterministic chronological order across all linked conversations
+    // (created_at, then id as a stable tiebreaker).
+    messages.sort((a, b) => {
+      const ta = String(a.created_at || ''); const tb = String(b.created_at || '');
+      if (ta < tb) return -1;
+      if (ta > tb) return 1;
+      return String(a.id).localeCompare(String(b.id));
+    });
+    return { ok: true, leadId: String(leadId), linked: conversations.length > 0, conversations, messages };
+  }
+
   async function sendMessage({ phone, conversationId, body, idempotencyKey, links, createdBy } = {}) {
     const res = await smsService.sendMessage({ phone, conversationId, body, idempotencyKey, links, createdBy });
     if (res.ok) return { ok: true, message: res.message, deduped: Boolean(res.deduped) };
@@ -98,7 +138,7 @@ function createCommApi({ repo, conversationService, smsService } = {}) {
     return { ok: true, conversation: updated };
   }
 
-  return { findOrCreateConversation, addLink, listConversations, getThread, sendMessage, getMessageStatus, markRead };
+  return { findOrCreateConversation, addLink, listConversations, getThread, getLeadThread, sendMessage, getMessageStatus, markRead };
 }
 
 module.exports = { createCommApi, MAX_PAGE };

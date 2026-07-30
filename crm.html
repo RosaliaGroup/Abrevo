@@ -405,15 +405,19 @@ tr:hover td{background:rgba(201,168,76,0.03)}
   <h2 id="ld-name" style="margin-bottom:4px">Lead</h2>
   <div id="ld-contact" style="color:var(--text-muted);font-size:13px;margin-bottom:20px"></div>
   <div class="detail-tabs">
-    <div class="detail-tab active" onclick="showDetailTab('info')">Info</div>
-    <div class="detail-tab" onclick="showDetailTab('activity')">Activity</div>
-    <div class="detail-tab" onclick="showDetailTab('tasks')">Tasks</div>
+    <div class="detail-tab active" data-tab="info" onclick="showDetailTab('info')">Info</div>
+    <div class="detail-tab" data-tab="activity" onclick="showDetailTab('activity')">Activity</div>
+    <div class="detail-tab" data-tab="comms" onclick="showDetailTab('comms')">Communications</div>
+    <div class="detail-tab" data-tab="tasks" onclick="showDetailTab('tasks')">Tasks</div>
   </div>
   <div class="detail-panel active" id="detail-info">
     <div id="ld-info-content" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"></div>
   </div>
   <div class="detail-panel" id="detail-activity">
     <div id="ld-activity-list" style="max-height:300px;overflow-y:auto"></div>
+  </div>
+  <div class="detail-panel" id="detail-comms">
+    <div id="ld-comms-list" style="max-height:340px;overflow-y:auto"></div>
   </div>
   <div class="detail-panel" id="detail-tasks">
     <div id="ld-tasks-list"></div>
@@ -565,6 +569,7 @@ async function loadLeads() {
 async function openLeadDetail(id) {
   const lead = allLeads.find(l => l.id === id);
   if (!lead) return;
+  activeLeadDetailId = id; // mark active lead so stale async comms responses are discarded
   document.getElementById('ld-name').textContent = lead.name || 'Unknown';
   document.getElementById('ld-contact').innerHTML = esc(lead.email||'') + (lead.phone ? ' &middot; ' + fmtPhone(lead.phone) : '') + (lead.phone ? ' &middot; <a href="tel:'+esc(lead.phone)+'">Call</a> &middot; <a href="sms:'+esc(lead.phone)+'">Text</a>' : '');
 
@@ -589,6 +594,11 @@ async function openLeadDetail(id) {
   const tasks = allTasks.filter(t => t.lead_id === id);
   document.getElementById('ld-tasks-list').innerHTML = tasks.length ? tasks.map(t => '<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;justify-content:space-between"><div><div style="font-size:13px">'+esc(t.title)+'</div><div style="font-size:12px;color:var(--text-muted)">Due: '+fmtDate(t.due_date)+'</div></div><div>'+statusBadge(t.status)+'</div></div>').join('') : '<p style="color:var(--text-muted)">No tasks</p>';
 
+  // Communications (read-only): fire-and-forget so a slow/unavailable comms
+  // endpoint never blocks the modal or the other tabs; errors render in-panel.
+  document.getElementById('ld-comms-list').innerHTML = '<p style="color:var(--text-muted)">Loading messages…</p>';
+  loadComms(id);
+
   showDetailTab('info');
   openModal('lead-detail-modal');
 }
@@ -596,8 +606,55 @@ async function openLeadDetail(id) {
 function showDetailTab(tab) {
   document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.detail-panel').forEach(p => p.classList.remove('active'));
-  document.querySelector('.detail-tab:nth-child('+(tab==='info'?1:tab==='activity'?2:3)+')').classList.add('active');
-  document.getElementById('detail-'+tab).classList.add('active');
+  const tb = document.querySelector('.detail-tab[data-tab="'+tab+'"]');
+  if (tb) tb.classList.add('active');
+  const pn = document.getElementById('detail-'+tab);
+  if (pn) pn.classList.add('active');
+}
+
+// ── COMMUNICATIONS (read-only Stack B timeline; no composer/send in Phase 1) ──
+// Tracks which lead's detail view is currently open. A comms fetch is async, so
+// opening lead A then lead B can let A's slower response resolve last; we discard
+// any response whose requested leadId is no longer the active one. Declared with
+// var so the browser-level race test can observe/drive it in the vm sandbox.
+var activeLeadDetailId = null;
+async function commGet(action, params) {
+  const qs = new URLSearchParams(Object.assign({ action: action }, params || {})).toString();
+  try {
+    const res = await fetch('/.netlify/functions/communications?' + qs, { credentials: 'same-origin' });
+    if (res.status === 401) { showLoginGate(true); return null; }
+    let body = null; try { body = await res.json(); } catch (e) {}
+    if (!res.ok || !body || body.ok === false) return null;
+    return body;
+  } catch (e) { return null; }
+}
+function renderCommMessage(m) {
+  const inbound = m.direction === 'inbound';
+  const who = inbound ? 'Lead → us' : 'Us → lead';
+  const align = inbound ? 'flex-start' : 'flex-end';
+  const bg = inbound ? 'rgba(255,255,255,0.06)' : 'rgba(80,140,255,0.15)';
+  const status = esc(String(m.status || 'unknown'));
+  // provider id only when useful for diagnostics (failed sends)
+  const diag = (m.status === 'failed' && m.provider_message_id) ? ' &middot; id ' + esc(String(m.provider_message_id)) : '';
+  const err = (m.status === 'failed' && m.error_message) ? '<div style="font-size:11px;color:#e07a7a;margin-top:2px">' + esc(String(m.error_message)) + '</div>' : '';
+  return '<div style="display:flex;justify-content:' + align + ';margin:6px 0">'
+    + '<div style="max-width:80%;padding:8px 10px;border-radius:10px;background:' + bg + '">'
+    + '<div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">' + who + ' &middot; SMS &middot; ' + fmtDate(m.created_at) + '</div>'
+    + '<div style="font-size:13px;white-space:pre-wrap">' + esc(String(m.body || '')) + '</div>'
+    + '<div style="font-size:11px;color:var(--text-muted);margin-top:3px">' + status + diag + '</div>'
+    + err
+    + '</div></div>';
+}
+async function loadComms(leadId) {
+  const el = document.getElementById('ld-comms-list');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--text-muted)">Loading messages…</p>';
+  const data = await commGet('leadThread', { leadId: leadId });
+  if (leadId !== activeLeadDetailId) return; // stale response: a different lead is now open — discard
+  if (!data) { el.innerHTML = '<p style="color:var(--text-muted)">Couldn\'t load messages right now.</p>'; return; }
+  const msgs = Array.isArray(data.messages) ? data.messages : [];
+  if (!msgs.length) { el.innerHTML = '<p style="color:var(--text-muted)">No messages yet for this lead.</p>'; return; }
+  el.innerHTML = msgs.map(renderCommMessage).join('');
 }
 
 // ── PIPELINE ──

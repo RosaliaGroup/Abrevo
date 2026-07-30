@@ -57,6 +57,13 @@ function createFakeRepo() {
     async listLinks(conversationId) {
       return links.filter((l) => l.conversation_id === conversationId).map((l) => ({ ...l }));
     },
+    async listConversationsByEntity(entityType, entityId) {
+      const eid = String(entityId);
+      return links
+        .filter((l) => l.entity_type === entityType && l.entity_id === eid)
+        .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
+        .map((l) => ({ ...l }));
+    },
     async insertLinkIfAbsent({ conversation_id, entity_type, entity_id }) {
       const eid = String(entity_id);
       const dup = links.find((l) =>
