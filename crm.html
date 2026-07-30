@@ -722,6 +722,10 @@ async function loadLeadMessages(lead) {
 
   // Calls don't need a phone — they're keyed on lead_id.
   const calls = await apiGet('/calls?lead_id=' + encodeURIComponent(lead.id)) || [];
+  // Stale-response guard: if a different lead was opened while this awaited,
+  // abandon this render so a slower response can't overwrite the active lead's
+  // timeline (A→B race). __ldLeadId is reset at the top of each invocation.
+  if (lead.id !== __ldLeadId) return;
 
   if (!lead.phone) {
     renderLeadTimeline([], calls);
@@ -736,6 +740,7 @@ async function loadLeadMessages(lead) {
     method: 'POST',
     body: { phone: lead.phone, links: [{ type: 'lead', id: lead.id }] }
   });
+  if (lead.id !== __ldLeadId) return; // stale: a different lead is now open
   if (!fc.ok || !fc.conversation) {
     renderLeadTimeline([], calls);
     ldMsgErr((fc.error && fc.error.message) || 'Could not load the text thread.');
@@ -744,6 +749,7 @@ async function loadLeadMessages(lead) {
   __ldConv = fc.conversation;
 
   const t = await commApi('thread', { query: { conversationId: __ldConv.id, limit: 100 } });
+  if (lead.id !== __ldLeadId) return; // stale: a different lead is now open
   const msgs = (t.ok && t.messages) ? t.messages : [];
   if (t.ok && t.conversation) __ldConv = t.conversation;
 

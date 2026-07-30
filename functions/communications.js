@@ -44,6 +44,7 @@ function httpFor(result) {
 const ACTIONS = {
   listConversations: { method: 'GET',  mutation: false },
   thread:            { method: 'GET',  mutation: false },
+  leadThread:        { method: 'GET',  mutation: false },
   messageStatus:     { method: 'GET',  mutation: false },
   findOrCreate:      { method: 'POST', mutation: true },
   addLink:           { method: 'POST', mutation: true },
@@ -109,6 +110,7 @@ function makeHandler(deps = {}) {
       switch (action) {
         case 'listConversations': result = await api.listConversations({ limit: q.limit, offset: q.offset }); break;
         case 'thread':            result = await api.getThread({ conversationId: q.conversationId, limit: q.limit, offset: q.offset }); break;
+        case 'leadThread':        result = await api.getLeadThread({ leadId: q.leadId, limit: q.limit, offset: q.offset }); break;
         case 'messageStatus':     result = await api.getMessageStatus({ id: q.id }); break;
         case 'findOrCreate':      result = await api.findOrCreateConversation({ phone: body.phone, links: body.links, createdBy: sess.user || 'comm-ui' }); break;
         case 'addLink':           result = await api.addLink({ conversationId: body.conversationId, type: body.type, id: body.id }); break;

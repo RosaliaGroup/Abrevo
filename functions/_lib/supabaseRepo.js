@@ -97,6 +97,16 @@ function createSupabaseRepo(opts = {}) {
       return Array.isArray(r.json) ? r.json : [];
     },
 
+    // Reverse lookup: which conversation(s) is a CRM entity linked to?
+    // e.g. (entity_type='lead', entity_id=<leadId>). Backed by
+    // conversation_links_entity_idx (entity_type, entity_id). Read-only.
+    async listConversationsByEntity(entityType, entityId) {
+      const r = await rest('GET',
+        `/conversation_links?entity_type=eq.${enc(entityType)}&entity_id=eq.${enc(String(entityId))}&order=created_at.asc`);
+      if (!r.ok) throw new Error(`listConversationsByEntity failed: ${r.status} ${r.text.slice(0, 200)}`);
+      return Array.isArray(r.json) ? r.json : [];
+    },
+
     /** Idempotent: returns the new link, or null if the pair already existed. */
     async insertLinkIfAbsent({ conversation_id, entity_type, entity_id }) {
       const r = await rest('POST', '/conversation_links', {
