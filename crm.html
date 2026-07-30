@@ -567,9 +567,17 @@ async function loadLeads() {
   const tbody = document.getElementById('leads-body');
   tbody.innerHTML = filtered.map(l => {
     const ph = l.phone ? fmtPhone(l.phone) : '-';
-    const actions = (l.phone ? '<a class="action-btn" href="tel:'+esc(l.phone)+'">Call</a> <a class="action-btn" href="sms:'+esc(l.phone)+'">Text</a> ' : '') + '<a class="action-btn" href="mailto:'+esc(l.email||'')+'">Email</a>';
+    // Text opens the in-app thread. Call stays a tel: handoff — that one genuinely
+    // belongs to the phone app. The cell already stops propagation to the row.
+    const actions = (l.phone ? '<a class="action-btn" href="tel:'+esc(l.phone)+'">Call</a> <a class="action-btn" href="#" onclick="event.preventDefault();openLeadMessages(\''+l.id+'\');return false;">Text</a> ' : '') + '<a class="action-btn" href="mailto:'+esc(l.email||'')+'">Email</a>';
     return '<tr onclick="openLeadDetail(\''+l.id+'\')"><td>'+esc(l.name||'Unknown')+'</td><td>'+esc(l.email||'-')+'<br><small style="color:var(--text-muted)">'+ph+'</small></td><td>'+esc(l.source||'-')+'</td><td>'+esc(l.property||'-')+'</td><td>'+statusBadge(l.status)+'</td><td>'+agentName(l.assigned_to)+'</td><td>'+fmtDate(l.last_contact_at||l.replied_at||l.created_at)+'</td><td onclick="event.stopPropagation()">'+actions+'</td></tr>';
   }).join('');
+}
+
+// Open a lead straight onto its Messages tab (used by the row Text button).
+async function openLeadMessages(id) {
+  await openLeadDetail(id);
+  showDetailTab('messages');
 }
 
 // ── LEAD DETAIL ──
@@ -577,7 +585,7 @@ async function openLeadDetail(id) {
   const lead = allLeads.find(l => l.id === id);
   if (!lead) return;
   document.getElementById('ld-name').textContent = lead.name || 'Unknown';
-  document.getElementById('ld-contact').innerHTML = esc(lead.email||'') + (lead.phone ? ' &middot; ' + fmtPhone(lead.phone) : '') + (lead.phone ? ' &middot; <a href="tel:'+esc(lead.phone)+'">Call</a> &middot; <a href="sms:'+esc(lead.phone)+'">Text</a>' : '');
+  document.getElementById('ld-contact').innerHTML = esc(lead.email||'') + (lead.phone ? ' &middot; ' + fmtPhone(lead.phone) : '') + (lead.phone ? ' &middot; <a href="tel:'+esc(lead.phone)+'">Call</a> &middot; <a href="#" onclick="event.preventDefault();showDetailTab(\'messages\');return false;">Text</a>' : '');
 
   const info = document.getElementById('ld-info-content');
   info.innerHTML = [
@@ -619,15 +627,20 @@ let __ldConv = null;      // active conversation for the open lead
 let __ldLeadId = null;
 
 async function commApi(action, { method='GET', query={}, body=null } = {}) {
-  const qs = new URLSearchParams(Object.assign({ action }, query)).toString();
+  // communications.js reads the action from the QUERY on GET and from the BODY on
+  // POST (see its line 88). Sending it in the query for a POST yields
+  // "unknown action". This mirrors the same split used by communications.html.
   const opts = { method, credentials: 'same-origin', headers: {} };
-  if (body) {
+  let url = COMM_API;
+  if (method === 'GET') {
+    url += '?' + new URLSearchParams(Object.assign({ action }, query)).toString();
+  } else {
     opts.headers['Content-Type'] = 'application/json';
     if (__csrf) opts.headers['X-CSRF-Token'] = __csrf;
-    opts.body = JSON.stringify(body);
+    opts.body = JSON.stringify(Object.assign({ action }, body || {}));
   }
   try {
-    const res = await fetch(COMM_API + '?' + qs, opts);
+    const res = await fetch(url, opts);
     if (res.status === 401) { showLoginGate(true); return { ok:false, error:{ message:'Session expired. Please sign in again.' } }; }
     const j = await res.json().catch(()=>({}));
     return (res.ok && j.ok !== false) ? Object.assign({ ok:true }, j) : { ok:false, error:j.error||{ message:'Request failed' } };
