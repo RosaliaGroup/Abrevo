@@ -103,17 +103,45 @@ async function markDnc(leadId) {
   });
 }
 
-async function sendLeadSMS(phone, leadName, bookingUrl, attemptNumber) {
-  const firstName = (leadName || '').split(' ')[0] || 'there';
+// Placeholders that live in leads.property but aren't buildings — naming these
+// in a text would read as nonsense ("your inquiry about Real Estate Inquiry").
+const NON_BUILDING = /^(real estate inquiry|mechanical enterprise|general|inquiry|n\/a|unknown)/i;
 
-  // Vary the message based on attempt number
+/**
+ * The building to name in a message, or null to fall back to generic wording.
+ * 35% of leads have no property at all, so the fallback is the common path.
+ */
+function buildingLabel(property) {
+  const p = String(property || '').trim().replace(/\s+/g, ' ');
+  if (!p || p.length > 48 || NON_BUILDING.test(p)) return null;
+  // Form fragments leak into these columns ("2C. Pet Description: no pets.").
+  // Real building names never contain a colon or semicolon, so that's a
+  // reliable tell that we're looking at a chunk of a form, not an address.
+  if (/[:;]/.test(p) || /pet\s*(description|type)/i.test(p)) return null;
+  return p;
+}
+
+async function sendLeadSMS(phone, leadName, bookingUrl, attemptNumber, property) {
+  const firstName = (leadName || '').split(' ')[0] || 'there';
+  const b = buildingLabel(property);
+
+  // Vary the message based on attempt number. Every variant names the building
+  // the lead actually inquired about when we know it — a follow-up that just
+  // says "your apartment inquiry" reads like a blast to someone who asked about
+  // one specific address.
   let msg;
   if (attemptNumber === 1) {
-    msg = `Hi ${firstName}! Alex from Rosalia Group here -- tried reaching you about your apartment inquiry. Book your tour anytime: ${bookingUrl}`;
+    msg = b
+      ? `Hi ${firstName}! Alex from Rosalia Group here -- tried reaching you about ${b}. Book your tour: ${bookingUrl}`
+      : `Hi ${firstName}! Alex from Rosalia Group here -- tried reaching you about your apartment inquiry. Book your tour anytime: ${bookingUrl}`;
   } else if (attemptNumber === 2) {
-    msg = `Hi ${firstName}! Alex from Rosalia Group again. Still have great apartments available for you. Book here: ${bookingUrl}`;
+    msg = b
+      ? `Hi ${firstName}! Alex from Rosalia Group again. Still have availability at ${b}. Book here: ${bookingUrl}`
+      : `Hi ${firstName}! Alex from Rosalia Group again. Still have great apartments available for you. Book here: ${bookingUrl}`;
   } else {
-    msg = `Hi ${firstName}! Rosalia Group here -- we have limited units available. Don't miss out! Book your tour: ${bookingUrl}`;
+    msg = b
+      ? `Hi ${firstName}! Rosalia Group here -- limited units left at ${b}. Book your tour: ${bookingUrl}`
+      : `Hi ${firstName}! Rosalia Group here -- we have limited units available. Don't miss out! Book your tour: ${bookingUrl}`;
   }
 
   // 1h cooldown: readmail already texts a brand-new lead the moment their
@@ -201,7 +229,7 @@ exports.handler = async (event) => {
         const callId = await triggerCall(lead.phone, callName, assistantId, phoneId, lead.property);
 
         // Send SMS after every missed call attempt
-        await sendLeadSMS(lead.phone, callName, bookingUrl, attempts);
+        await sendLeadSMS(lead.phone, callName, bookingUrl, attempts, lead.property);
 
         // Update lead - mark call attempt but keep status as 'new' until they answer
         const newStatus = attempts >= MAX_CALL_ATTEMPTS ? 'contacted' : lead.status || 'new';
