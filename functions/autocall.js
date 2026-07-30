@@ -14,8 +14,9 @@ const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
 
 // Max call attempts before giving up
 const MAX_CALL_ATTEMPTS = 5;
-// Minimum hours between call attempts
-const MIN_HOURS_BETWEEN_CALLS = 2;
+// Minimum hours between call attempts. Was 2, which meant a lead who never
+// answered received five calls and five texts inside a single afternoon.
+const MIN_HOURS_BETWEEN_CALLS = 24;
 
 function isBusinessHours() {
   const now = new Date();
@@ -115,7 +116,10 @@ async function sendLeadSMS(phone, leadName, bookingUrl, attemptNumber) {
     msg = `Hi ${firstName}! Rosalia Group here -- we have limited units available. Don't miss out! Book your tour: ${bookingUrl}`;
   }
 
-  const result = await sendSMS(phone, msg, { optOut: true });
+  // 1h cooldown: readmail already texts a brand-new lead the moment their
+  // email lands, and autocall picks the same lead up seconds later. Without
+  // this they get two texts ~20s apart. The CALL still happens either way.
+  const result = await sendSMS(phone, msg, { optOut: true, cooldownHours: 1 });
   console.log(`SMS attempt ${attemptNumber} sent to ${result.to || phone}: ${result.success}`);
   return result;
 }

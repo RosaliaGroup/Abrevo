@@ -154,4 +154,34 @@ async function logOutbound({ to, body, result, links = [], createdBy } = {}) {
   }
 }
 
-module.exports = { logOutbound, isOptedOut, isInternalNumber, INTERNAL_NUMBERS };
+/**
+ * Recent outbound history for a number, newest first.
+ *
+ * Powers two guards in lib/sms.js: the duplicate check and the cooldown. Both
+ * FAIL OPEN — on any error this returns an empty list, so a database problem
+ * lets messages through rather than silently blocking booking confirmations.
+ *
+ * @param {string} e164
+ * @param {number} withinMinutes how far back to look
+ * @returns {Promise<Array<{body:string, created_at:string}>>}
+ */
+async function recentOutbound(e164, withinMinutes) {
+  try {
+    if (!e164) return [];
+    const { repo } = services();
+    const conv = await repo.getConversationByPhone(e164);
+    if (!conv) return [];
+
+    const cutoff = Date.now() - withinMinutes * 60 * 1000;
+    // listMessages returns oldest-first, so take the tail and reverse it.
+    const all = await repo.listMessages(conv.id, { limit: 100 });
+    return all
+      .filter((m) => m.direction === 'outbound' && Date.parse(m.created_at) >= cutoff)
+      .reverse();
+  } catch (err) {
+    console.warn('[threadLog] recent-send lookup unavailable, allowing send:', err.message);
+    return [];
+  }
+}
+
+module.exports = { logOutbound, isOptedOut, isInternalNumber, recentOutbound, INTERNAL_NUMBERS };

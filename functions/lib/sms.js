@@ -26,6 +26,10 @@ try {
   console.warn('[sms] thread logging unavailable:', err.message);
 }
 
+// Window for the duplicate guard. Long enough to catch overlapping scheduled
+// runs, short enough that a genuine re-send an hour later still goes out.
+const DEDUPE_MINUTES = 10;
+
 const TELNYX_MESSAGES_URL = 'https://api.telnyx.com/v2/messages';
 
 const API_KEY = process.env.TELNYX_API_KEY;
@@ -232,10 +236,42 @@ async function sendSMS(to, text, options = {}) {
     }
   }
 
-  // 2. Actual send (unchanged behaviour).
+  // 2. Duplicate guard — ALWAYS ON. The exact same text to the same number
+  //    within a few minutes is never intentional; it means two overlapping runs
+  //    of a scheduled function both picked up the same lead before the first
+  //    marked it done. This happened in production: one lead received identical
+  //    texts one second apart.
+  if (threadLog && dest && !options.noThread) {
+    const recent = await threadLog.recentOutbound(dest, DEDUPE_MINUTES);
+    const body = options.optOut ? withOptOut(String(text || '').trim()) : String(text || '').trim();
+    if (recent.some((m) => (m.body || '').trim() === body)) {
+      console.log(`[sms] suppressed duplicate -> ${mask(dest)} (identical text within ${DEDUPE_MINUTES}m)`);
+      return {
+        success: false, id: null, to: dest, from: null,
+        error: 'duplicate_suppressed', status: null, provider: 'telnyx', suppressed: true,
+      };
+    }
+
+    // 3. Cooldown — OPT-IN via options.cooldownHours. Deliberately not the
+    //    default: a booking confirmation or appointment reminder must never be
+    //    withheld because a marketing text happened to go out earlier. Only
+    //    follow-up senders opt in.
+    if (options.cooldownHours > 0) {
+      const inCooldown = await threadLog.recentOutbound(dest, options.cooldownHours * 60);
+      if (inCooldown.length) {
+        console.log(`[sms] held by ${options.cooldownHours}h cooldown -> ${mask(dest)}`);
+        return {
+          success: false, id: null, to: dest, from: null,
+          error: 'cooldown', status: null, provider: 'telnyx', suppressed: true,
+        };
+      }
+    }
+  }
+
+  // 4. Actual send (unchanged behaviour).
   const result = await sendViaTelnyx(to, text, options);
 
-  // 3. Thread log. Uses the body as actually sent, including opt-out language.
+  // 5. Thread log. Uses the body as actually sent, including opt-out language.
   if (threadLog && !options.noThread && result.to) {
     let body = text === null || text === undefined ? '' : String(text).trim();
     if (options.optOut) body = withOptOut(body);
