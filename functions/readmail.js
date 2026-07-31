@@ -1448,7 +1448,7 @@ async function buildAndSendLeadText(phone, leadName, property, bookingUrl) {
   const firstName = leadName?.split(' ')[0] || 'there';
   const url = bookingUrl || BOOKING_FORM_URL;
   const msg = `Hi ${firstName}! Rosalia Group here — we just replied to your inquiry${property ? ` about ${property}` : ''}.\nBook a tour: ${url}`;
-  const result = await sendSMS(phone, msg, { optOut: true });
+  const result = await sendSMS(phone, msg, { optOut: true, cooldownHours: 2 });
   console.log('SMS sent to:', phone, result.success);
   return result;
 }

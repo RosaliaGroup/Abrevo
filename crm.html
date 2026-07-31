@@ -961,10 +961,26 @@ function fmtDuration(s) {
   return m ? m+'m '+r+'s' : r+'s';
 }
 
-function renderLeadTimeline(messages, calls) {
+// Inbound emails arrive as raw bodies — Apartments.com HTML, tracking URLs,
+// image links. Strip the worst of it so the timeline stays readable.
+function cleanEmailBody(t) {
+  return String(t || '')
+    .replace(/\[?https?:\/\/\S+\]?/g, ' ')      // urls and [url] wrappers
+    .replace(/<[^>]+>/g, ' ')                        // stray tags
+    .replace(/&[a-z]+;|&#\w+;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function renderLeadTimeline(messages, calls, emails) {
   const items = [];
   (messages||[]).forEach(m => items.push({ at: m.created_at, kind: 'msg', m }));
   (calls||[]).forEach(c => items.push({ at: c.created_at, kind: 'call', c }));
+  if (emails) {
+    const inb = cleanEmailBody(emails.message);
+    if (inb) items.push({ at: emails.created_at, kind: 'email', dir: 'in', body: inb });
+    if (emails.email_reply) items.push({ at: emails.replied_at || emails.created_at, kind: 'email', dir: 'out', body: emails.email_reply });
+  }
   items.sort((a,b) => String(a.at||'').localeCompare(String(b.at||'')));
 
   const el = document.getElementById('ld-timeline');
@@ -981,6 +997,13 @@ function renderLeadTimeline(messages, calls) {
         + '<div style="font-size:11px;color:var(--text-muted);margin-top:4px">'+fmtStamp(m.created_at)
         + (out ? ' &middot; '+esc(m.status||'') : ' &middot; received') + '</div>'
         + '</div></div>';
+    }
+    if (it.kind === 'email') {
+      const out = it.dir === 'out';
+      return '<div style="margin:8px 0;padding:9px 11px;border-left:3px solid '+(out?'rgba(90,160,255,.6)':'var(--text-muted)')+';background:rgba(255,255,255,.03);border-radius:6px">'
+        + '<div style="font-size:11px;color:var(--text-muted)">'+fmtStamp(it.at)+' &middot; '+(out?'Email sent':'Email received')+'</div>'
+        + '<div style="font-size:13px;margin-top:4px;white-space:pre-wrap">'+esc(it.body.slice(0,600))+(it.body.length>600?'…':'')+'</div>'
+        + '</div>';
     }
     const c = it.c;
     const flags = Array.isArray(c.flags) && c.flags.length
@@ -1007,13 +1030,16 @@ async function loadLeadMessages(lead) {
 
   // Calls don't need a phone — they're keyed on lead_id.
   const calls = await apiGet('/calls?lead_id=' + encodeURIComponent(lead.id)) || [];
+  // Email history: the original inquiry and our reply, so the card shows every
+  // channel rather than texts and calls only.
+  const emails = await apiGet('/leads/' + encodeURIComponent(lead.id) + '/emails');
   // Stale-response guard: if a different lead was opened while this awaited,
   // abandon this render so a slower response can't overwrite the active lead's
   // timeline (A→B race). __ldLeadId is reset at the top of each invocation.
   if (lead.id !== __ldLeadId) return;
 
   if (!lead.phone) {
-    renderLeadTimeline([], calls);
+    renderLeadTimeline([], calls, emails);
     ldMsgErr('No phone number on this lead, so there is no text thread.');
     return;
   }
@@ -1027,7 +1053,7 @@ async function loadLeadMessages(lead) {
   });
   if (lead.id !== __ldLeadId) return; // stale: a different lead is now open
   if (!fc.ok || !fc.conversation) {
-    renderLeadTimeline([], calls);
+    renderLeadTimeline([], calls, emails);
     ldMsgErr((fc.error && fc.error.message) || 'Could not load the text thread.');
     return;
   }
@@ -1038,7 +1064,7 @@ async function loadLeadMessages(lead) {
   const msgs = (t.ok && t.messages) ? t.messages : [];
   if (t.ok && t.conversation) __ldConv = t.conversation;
 
-  renderLeadTimeline(msgs, calls);
+  renderLeadTimeline(msgs, calls, emails);
 
   const optedOut = !!(__ldConv && __ldConv.opted_out_at);
   if (optedOut) {
