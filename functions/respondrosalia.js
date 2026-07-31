@@ -125,9 +125,11 @@ async function generateFollowUp(lead, followUpNumber) {
   const bookingLink = getBookingLink(lead);
 
   if (category === 'buyer') {
+    // Buyers often have no specific building, so only name one when it's real.
+    const named = lead.property ? ` about ${lead.property}` : '';
     const msgs = {
-      1: `Hi ${first}, just following up from Ana at Rosalia Group! Are you still looking for a home in NJ? I'd love to help -- schedule a quick call: ${bookingLink} -- (862) 333-1681`,
-      2: `Hi ${first}, last follow up from Ana at Rosalia Group. The market is moving fast -- if you're still looking, I'm here to help: ${bookingLink}`,
+      1: `Hi ${first}, just following up from Ana at Rosalia Group${named}! Are you still looking for a home in NJ? I'd love to help -- schedule a quick call: ${bookingLink} -- (862) 333-1681`,
+      2: `Hi ${first}, last follow up from Ana at Rosalia Group${named}. The market is moving fast -- if you're still looking, I'm here to help: ${bookingLink}`,
     };
     return msgs[followUpNumber] || msgs[1];
   } else {

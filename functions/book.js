@@ -392,7 +392,20 @@ exports.handler = async (event) => {
       const rescheduleUrl = isIron65(propertyAddress)
         ? 'https://book.rosaliagroup.com/iron65-reschedule'
         : 'https://book.rosaliagroup.com/reschedule';
-      const callerMsg = `Your tour is confirmed!\n${propertyAddress}\n${displayDate} at ${displayTime}\nNeed to reschedule? ${rescheduleUrl}`;
+      // A booking can arrive without a usable date or time (Vapi not capturing it,
+      // or a form submitted blank). Saying "confirmed ... TBD at TBD" tells the
+      // customer nothing and looks broken, so only claim a confirmed slot when
+      // there actually is one, and otherwise promise a follow-up.
+      const haveDate = displayDate && displayDate !== 'TBD';
+      const haveTime = displayTime && displayTime !== 'TBD';
+      let callerMsg;
+      if (haveDate && haveTime) {
+        callerMsg = `Your tour is confirmed!\n${propertyAddress}\n${displayDate} at ${displayTime}\nNeed to reschedule? ${rescheduleUrl}`;
+      } else if (haveDate) {
+        callerMsg = `Your tour is confirmed!\n${propertyAddress}\n${displayDate} - we'll text shortly to confirm the time.\nNeed to reschedule? ${rescheduleUrl}`;
+      } else {
+        callerMsg = `Tour request received for ${propertyAddress}.\nWe'll text you shortly to confirm a date and time.\nQuestions? Call (862) 333-1681`;
+      }
       try {
         const smsResult = await sendSMS(data.phone, callerMsg, { optOut: true });
         console.log('Caller SMS sent:', smsResult.success);

@@ -412,12 +412,28 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 </div>
 </div>
 
+<div class="modal-overlay" id="thread-modal" onclick="if(event.target===this)closeModal(this.id)">
+<div class="modal" style="max-width:520px">
+  <h2 id="th-title" style="margin-bottom:2px"></h2>
+  <div id="th-sub" style="font-size:12px;color:var(--text-muted);margin-bottom:14px"></div>
+  <div id="th-err" style="display:none;background:rgba(255,80,80,.12);border:1px solid rgba(255,80,80,.35);color:#ff9a9a;padding:8px 10px;border-radius:6px;font-size:12px;margin-bottom:10px"></div>
+  <div id="th-timeline" style="max-height:300px;overflow-y:auto;padding-right:4px"></div>
+  <div id="th-compose" style="margin-top:12px">
+    <textarea id="th-text" rows="2" placeholder="Type a message…" style="width:100%;background:var(--bg-input,#12161c);color:inherit;border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-sm btn-green" onclick="sendThreadMessage()">Send text</button>
+      <button class="btn btn-sm btn-outline" onclick="createLeadFromThread()">Save as lead</button>
+    </div>
+  </div>
+</div>
+</div>
+
 <!-- LEAD DETAIL MODAL -->
 <div class="modal-overlay" id="lead-detail-modal" onclick="if(event.target===this)closeModal(this.id)">
 <div class="modal" style="max-width:640px">
   <h2 id="ld-name" style="margin-bottom:4px">Lead</h2>
   <div id="ld-contact" style="color:var(--text-muted);font-size:13px;margin-bottom:20px"></div>
-  <div id="ld-stage-wrap" style="margin:12px 0 4px"></div>
+<div id="ld-stage-wrap" style="margin:12px 0 4px"></div>
   <div class="detail-tabs">
     <div class="detail-tab active" data-tab="info" onclick="showDetailTab('info')">Info</div>
     <div class="detail-tab" data-tab="messages" onclick="showDetailTab('messages')">Messages</div>
@@ -590,8 +606,84 @@ async function loadDashComms() {
 function openLeadByPhone(phone) {
   const d = String(phone||'').replace(/\D/g,'').slice(-10);
   const lead = allLeads.find(l => String(l.phone||'').replace(/\D/g,'').slice(-10) === d);
-  if (lead) { openLeadDetail(lead.id); showDetailTab('messages'); }
-  else alert('No lead matches ' + fmtPhone(phone));
+  if (lead) { openLeadDetail(lead.id); showDetailTab('messages'); return; }
+  // Not every conversation belongs to a lead — people text the business number
+  // directly. Dead-ending on "no lead matches" meant those went unanswered, so
+  // open the thread on its own instead.
+  openThreadByPhone(phone);
+}
+
+// ── STANDALONE THREAD (no lead required) ──
+let __thConv = null;
+let __thPhone = null;
+
+async function openThreadByPhone(phone) {
+  __thPhone = phone; __thConv = null;
+  document.getElementById('th-title').textContent = fmtPhone(phone);
+  document.getElementById('th-sub').textContent = 'Not linked to a lead';
+  document.getElementById('th-err').style.display = 'none';
+  document.getElementById('th-timeline').innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
+  openModal('thread-modal');
+
+  const fc = await commApi('findOrCreate', { method: 'POST', body: { phone } });
+  if (!fc.ok || !fc.conversation) {
+    document.getElementById('th-timeline').innerHTML = '<p style="color:var(--text-muted)">Could not open this thread.</p>';
+    return;
+  }
+  __thConv = fc.conversation;
+  const t = await commApi('thread', { query: { conversationId: __thConv.id, limit: 100 } });
+  const msgs = (t.ok && t.messages) ? t.messages : [];
+  if (t.ok && t.conversation) __thConv = t.conversation;
+
+  const el = document.getElementById('th-timeline');
+  el.innerHTML = msgs.length ? msgs.map(m =>
+      '<div style="margin:8px 0;display:flex;'+(m.direction==='outbound'?'justify-content:flex-end':'')+'">'
+    + '<div style="max-width:80%;background:'+(m.direction==='outbound'?'rgba(90,160,255,.14)':'rgba(255,255,255,.06)')+';border:1px solid var(--border);border-radius:8px;padding:8px 10px">'
+    + '<div style="font-size:13px;white-space:pre-wrap">'+esc(m.body||'')+'</div>'
+    + '<div style="font-size:11px;color:var(--text-muted);margin-top:4px">'+fmtStamp(m.created_at)
+    + (m.direction==='outbound' ? ' · '+esc(m.status||'') : ' · received')+'</div></div></div>'
+  ).join('') : '<p style="color:var(--text-muted)">No messages yet</p>';
+  el.scrollTop = el.scrollHeight;
+
+  if (__thConv.opted_out_at) {
+    const e = document.getElementById('th-err');
+    e.style.display = 'block'; e.textContent = 'This number replied STOP. Texting is disabled.';
+    document.getElementById('th-compose').style.display = 'none';
+  } else {
+    document.getElementById('th-compose').style.display = 'block';
+  }
+}
+
+async function sendThreadMessage() {
+  if (!__thConv) return;
+  const ta = document.getElementById('th-text');
+  const body = (ta.value||'').trim();
+  if (!body) return;
+  const r = await commApi('send', { method: 'POST',
+    body: { conversationId: __thConv.id, body, idempotencyKey: 'crm-th-'+__thConv.id+'-'+Date.now() } });
+  if (!r.ok) {
+    const e = document.getElementById('th-err');
+    e.style.display='block'; e.textContent = (r.error && r.error.message) || 'Send failed.';
+    return;
+  }
+  ta.value = '';
+  openThreadByPhone(__thPhone);
+}
+
+// Promote an unknown number into a real lead so it stops living only in the inbox.
+async function createLeadFromThread() {
+  if (!__thPhone) return;
+  const name = prompt('Name for this new lead?');
+  if (name === null) return;
+  const r = await apiSend('POST', '/leads', { name: (name||'').trim() || 'Unknown', phone: __thPhone });
+  if (!r || r.ok === false) {
+    const e = document.getElementById('th-err');
+    e.style.display='block'; e.textContent = 'Could not create lead: ' + ((r && r.error) || 'unknown');
+    return;
+  }
+  closeModal('thread-modal');
+  await loadLeads();
+  openLeadByPhone(__thPhone);
 }
 
 // ── DASHBOARD ──
