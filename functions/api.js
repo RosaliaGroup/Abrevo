@@ -414,6 +414,16 @@ exports.handler = async (event) => {
     }
     // Manual stage change from the lead card. Records who moved it and when, so
     // an operator override is distinguishable from an automatic transition.
+    // Email history for one lead. Fetched per-lead rather than included in the
+    // 500-row list: these are full email bodies and would bloat every page load.
+    // NOTE: only the most recent reply is retained — readmail overwrites
+    // email_reply each time — so this is the latest exchange, not a full thread.
+    if (route.startsWith("/leads/") && route.endsWith("/emails") && method === "GET") {
+      const id = route.slice("/leads/".length, -"/emails".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+      const rows = await sbGet(`leads?id=eq.${encodeURIComponent(id)}&select=message,email_reply,replied_at,created_at,source&limit=1`);
+      return json(200, { ok: true, data: Array.isArray(rows) && rows[0] ? rows[0] : null });
+    }
     if (route.startsWith("/leads/") && method === "PATCH") {
       if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
       const id = route.slice("/leads/".length);
