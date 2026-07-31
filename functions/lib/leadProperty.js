@@ -145,4 +145,24 @@ function extractProperty(body, subject) {
   return null;
 }
 
-module.exports = { extractProperty, KNOWN_BUILDINGS };
+/**
+ * Derive the building from the lead's `client` value.
+ *
+ * Some sources write the building into `client` instead of `property` — the
+ * Iron 65 tour-request confirmations arrive with
+ * client = 'Iron 65 - 65 McWhorter St, Newark NJ' and no property at all, and
+ * their body ("Thank you X for requesting a tour with us") names no building
+ * for extractProperty to find. This recovers it.
+ *
+ * 'rosalia' and 'mechanical' are tenant identifiers, not buildings, so they
+ * yield nothing.
+ */
+function propertyFromClient(client) {
+  const c = String(client || '').trim();
+  if (!c) return null;
+  if (/^(rosalia|mechanical)$/i.test(c)) return null;
+  if (/iron\s*-?\s*65|mcwhorter/i.test(c)) return 'Iron 65';
+  return canonicalise(c);
+}
+
+module.exports = { extractProperty, propertyFromClient, KNOWN_BUILDINGS };

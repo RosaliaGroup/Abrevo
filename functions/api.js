@@ -421,7 +421,7 @@ exports.handler = async (event) => {
     if (route.startsWith("/leads/") && route.endsWith("/emails") && method === "GET") {
       const id = route.slice("/leads/".length, -"/emails".length);
       if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
-      const rows = await sbGet(`leads?id=eq.${encodeURIComponent(id)}&select=message,email_reply,replied_at,created_at,source&limit=1`);
+      const rows = await sbGet(`leads?id=eq.${encodeURIComponent(id)}&select=message,email_reply,replied_at,created_at,source,notes,email&limit=1`);
       return json(200, { ok: true, data: Array.isArray(rows) && rows[0] ? rows[0] : null });
     }
     if (route.startsWith("/leads/") && method === "PATCH") {

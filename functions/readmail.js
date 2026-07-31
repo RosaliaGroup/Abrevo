@@ -81,7 +81,7 @@ const { getPropertyMedia } = require('./lib/propertyMedia');
 const { sendSMS } = require('./lib/sms');
 const { getGoogleCredentials } = require('./lib/googleCreds');
 const { cleanName } = require('./lib/leadName');
-const { extractProperty } = require('./lib/leadProperty');
+const { extractProperty, propertyFromClient } = require('./lib/leadProperty');
 
 const VAPI_KEY = process.env.VAPI_KEY;
 
@@ -1470,6 +1470,7 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone, cl
         replied_at: new Date().toISOString(),
         email_reply: replyText,
         phone: existing[0].phone || phone || null,  // keep existing phone; only fill if missing
+        property: existing[0].property || extractProperty(body, subject) || propertyFromClient(client) || null,
       }),
     });
     return existing[0];
@@ -1489,7 +1490,7 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone, cl
       source: 'email',
       message: body?.substring(0, 500) || subject,
       client: client || 'rosalia',
-      property: extractProperty(body, subject),
+      property: extractProperty(body, subject) || propertyFromClient(client),
       status: 'lead',
       replied_at: new Date().toISOString(),
       follow_up_count: 0,
