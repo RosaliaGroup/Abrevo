@@ -2278,8 +2278,7 @@ exports.handler = async (event) => {
         if (phone) {
           const existingLead = await getLeadData(fromEmail);
           const hadPhone = existingLead?.phone && existingLead.phone.replace(/\D/g, '').length >= 10;
-          const propertyMatch = subject.match(/for\s+(.+?)(?:,\s*Unit|\s*$)/i);
-          const propertyName = propertyMatch ? propertyMatch[1].trim() : '';
+          const propertyName = extractProperty(body, subject) || propertyFromClient(leadClient) || '';
           const smsBookingUrl = leadClient === 'iron65' ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
           // Send SMS immediately: new lead OR phone newly provided in reply
           const shouldSendSMS = !hadPhone || !isReply;

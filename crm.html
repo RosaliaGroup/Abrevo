@@ -251,6 +251,9 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     <select id="lead-filter-source" onchange="loadLeads()"><option value="">All Sources</option><option value="email">Email</option><option value="zillow">Zillow</option><option value="avail">Avail</option><option value="webflow">Webflow</option><option value="fub">FUB</option><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="phone">Phone</option></select>
     <select id="lead-filter-agent" onchange="loadLeads()"><option value="">All Agents</option></select>
     <input type="text" id="lead-search" placeholder="Search name or email..." oninput="loadLeads()" style="min-width:200px">
+    <input type="text" id="comm-search" placeholder="Search texts, emails, calls..." onkeydown="if(event.key==='Enter')searchComms()" style="min-width:230px">
+    <button class="btn btn-sm btn-outline" onclick="searchComms()">Search</button>
+    <button class="btn btn-sm btn-outline" id="comm-clear" onclick="clearCommSearch()" style="display:none">Clear</button>
   </div>
   <div class="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Source</th><th>Property</th><th>Status</th><th>Assigned</th><th>Last Contact</th><th>Actions</th></tr></thead><tbody id="leads-body"></tbody></table></div>
 </div>
@@ -739,6 +742,30 @@ async function changeStage(id, status) {
   loadLeads();
 }
 
+// ── SEARCH COMMUNICATIONS ──
+// The existing filter only matches name and email. This searches what was
+// actually SAID — text bodies, email bodies, our replies, call summaries and
+// transcripts — which is how you find "the person who asked about parking".
+let __commResults = null;
+
+async function searchComms() {
+  const q = (document.getElementById('comm-search').value || '').trim();
+  if (q.length < 2) { alert('Type at least 2 characters.'); return; }
+  const rows = await apiGet('/search/comms?q=' + encodeURIComponent(q));
+  if (rows === null) { alert('Search failed.'); return; }
+  __commResults = rows;
+  document.getElementById('comm-clear').style.display = '';
+  loadLeads();
+  if (!rows.length) alert('Nothing found mentioning "' + q + '".');
+}
+
+function clearCommSearch() {
+  __commResults = null;
+  document.getElementById('comm-search').value = '';
+  document.getElementById('comm-clear').style.display = 'none';
+  loadLeads();
+}
+
 // ── EDIT LEAD ──
 // Contact details arrive from whatever parsed the source email, and they're often
 // incomplete — a Zillow lead with no phone, a name that came through as an email
@@ -829,7 +856,10 @@ async function loadLeads() {
   const agent = document.getElementById('lead-filter-agent').value;
   const search = (document.getElementById('lead-search').value||'').toLowerCase();
 
-  let filtered = allLeads;
+  // A communications search replaces the source list entirely — the matches
+  // come from the server, not from allLeads, since they're found by what was
+  // said rather than by name.
+  let filtered = __commResults || allLeads;
   if (status) filtered = filtered.filter(l => (l.status||'').toLowerCase() === status);
   if (source) filtered = filtered.filter(l => (l.source||'').toLowerCase().includes(source));
   if (agent) filtered = filtered.filter(l => l.assigned_to === agent);
@@ -1005,12 +1035,16 @@ function renderLeadTimeline(messages, calls, emails) {
     }
     if (it.kind === 'email') {
       const out = it.dir === 'out';
-      return '<div style="margin:8px 0;padding:9px 11px;border-left:3px solid '+(out?'rgba(90,160,255,.6)':'var(--text-muted)')+';background:rgba(255,255,255,.03);border-radius:6px">'
-        + '<div style="font-size:11px;color:var(--text-muted)">'+fmtStamp(it.at)+' &middot; '+(out?'Email sent':'Email received')
+      // Aligned like the text bubbles — inbound left, outbound right — so the
+      // timeline reads as one conversation rather than texts interrupted by
+      // full-width email blocks. The envelope icon marks the channel.
+      return '<div style="margin:8px 0;display:flex;'+(out?'justify-content:flex-end':'')+'">'
+        + '<div style="max-width:80%;padding:9px 11px;border-'+(out?'right':'left')+':3px solid '+(out?'rgba(90,160,255,.6)':'var(--text-muted)')+';background:rgba(255,255,255,.03);border-radius:6px">'
+        + '<div style="font-size:11px;color:var(--text-muted)">'+fmtStamp(it.at)+' &middot; '+(out?'\u2709 Email sent':'\u2709 Email received')
         + (it.addr ? ' &middot; '+esc(out?'to '+it.addr:'from '+it.addr) : '')+'</div>'
         + (it.subj ? '<div style="font-size:12px;color:var(--gold);margin-top:2px">'+esc(it.subj)+'</div>' : '')
         + '<div style="font-size:13px;margin-top:4px;white-space:pre-wrap">'+esc(it.body.slice(0,600))+(it.body.length>600?'…':'')+'</div>'
-        + '</div>';
+        + '</div></div>';
     }
     const c = it.c;
     const flags = Array.isArray(c.flags) && c.flags.length

@@ -418,6 +418,39 @@ exports.handler = async (event) => {
     // 500-row list: these are full email bodies and would bloat every page load.
     // NOTE: only the most recent reply is retained — readmail overwrites
     // email_reply each time — so this is the latest exchange, not a full thread.
+    // Search across communications, not just name/email. `q` is matched against
+    // email bodies, our replies, call summaries and transcripts, and text message
+    // bodies. Each channel is queried separately and the lead ids unioned —
+    // PostgREST can't join messages -> conversations -> leads in one request.
+    if (route === "/search/comms" && method === "GET") {
+      const q = vStr(qs.q, 100, "q", true);
+      if (q.length < 2) return json(400, { ok: false, error: "query_too_short" });
+      const like = `*${encodeURIComponent(q)}*`;
+      const ids = new Set();
+      const channels = {};
+
+      const emailRows = await sbGet(`leads?or=(message.ilike.${like},email_reply.ilike.${like})&select=id&limit=200`);
+      (emailRows || []).forEach((r) => { ids.add(r.id); channels[r.id] = "email"; });
+
+      const callRows = await sbGet(`calls?or=(summary.ilike.${like},transcript.ilike.${like})&select=lead_id&limit=200`);
+      (callRows || []).forEach((r) => { if (r.lead_id) { ids.add(r.lead_id); channels[r.lead_id] = channels[r.lead_id] || "call"; } });
+
+      // Texts: find matching messages, map to conversations, then to leads by phone.
+      const msgRows = await sbGet(`messages?body=ilike.${like}&select=conversation_id&limit=200`);
+      const convIds = [...new Set((msgRows || []).map((m) => m.conversation_id).filter(Boolean))];
+      if (convIds.length) {
+        const convs = await sbGet(`conversations?id=in.(${convIds.join(",")})&select=normalized_phone&limit=200`);
+        const last10 = (convs || []).map((c) => String(c.normalized_phone || "").replace(/\D/g, "").slice(-10)).filter(Boolean);
+        for (const d of [...new Set(last10)].slice(0, 40)) {
+          const hit = await sbGet(`leads?phone=ilike.*${d}*&select=id&limit=3`);
+          (hit || []).forEach((r) => { ids.add(r.id); channels[r.id] = channels[r.id] || "text"; });
+        }
+      }
+
+      if (ids.size === 0) return json(200, { ok: true, data: [] });
+      const leads = await sbGet(`leads?id=in.(${[...ids].join(",")})&select=id,name,email,phone,property,status,created_at&limit=200`);
+      return json(200, { ok: true, data: (leads || []).map((l) => ({ ...l, matched_in: channels[l.id] || "text" })) });
+    }
     if (route.startsWith("/leads/") && route.endsWith("/emails") && method === "GET") {
       const id = route.slice("/leads/".length, -"/emails".length);
       if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
