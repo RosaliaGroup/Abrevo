@@ -1016,7 +1016,11 @@ function renderLeadTimeline(messages, calls, emails) {
     if (inb) items.push({ at: emails.created_at, kind: 'email', dir: 'in', body: inb, subj, addr });
     if (emails.email_reply) items.push({ at: emails.replied_at || emails.created_at, kind: 'email', dir: 'out', body: emails.email_reply, subj, addr });
   }
-  items.sort((a,b) => String(a.at||'').localeCompare(String(b.at||'')));
+  // Tie-break on direction: readmail stores the inbound email and its reply with
+  // timestamps in the same second, so a plain time sort can show the reply above
+  // the message it answers. Inbound always comes first at equal times.
+  const rank = (it) => (it.kind === 'email' ? (it.dir === 'in' ? 0 : 1) : (it.m && it.m.direction === 'inbound' ? 0 : 1));
+  items.sort((a,b) => String(a.at||'').localeCompare(String(b.at||'')) || rank(a) - rank(b));
 
   const el = document.getElementById('ld-timeline');
   if (!items.length) {
