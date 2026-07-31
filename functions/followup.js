@@ -60,7 +60,10 @@ const transporter = nodemailer.createTransport({
 
 async function sendFollowUpEmail(lead, attempt) {
   if (!lead.email || lead.email.includes('reply.avail.co') || lead.email.includes('convo.zillow')) return;
-  const isIron65 = lead.client === 'iron65';
+  // Loose match: client has historically held the full building string as well
+  // as 'iron65', and property is checked too, so a lead is routed by the
+  // building they asked about even when client is wrong.
+  const isIron65 = /iron\s*-?\s*65|mcwhorter/i.test(`${lead.client || ''} ${lead.property || ''}`);
   const bookingUrl = isIron65 ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
 
   // Improve wording via Claude; validate; fall back to a static template on any
@@ -96,7 +99,10 @@ async function sendFollowUpEmail(lead, attempt) {
 
 async function sendFollowUpSMS(lead, attempt) {
   if (!lead.phone) return;
-  const isIron65 = lead.client === 'iron65';
+  // Loose match: client has historically held the full building string as well
+  // as 'iron65', and property is checked too, so a lead is routed by the
+  // building they asked about even when client is wrong.
+  const isIron65 = /iron\s*-?\s*65|mcwhorter/i.test(`${lead.client || ''} ${lead.property || ''}`);
   const bookingUrl = isIron65 ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
   const msg = buildSMS(lead, attempt, bookingUrl);
   // Route through the shared Telnyx sender (functions/lib/sms.js). buildSMS()

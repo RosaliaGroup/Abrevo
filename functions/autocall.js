@@ -49,6 +49,10 @@ async function findLeadsToCall() {
     // filter named survey_completed/needs_specialist, which no longer exist
     // after the FUB ladder migration — leads at 'contacted' or 'appt_set'
     // were still being picked up.
+    // Rosalia-side only. Without this a Mechanical Enterprise lead gets called by
+    // Alex, Rosalia's LEASING assistant, and texted a Rosalia apartment booking
+    // link — the wrong brand entirely. 1,100 mechanical leads sit in this table.
+    `client=neq.mechanical&` +
     `status=neq.dnc&` +
     `status=neq.contacted&` +
     `status=neq.appt_set&` +
@@ -216,7 +220,13 @@ exports.handler = async (event) => {
           continue;
         }
 
-        const isIron65 = lead.client === 'iron65';
+        // Matched loosely on purpose. The client column has historically held
+        // 'Iron 65 - 65 McWhorter St, Newark NJ' as well as 'iron65', and an
+        // exact comparison silently routed those 272 leads to Rosalia's
+        // assistant and booking URL. The property is checked too, so a lead is
+        // routed by which building they asked about even if client is wrong.
+        const brand = `${lead.client || ''} ${lead.property || ''}`;
+        const isIron65 = /iron\s*-?\s*65|mcwhorter/i.test(brand);
         const assistantId = isIron65 ? JESSICA_ASSISTANT_ID : VAPI_ASSISTANT_ID;
         const phoneId = isIron65 ? JESSICA_PHONE_ID : VAPI_PHONE_ID;
         const bookingUrl = isIron65 ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
