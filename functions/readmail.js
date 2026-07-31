@@ -82,6 +82,7 @@ const { sendSMS } = require('./lib/sms');
 const { getGoogleCredentials } = require('./lib/googleCreds');
 const { cleanName } = require('./lib/leadName');
 const { extractProperty, propertyFromClient } = require('./lib/leadProperty');
+const { logEmail } = require('./lib/emailLog');
 
 const VAPI_KEY = process.env.VAPI_KEY;
 
@@ -1453,7 +1454,24 @@ async function buildAndSendLeadText(phone, leadName, property, bookingUrl) {
   return result;
 }
 
-async function saveLead(fromEmail, fromName, subject, body, replyText, phone, client) {
+// Store the inbound email and our reply as separate rows, so the lead card shows
+// a real thread rather than only the most recent exchange (email_reply used to be
+// overwritten each time). Never throws — replying to leads matters more than
+// logging it.
+async function recordEmails(leadId, fromEmail, subject, body, replyText, messageId) {
+  try {
+    await logEmail({ leadId, direction: 'inbound', subject, body,
+                     fromEmail, toEmail: 'inquiries@rosaliagroup.com', messageId });
+    if (replyText) {
+      await logEmail({ leadId, direction: 'outbound', subject: subject ? `Re: ${subject}` : null,
+                       body: replyText, fromEmail: 'inquiries@rosaliagroup.com', toEmail: fromEmail });
+    }
+  } catch (e) {
+    console.warn('[readmail] email logging failed:', e.message);
+  }
+}
+
+async function saveLead(fromEmail, fromName, subject, body, replyText, phone, client, messageId) {
   const checkRes = await fetch(
     `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(fromEmail)}&limit=1`,
     { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
@@ -1473,6 +1491,7 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone, cl
         property: existing[0].property || extractProperty(body, subject) || propertyFromClient(client) || null,
       }),
     });
+    await recordEmails(existing[0].id, fromEmail, subject, body, replyText, messageId);
     return existing[0];
   }
   const res = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
@@ -1501,7 +1520,9 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone, cl
   const text = await res.text();
   try {
     const saved = JSON.parse(text);
-    return Array.isArray(saved) ? saved[0] : saved;
+    const lead = Array.isArray(saved) ? saved[0] : saved;
+    if (lead && lead.id) await recordEmails(lead.id, fromEmail, subject, body, replyText, messageId);
+    return lead;
   } catch (e) { return null; }
 }
 
@@ -2150,7 +2171,7 @@ exports.handler = async (event) => {
         // For FUB leads with no real email (Facebook/Instagram leads) — skip email reply, use SMS+call only
         if (isFUB && !realEmail) {
           console.log('FUB lead with no email (Facebook/Instagram) — skipping email reply, SMS+call only');
-          await saveLead(fromEmail, realName || fromName, subject, body, null, phone, leadClient);
+          await saveLead(fromEmail, realName || fromName, subject, body, null, phone, leadClient, parsed.messageId);
           await notifyAna(realName || fromName || from, subject, phone, false);
           if (phone) {
             const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
@@ -2261,7 +2282,7 @@ exports.handler = async (event) => {
           const ccEmail = avail && realEmail && realEmail !== fromEmail ? realEmail : null;
           await sendReply(replyTarget, subject, replyText, ccEmail);
         }
-        await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone, leadClient);
+        await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone, leadClient, parsed.messageId);
         // Business hours check BEFORE notifying Ana
         let callAllowed = false;
         if (phone) {

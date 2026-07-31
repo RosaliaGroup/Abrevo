@@ -46,6 +46,22 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold)}
 /* Table */
 .table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto}
 table{width:100%;border-collapse:collapse}
+/* Leads table: fixed layout with declared widths, FUB-style. Auto layout sizes
+   every column to its widest cell, which is how NAME ended up taking a third of
+   the width. Long values now ellipsis instead of stretching the row. */
+#leads-table{table-layout:fixed}
+#leads-table td{overflow:hidden;text-overflow:ellipsis}
+#leads-table td:first-child{font-weight:500}
+#leads-table .col-name{width:16%}
+#leads-table .col-contact{width:19%}
+#leads-table .col-source{width:8%}
+#leads-table .col-property{width:14%}
+#leads-table .col-stage{width:12%}
+#leads-table .col-agent{width:10%}
+#leads-table .col-last{width:14%}
+#leads-table .col-actions{width:7%}
+/* Contact and Last Contact stack two lines, so they can't be nowrap. */
+#leads-table td.wrap{white-space:normal;line-height:1.35}
 th{text-align:left;padding:12px 16px;font-size:11px;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;border-bottom:1px solid var(--border);font-weight:500;white-space:nowrap}
 td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;white-space:nowrap}
 tr:hover td{background:rgba(201,168,76,0.03)}
@@ -255,7 +271,7 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     <button class="btn btn-sm btn-outline" onclick="searchComms()">Search</button>
     <button class="btn btn-sm btn-outline" id="comm-clear" onclick="clearCommSearch()" style="display:none">Clear</button>
   </div>
-  <div class="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Source</th><th>Property</th><th>Status</th><th>Assigned</th><th>Last Contact</th><th>Actions</th></tr></thead><tbody id="leads-body"></tbody></table></div>
+  <div class="table-wrap"><table id="leads-table"><thead><tr><th class="col-name">Name</th><th class="col-contact">Contact</th><th class="col-source">Source</th><th class="col-property">Property</th><th class="col-stage">Stage</th><th class="col-agent">Assigned</th><th class="col-last">Last Contact</th><th class="col-actions"></th></tr></thead><tbody id="leads-body"></tbody></table></div>
 </div>
 
 <!-- DEAL PIPELINE -->
@@ -877,7 +893,9 @@ async function loadLeads() {
         + '<div style="font-size:11px;color:var(--gold)">replied ' + fmtStamp(l.last_inbound_at) + '</div>'
       : '<div style="font-size:12px;color:var(--text-muted)">' + fmtDate(l.last_contact_at || l.created_at) + '</div>';
     const actions = (l.phone ? '<a class="action-btn" href="tel:'+esc(l.phone)+'">Call</a> <a class="action-btn" href="#" onclick="event.preventDefault();openLeadMessages(\''+l.id+'\');return false;">Text</a> ' : '') + '<a class="action-btn" href="mailto:'+esc(l.email||'')+'">Email</a>';
-    return '<tr onclick="openLeadDetail(\''+l.id+'\')"><td>'+esc(l.name||'Unknown')+'</td><td>'+esc(l.email||'-')+'<br><small style="color:var(--text-muted)">'+ph+'</small></td><td>'+esc(l.source||'-')+'</td><td>'+esc(l.property||'-')+'</td><td>'+statusBadge(l.status)+'</td><td>'+agentName(l.assigned_to)+'</td><td>'+lastComm+'</td><td onclick="event.stopPropagation()">'+actions+'</td></tr>';
+    // .wrap on the two-line cells: fixed layout + nowrap would clip the second
+    // line, and these are the cells worth reading at a glance.
+    return '<tr onclick="openLeadDetail(\''+l.id+'\')"><td title="'+esc(l.name||'')+'">'+esc(l.name||'Unknown')+'</td><td class="wrap">'+esc(l.email||'-')+'<br><small style="color:var(--text-muted)">'+ph+'</small></td><td>'+esc(l.source||'-')+'</td><td>'+esc(l.property||'-')+'</td><td>'+statusBadge(l.status)+'</td><td>'+agentName(l.assigned_to)+'</td><td class="wrap">'+lastComm+'</td><td onclick="event.stopPropagation()">'+actions+'</td></tr>';
   }).join('');
 }
 
@@ -1006,10 +1024,16 @@ function renderLeadTimeline(messages, calls, emails) {
   const items = [];
   (messages||[]).forEach(m => items.push({ at: m.created_at, kind: 'msg', m }));
   (calls||[]).forEach(c => items.push({ at: c.created_at, kind: 'call', c }));
-  if (emails) {
-    // The subject is the only record of where an email actually came from —
-    // "Thank you for requesting a tour!" vs a Zillow or Apartments.com alert.
-    // readmail stores it as the first line of notes.
+  if (emails && Array.isArray(emails.thread)) {
+    // Full thread from the emails table — every exchange, not just the latest.
+    emails.thread.forEach(e => {
+      const isIn = e.direction === 'inbound';
+      const body = isIn ? cleanEmailBody(e.body) : (e.body || '');
+      if (body) items.push({ at: e.created_at, kind: 'email', dir: isIn ? 'in' : 'out',
+                             body, subj: e.subject || '', addr: (isIn ? e.from_email : e.to_email) || '' });
+    });
+  } else if (emails) {
+    // Legacy shape: the two columns on the lead, for records that predate the table.
     const subj = (String(emails.notes || '').match(/^Subject:\s*(.+)$/m) || [])[1] || '';
     const addr = emails.email || '';
     const inb = cleanEmailBody(emails.message);
