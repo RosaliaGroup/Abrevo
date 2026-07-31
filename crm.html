@@ -224,8 +224,20 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     <div class="stat-card"><div class="label">Tours This Week</div><div class="value" id="stat-tours-week">-</div></div>
     <div class="stat-card"><div class="label">Commission Pending</div><div class="value" id="stat-commission">-</div></div>
   </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+    <div>
+      <h2 style="margin-bottom:12px;display:flex;align-items:center;gap:8px">Needs a reply
+        <span id="dash-awaiting-count" style="font-size:12px;background:var(--gold);color:#000;border-radius:10px;padding:1px 8px"></span>
+      </h2>
+      <div id="dash-awaiting" style="max-height:340px;overflow-y:auto"></div>
+    </div>
+    <div>
+      <h2 style="margin-bottom:12px">Recent conversations</h2>
+      <div id="dash-recent" style="max-height:340px;overflow-y:auto"></div>
+    </div>
+  </div>
   <h2 style="margin-bottom:16px">Recent Leads</h2>
-  <div class="table-wrap"><table><thead><tr><th>Name</th><th>Source</th><th>Property</th><th>Status</th><th>Date</th></tr></thead><tbody id="dash-leads-body"></tbody></table></div>
+  <div class="table-wrap"><table><thead><tr><th>Name</th><th>Source</th><th>Property</th><th>Stage</th><th>Date</th></tr></thead><tbody id="dash-leads-body"></tbody></table></div>
 </div>
 
 <!-- LEADS -->
@@ -235,7 +247,7 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     <button class="btn btn-gold" onclick="openModal('add-lead-modal')">+ Add Lead</button>
   </div>
   <div class="filters">
-    <select id="lead-filter-status" onchange="loadLeads()"><option value="">All Status</option><option value="new">New</option><option value="contacted">Contacted</option><option value="touring">Touring</option><option value="applied">Applied</option><option value="closed">Closed</option><option value="lost">Lost</option></select>
+    <select id="lead-filter-status" onchange="loadLeads()"><option value="">All Status</option><option value="lead">Lead</option><option value="attempted">Attempted contact</option><option value="contacted">Contacted</option><option value="appt_set">Appointment Set</option><option value="applied">Applied</option><option value="rented">Rented</option><option value="dnc">Do Not Contact</option></select>
     <select id="lead-filter-source" onchange="loadLeads()"><option value="">All Sources</option><option value="email">Email</option><option value="zillow">Zillow</option><option value="avail">Avail</option><option value="webflow">Webflow</option><option value="fub">FUB</option><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="phone">Phone</option></select>
     <select id="lead-filter-agent" onchange="loadLeads()"><option value="">All Agents</option></select>
     <input type="text" id="lead-search" placeholder="Search name or email..." oninput="loadLeads()" style="min-width:200px">
@@ -405,6 +417,7 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 <div class="modal" style="max-width:640px">
   <h2 id="ld-name" style="margin-bottom:4px">Lead</h2>
   <div id="ld-contact" style="color:var(--text-muted);font-size:13px;margin-bottom:20px"></div>
+  <div id="ld-stage-wrap" style="margin:12px 0 4px"></div>
   <div class="detail-tabs">
     <div class="detail-tab active" data-tab="info" onclick="showDetailTab('info')">Info</div>
     <div class="detail-tab" data-tab="messages" onclick="showDetailTab('messages')">Messages</div>
@@ -525,11 +538,61 @@ function fmtStamp(d) {
   return isToday ? t : dt.toLocaleDateString([], { month: 'numeric', day: 'numeric' }) + ' ' + t;
 }
 function fmtPhone(p) { if (!p) return '-'; const d = p.replace(/\D/g,''); if (d.length===11 && d[0]==='1') return '('+d.slice(1,4)+') '+d.slice(4,7)+'-'+d.slice(7); if (d.length===10) return '('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6); return p; }
-function statusBadge(s) { const cls = {'new':'badge-new','contacted':'badge-contacted','touring':'badge-touring','applied':'badge-applied','closed':'badge-closed','lost':'badge-lost'}; return '<span class="badge '+(cls[s]||'badge-new')+'">'+esc(s||'new')+'</span>'; }
+function statusBadge(s) {
+  // Reuses the existing badge palette; the ladder changed, the colours didn't.
+  const cls = {'lead':'badge-new','attempted':'badge-touring','contacted':'badge-contacted',
+               'appt_set':'badge-touring','applied':'badge-applied','rented':'badge-closed','dnc':'badge-lost'};
+  return '<span class="badge '+(cls[s]||'badge-new')+'">'+esc(stageLabel(s))+'</span>';
+}
 function agentName(id) { const a = allAgents.find(a => a.id === id); return a ? a.name : 'Unassigned'; }
+
+// ── DASHBOARD: COMMUNICATIONS ──
+// Two views of the same thread list. "Needs a reply" is the triage queue —
+// conversations where THEY spoke last. "Recent" is everything, newest first.
+async function loadDashComms() {
+  const awaitingEl = document.getElementById('dash-awaiting');
+  const recentEl = document.getElementById('dash-recent');
+  if (!awaitingEl || !recentEl) return;
+  awaitingEl.innerHTML = recentEl.innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
+
+  const r = await commApi('listConversations', { query: { limit: 50 } });
+  if (!r.ok || !Array.isArray(r.conversations)) {
+    awaitingEl.innerHTML = recentEl.innerHTML = '<p style="color:var(--text-muted)">Unavailable</p>';
+    return;
+  }
+
+  const card = (c, highlight) =>
+    '<div onclick="openLeadByPhone(\''+esc(c.normalized_phone)+'\')" style="cursor:pointer;padding:9px 11px;margin-bottom:7px;border-radius:6px;'
+    + 'background:rgba(255,255,255,.04);border-left:3px solid '+(highlight?'var(--gold)':'transparent')+'">'
+    + '<div style="display:flex;justify-content:space-between;gap:8px">'
+    + '<span style="font-size:13px">'+esc(fmtPhone(c.normalized_phone))+'</span>'
+    + '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap">'+fmtStamp(c.last_message_at)+'</span></div>'
+    + '<div style="font-size:12px;color:var(--text-muted);margin-top:3px">'
+    + (c.last_message_direction === 'inbound' ? '' : '<span style="color:var(--text-muted)">You: </span>')
+    + esc((c.last_message_preview||'').slice(0,58))+'</div></div>';
+
+  const awaiting = r.conversations.filter(c => c.last_message_direction === 'inbound');
+  document.getElementById('dash-awaiting-count').textContent = awaiting.length || '';
+  awaitingEl.innerHTML = awaiting.length
+    ? awaiting.map(c => card(c, true)).join('')
+    : '<p style="color:var(--text-muted)">Nothing waiting — every thread has been answered.</p>';
+  recentEl.innerHTML = r.conversations.length
+    ? r.conversations.map(c => card(c, false)).join('')
+    : '<p style="color:var(--text-muted)">No conversations yet</p>';
+}
+
+// Jump from a conversation card to the matching lead, matched on the last 10
+// digits — the same convention used server-side.
+function openLeadByPhone(phone) {
+  const d = String(phone||'').replace(/\D/g,'').slice(-10);
+  const lead = allLeads.find(l => String(l.phone||'').replace(/\D/g,'').slice(-10) === d);
+  if (lead) { openLeadDetail(lead.id); showDetailTab('messages'); }
+  else alert('No lead matches ' + fmtPhone(phone));
+}
 
 // ── DASHBOARD ──
 async function loadDashboard() {
+  loadDashComms();   // side-by-side comms panels; independent of the stats below
   const today = new Date().toISOString().split('T')[0];
   const weekAgo = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
 
@@ -567,6 +630,34 @@ function populateAgentDropdowns() {
   });
 }
 
+// Manual stage override. The server allow-lists the value and records who moved
+// it, so an operator change is distinguishable from an automatic transition.
+async function changeStage(id, status) {
+  const sel = document.getElementById('ld-stage');
+  if (sel) sel.disabled = true;
+  const r = await apiSend('PATCH', '/leads/' + id, { status });
+  if (sel) sel.disabled = false;
+  if (!r || r.ok === false) { alert('Could not change stage.'); return; }
+  const lead = allLeads.find(l => l.id === id);
+  if (lead) lead.status = status;
+  loadLeads();
+}
+
+// ── LEAD STAGES (FUB ladder) ──
+// Named LEAD_STAGES because STAGES is already taken by the deal pipeline.
+// Order matters: it's the progression shown in the dropdown.
+const LEAD_STAGES = [
+  ['lead',      'Lead'],
+  ['attempted', 'Attempted contact'],
+  ['contacted', 'Contacted'],
+  ['appt_set',  'Appointment Set'],
+  ['applied',   'Applied'],
+  ['rented',    'Rented'],
+  ['dnc',       'Do Not Contact'],
+];
+const STAGE_LABEL = Object.fromEntries(LEAD_STAGES);
+function stageLabel(v) { return STAGE_LABEL[v] || v || '-'; }
+
 // ── LEADS ──
 async function loadLeads() {
   const status = document.getElementById('lead-filter-status').value;
@@ -585,8 +676,14 @@ async function loadLeads() {
     const ph = l.phone ? fmtPhone(l.phone) : '-';
     // Text opens the in-app thread. Call stays a tel: handoff — that one genuinely
     // belongs to the phone app. The cell already stops propagation to the row.
+    // "Last contact" used to be a date with no context. Showing what the lead
+    // actually said makes the list scannable for who needs a reply.
+    const lastComm = l.last_inbound_at
+      ? '<div style="font-size:12px">' + esc((l.last_inbound_preview||'').slice(0,44)) + '</div>'
+        + '<div style="font-size:11px;color:var(--gold)">replied ' + fmtStamp(l.last_inbound_at) + '</div>'
+      : '<div style="font-size:12px;color:var(--text-muted)">' + fmtDate(l.last_contact_at || l.created_at) + '</div>';
     const actions = (l.phone ? '<a class="action-btn" href="tel:'+esc(l.phone)+'">Call</a> <a class="action-btn" href="#" onclick="event.preventDefault();openLeadMessages(\''+l.id+'\');return false;">Text</a> ' : '') + '<a class="action-btn" href="mailto:'+esc(l.email||'')+'">Email</a>';
-    return '<tr onclick="openLeadDetail(\''+l.id+'\')"><td>'+esc(l.name||'Unknown')+'</td><td>'+esc(l.email||'-')+'<br><small style="color:var(--text-muted)">'+ph+'</small></td><td>'+esc(l.source||'-')+'</td><td>'+esc(l.property||'-')+'</td><td>'+statusBadge(l.status)+'</td><td>'+agentName(l.assigned_to)+'</td><td>'+fmtDate(l.last_contact_at||l.replied_at||l.created_at)+'</td><td onclick="event.stopPropagation()">'+actions+'</td></tr>';
+    return '<tr onclick="openLeadDetail(\''+l.id+'\')"><td>'+esc(l.name||'Unknown')+'</td><td>'+esc(l.email||'-')+'<br><small style="color:var(--text-muted)">'+ph+'</small></td><td>'+esc(l.source||'-')+'</td><td>'+esc(l.property||'-')+'</td><td>'+statusBadge(l.status)+'</td><td>'+agentName(l.assigned_to)+'</td><td>'+lastComm+'</td><td onclick="event.stopPropagation()">'+actions+'</td></tr>';
   }).join('');
 }
 
@@ -601,6 +698,20 @@ async function openLeadDetail(id) {
   const lead = allLeads.find(l => l.id === id);
   if (!lead) return;
   document.getElementById('ld-name').textContent = lead.name || 'Unknown';
+  // Stage control + the lead's own last message, at the top of the card where
+  // they're actually useful — you shouldn't have to open Messages to see whether
+  // someone has replied.
+  const stageSel = '<select id="ld-stage" onchange="changeStage(\''+lead.id+'\', this.value)" '
+    + 'style="background:var(--bg3);color:var(--gold);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font:inherit;font-size:13px">'
+    + LEAD_STAGES.map(([v,l]) => '<option value="'+v+'"'+((lead.status||'lead')===v?' selected':'')+'>'+l+'</option>').join('')
+    + '</select>';
+  const lastIn = lead.last_inbound_at
+    ? '<div style="margin-top:10px;padding:8px 10px;background:rgba(255,255,255,.05);border-left:3px solid var(--gold);border-radius:4px">'
+      + '<div style="font-size:11px;color:var(--text-muted)">Last message from them &middot; '+fmtStamp(lead.last_inbound_at)+'</div>'
+      + '<div style="font-size:13px;margin-top:3px">'+esc(lead.last_inbound_preview||'')+'</div></div>'
+    : '<div style="margin-top:10px;font-size:12px;color:var(--text-muted)">No reply from this lead yet</div>';
+  document.getElementById('ld-stage-wrap').innerHTML = stageSel + lastIn;
+
   document.getElementById('ld-contact').innerHTML = esc(lead.email||'') + (lead.phone ? ' &middot; ' + fmtPhone(lead.phone) : '') + (lead.phone ? ' &middot; <a href="tel:'+esc(lead.phone)+'">Call</a> &middot; <a href="#" onclick="event.preventDefault();showDetailTab(\'messages\');return false;">Text</a>' : '');
 
   const info = document.getElementById('ld-info-content');

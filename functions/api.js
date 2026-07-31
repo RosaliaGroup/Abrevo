@@ -83,7 +83,7 @@ async function recordAttempt(ip, username, success) {
 const LEAD_MODES = {
   list: () => `leads?client=eq.rosalia&order=created_at.desc&limit=50&select=name,email,phone,source,client,created_at`,
   all: () => `leads?select=*&order=created_at.desc&limit=500`,
-  "crm-list": () => `leads?order=created_at.desc&limit=500&select=id,name,email,phone,source,property,status,assigned_to,client,notes,last_contact_at,replied_at,created_at,call_attempts`,
+  "crm-list": () => `leads?order=created_at.desc&limit=500&select=id,name,email,phone,source,property,status,assigned_to,client,notes,last_contact_at,replied_at,created_at,call_attempts,last_inbound_at,last_inbound_preview,stage_changed_at`,
   "monitor-replied": () => `leads?select=name,replied_at,property&replied_at=not.is.null&order=replied_at.desc&limit=20`,
   "monitor-callattempts": () => `leads?select=call_attempts,phone,updated_at&limit=500`,
   search: (q) =>
@@ -116,6 +116,9 @@ const TASK_SORTS = { created: "created_at.desc", due: "due_date.asc" };
 const LEAD_SOURCES = new Set(["email", "phone", "zillow", "webflow", "facebook", "instagram", "fub", "walk-in", "avail"]);
 const DEAL_STAGES = new Set(["inquiry", "toured", "applied", "approved", "lease_sent", "signed", "moved_in", "lost"]);
 const TASK_PRIORITIES = new Set(["normal", "high", "low"]);
+// FUB-style ladder. Allow-listed so a bad value from the browser can never
+// land in the column and fragment the vocabulary the way the old one did.
+const LEAD_STAGES = new Set(["lead", "attempted", "contacted", "appt_set", "applied", "rented", "dnc"]);
 const AGENT_ROLES = new Set(["leasing_agent", "manager", "admin"]);
 const SOCIAL_CLIENTS = new Set(["rosalia", "mechanical"]);
 // Fields social.html's lead table/enrich actually render.
@@ -408,6 +411,21 @@ exports.handler = async (event) => {
       if (spec.stampField) patch[spec.stampField] = new Date().toISOString();
       await sbPatch(`tasks?id=eq.${encodeURIComponent(id)}`, patch);
       return json(200, { ok: true, task: { id, status: spec.status } });
+    }
+    // Manual stage change from the lead card. Records who moved it and when, so
+    // an operator override is distinguishable from an automatic transition.
+    if (route.startsWith("/leads/") && method === "PATCH") {
+      if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
+      const id = route.slice("/leads/".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+      let body; try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { ok: false, error: "invalid_json" }); }
+      if (!LEAD_STAGES.has(body.status)) return json(400, { ok: false, error: "bad_stage" });
+      await sbPatch(`leads?id=eq.${encodeURIComponent(id)}`, {
+        status: body.status,
+        stage_changed_at: new Date().toISOString(),
+        stage_changed_by: s.user || "operator",
+      });
+      return json(200, { ok: true, id, status: body.status });
     }
     if (route.startsWith("/commissions/") && method === "PATCH") {
       if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
