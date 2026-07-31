@@ -12,6 +12,7 @@
  */
 
 const { verifyTelnyxSignature } = require('./_lib/telnyxSignature');
+const { recordInboundOnLead } = require('./lib/leadStage');
 const { createCommContext } = require('./_lib/commContext');
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
@@ -65,6 +66,19 @@ function makeHandler(deps = {}) {
       // approved auto-reply (res.compliance.reply) is NOT sent in Phase 2 — wiring
       // an outbound compliance reply is deferred to production enablement (post
       // 10DLC). We only acknowledge here.
+
+      // Mirror the reply onto the lead: record what they said and advance the
+      // stage to 'contacted'. Skipped for a duplicate delivery (Telnyx retry) so
+      // a redelivered message can't restamp last_inbound_at. Best-effort by
+      // design — recordInboundOnLead never throws, because failing here would
+      // return a non-2xx and make Telnyx retry the whole message.
+      if (!res.deduped) {
+        const p = (parsed && parsed.data && parsed.data.payload) || {};
+        const from = p.from && p.from.phone_number;
+        const text = p.text != null ? p.text : '';
+        await recordInboundOnLead(from, text);
+      }
+
       return reply(200, { ok: true, stored: !res.deduped, deduped: Boolean(res.deduped),
         compliance: res.compliance ? res.compliance.action : null });
     } catch (e) {

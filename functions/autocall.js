@@ -45,9 +45,15 @@ async function findLeadsToCall() {
     `phone=not.is.null&` +
     `status=neq.contacted&` +
     `status=neq.rented&` +
-    `status=neq.survey_completed&` +
+    // Stop calling anyone who has engaged or moved down the funnel. The old
+    // filter named survey_completed/needs_specialist, which no longer exist
+    // after the FUB ladder migration — leads at 'contacted' or 'appt_set'
+    // were still being picked up.
     `status=neq.dnc&` +
-    `status=neq.needs_specialist&` +
+    `status=neq.contacted&` +
+    `status=neq.appt_set&` +
+    `status=neq.applied&` +
+    `status=neq.rented&` +
     `name=not.eq.Follow Up Boss&` +
     `name=not.ilike.*HEALTHCHECK*&` +
     `name=not.ilike.*Test*&` +
@@ -72,8 +78,8 @@ async function findLeadsToCall() {
     const bookings = await bookingRes.json();
     if (Array.isArray(bookings) && bookings.length > 0) {
       console.log(`Skipping ${lead.name} - already has a booking`);
-      // Mark as contacted so we stop calling
-      await updateLeadStatus(lead.id, 'contacted', lead.call_attempts || 0);
+      // They booked: that's Appointment Set on the ladder, not just "contacted".
+      await updateLeadStatus(lead.id, 'appt_set', lead.call_attempts || 0);
       continue;
     }
     filtered.push(lead);
@@ -231,8 +237,12 @@ exports.handler = async (event) => {
         // Send SMS after every missed call attempt
         await sendLeadSMS(lead.phone, callName, bookingUrl, attempts, lead.property);
 
-        // Update lead - mark call attempt but keep status as 'new' until they answer
-        const newStatus = attempts >= MAX_CALL_ATTEMPTS ? 'contacted' : lead.status || 'new';
+        // Placing a call is an ATTEMPT, however many times we try. 'contacted'
+        // means the person actually engaged, and only an inbound reply proves
+        // that — so it is set by telnyx-inbound, never here. Calling stops via
+        // call_attempts >= MAX, not by faking a stage advance.
+        const AHEAD = ['contacted', 'appt_set', 'applied', 'rented', 'dnc'];
+        const newStatus = AHEAD.includes(lead.status) ? lead.status : 'attempted';
         await updateLeadStatus(lead.id, newStatus, attempts);
 
         if (attempts >= MAX_CALL_ATTEMPTS) {
