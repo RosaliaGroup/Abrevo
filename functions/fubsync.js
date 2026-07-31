@@ -167,7 +167,7 @@ async function saveToSupabase(fubPerson) {
       message,
       property: property || 'Iron 65',
       client: 'iron65',
-      status: 'new',
+      status: 'lead',
       replied_at: new Date().toISOString(),
       follow_up_count: 0,
       notes,

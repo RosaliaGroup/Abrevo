@@ -425,7 +425,11 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     <div class="detail-tab" data-tab="tasks" onclick="showDetailTab('tasks')">Tasks</div>
   </div>
   <div class="detail-panel active" id="detail-info">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button class="btn btn-sm btn-outline" id="ld-edit-btn" onclick="toggleLeadEdit()">Edit details</button>
+    </div>
     <div id="ld-info-content" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"></div>
+    <div id="ld-edit-form" style="display:none"></div>
   </div>
   <div class="detail-panel" id="detail-messages">
     <div id="ld-msg-err" style="display:none;background:rgba(255,80,80,.12);border:1px solid rgba(255,80,80,.35);color:#ff9a9a;padding:8px 10px;border-radius:6px;font-size:12px;margin-bottom:10px"></div>
@@ -643,6 +647,74 @@ async function changeStage(id, status) {
   loadLeads();
 }
 
+// ── EDIT LEAD ──
+// Contact details arrive from whatever parsed the source email, and they're often
+// incomplete — a Zillow lead with no phone, a name that came through as an email
+// address. This lets those be corrected without a trip to Supabase.
+let __ldEditing = false;
+
+function toggleLeadEdit() {
+  const lead = allLeads.find(l => l.id === __ldLeadId);
+  if (!lead) return;
+  __ldEditing = !__ldEditing;
+  document.getElementById('ld-info-content').style.display = __ldEditing ? 'none' : 'grid';
+  document.getElementById('ld-edit-form').style.display = __ldEditing ? 'block' : 'none';
+  document.getElementById('ld-edit-btn').textContent = __ldEditing ? 'Cancel' : 'Edit details';
+  if (__ldEditing) renderLeadEdit(lead);
+}
+
+function renderLeadEdit(lead) {
+  const field = (id, label, val, type) =>
+    '<div style="margin-bottom:10px"><label style="display:block;font-size:11px;color:var(--text-muted);margin-bottom:3px">'+label+'</label>'
+    + '<input id="'+id+'" type="'+(type||'text')+'" value="'+esc(val==null?'':String(val))+'" '
+    + 'style="width:100%;background:var(--bg-input,#12161c);color:inherit;border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit"></div>';
+
+  const agentOpts = ['<option value="">Unassigned</option>']
+    .concat(allAgents.map(a => '<option value="'+a.id+'"'+(lead.assigned_to===a.id?' selected':'')+'>'+esc(a.name)+'</option>')).join('');
+
+  document.getElementById('ld-edit-form').innerHTML =
+      '<div id="ld-edit-err" style="display:none;background:rgba(255,80,80,.12);border:1px solid rgba(255,80,80,.35);color:#ff9a9a;padding:8px 10px;border-radius:6px;font-size:12px;margin-bottom:10px"></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">'
+    + field('ed-name','Name', lead.name)
+    + field('ed-phone','Phone', lead.phone)
+    + field('ed-email','Email', lead.email, 'email')
+    + field('ed-property','Property', lead.property)
+    + '</div>'
+    + '<div style="margin-bottom:10px"><label style="display:block;font-size:11px;color:var(--text-muted);margin-bottom:3px">Assigned to</label>'
+    + '<select id="ed-agent" style="width:100%;background:var(--bg-input,#12161c);color:inherit;border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit">'+agentOpts+'</select></div>'
+    + '<div style="margin-bottom:12px"><label style="display:block;font-size:11px;color:var(--text-muted);margin-bottom:3px">Notes</label>'
+    + '<textarea id="ed-notes" rows="3" style="width:100%;background:var(--bg-input,#12161c);color:inherit;border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical">'+esc(lead.notes||'')+'</textarea></div>'
+    + '<button class="btn btn-sm btn-green" onclick="saveLeadEdit()">Save changes</button>';
+}
+
+async function saveLeadEdit() {
+  const err = document.getElementById('ld-edit-err');
+  const val = id => (document.getElementById(id).value || '').trim();
+  const payload = {
+    name: val('ed-name'),
+    phone: val('ed-phone'),
+    email: val('ed-email'),
+    property: val('ed-property'),
+    assigned_to: document.getElementById('ed-agent').value,
+    notes: val('ed-notes'),
+  };
+  if (!payload.name) { err.style.display='block'; err.textContent='Name is required.'; return; }
+
+  const r = await apiSend('PATCH', '/leads/' + __ldLeadId, payload);
+  if (!r || r.ok === false) {
+    err.style.display = 'block';
+    // Surface the server's reason: bad_phone means it couldn't be normalised, and
+    // saving it as null would orphan the lead from its text thread.
+    err.textContent = r && r.error === 'bad_phone'
+      ? 'That phone number does not look valid — needs at least 10 digits.'
+      : 'Could not save: ' + ((r && r.error) || 'unknown error');
+    return;
+  }
+  await loadLeads();
+  __ldEditing = false;
+  openLeadDetail(__ldLeadId);
+}
+
 // ── LEAD STAGES (FUB ladder) ──
 // Named LEAD_STAGES because STAGES is already taken by the deal pipeline.
 // Order matters: it's the progression shown in the dropdown.
@@ -737,6 +809,16 @@ async function openLeadDetail(id) {
 
   showDetailTab('info');
   openModal('lead-detail-modal');
+  // Set here rather than relying on loadLeadMessages: the edit form writes to
+  // __ldLeadId, and it must not depend on the messages panel having run.
+  __ldLeadId = lead.id;
+  // Reset the editor: without this, opening a second lead inherits the first
+  // one's open edit form and could save changes onto the wrong record.
+  __ldEditing = false;
+  const _inf = document.getElementById('ld-info-content'); if (_inf) _inf.style.display = 'grid';
+  const _frm = document.getElementById('ld-edit-form'); if (_frm) _frm.style.display = 'none';
+  const _btn = document.getElementById('ld-edit-btn'); if (_btn) _btn.textContent = 'Edit details';
+
   // Texts + calls load after the modal is shown so the panel never blocks it.
   loadLeadMessages(lead);
 }

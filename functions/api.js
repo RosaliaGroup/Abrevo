@@ -419,13 +419,38 @@ exports.handler = async (event) => {
       const id = route.slice("/leads/".length);
       if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
       let body; try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { ok: false, error: "invalid_json" }); }
-      if (!LEAD_STAGES.has(body.status)) return json(400, { ok: false, error: "bad_stage" });
-      await sbPatch(`leads?id=eq.${encodeURIComponent(id)}`, {
-        status: body.status,
-        stage_changed_at: new Date().toISOString(),
-        stage_changed_by: s.user || "operator",
-      });
-      return json(200, { ok: true, id, status: body.status });
+      if (!body || typeof body !== "object" || Array.isArray(body)) return json(400, { ok: false, error: "invalid_body" });
+
+      // Allow-list. Anything not named here is ignored rather than rejected, so a
+      // future UI field can't accidentally write to client, call_attempts or the
+      // stage_changed_* audit columns. Same validators as POST /leads.
+      const patch = {};
+      try {
+        if (body.status !== undefined) {
+          if (!LEAD_STAGES.has(body.status)) return json(400, { ok: false, error: "bad_stage" });
+          patch.status = body.status;
+          patch.stage_changed_at = new Date().toISOString();
+          patch.stage_changed_by = s.user || "operator";
+        }
+        if (body.name !== undefined) patch.name = vStr(body.name, 200, "name", true);
+        if (body.email !== undefined) patch.email = body.email === "" ? null : vEmail(body.email, "email");
+        if (body.phone !== undefined) patch.phone = body.phone === "" ? null : normalizePhone(body.phone);
+        if (body.property !== undefined) patch.property = vStr(body.property, 500, "property", false);
+        if (body.assigned_to !== undefined) patch.assigned_to = body.assigned_to === "" ? null : vId(body.assigned_to, "assigned_to");
+        if (body.notes !== undefined) patch.notes = vStr(body.notes, 5000, "notes", false);
+      } catch (e) {
+        return json(400, { ok: false, error: e.message || "validation_failed" });
+      }
+      if (Object.keys(patch).length === 0) return json(400, { ok: false, error: "nothing_to_update" });
+
+      // A phone that can't be normalised would silently become null and orphan the
+      // lead from its text thread, so say so rather than accepting it.
+      if (body.phone !== undefined && body.phone !== "" && !patch.phone) {
+        return json(400, { ok: false, error: "bad_phone" });
+      }
+
+      await sbPatch(`leads?id=eq.${encodeURIComponent(id)}`, patch);
+      return json(200, { ok: true, id, updated: Object.keys(patch) });
     }
     if (route.startsWith("/commissions/") && method === "PATCH") {
       if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
@@ -456,7 +481,7 @@ exports.handler = async (event) => {
             property: vStr(body.property, 500, "property", false),
             assigned_to: vId(body.assigned_to, "assigned_to"),
             notes: vStr(body.notes, 5000, "notes", false),
-            client: "rosalia", status: "new", // server-set, not client-controlled
+            client: "rosalia", status: "lead", // server-set, not client-controlled
           };
         } else if (route === "/deals") {
           table = "deals";

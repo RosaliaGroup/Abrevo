@@ -53,7 +53,7 @@ async function saveLeadToSupabase(lead) {
     message: lead.message || null,
     property: lead.property || 'Real Estate Inquiry',
     client: 'rosalia',
-    status: 'new',
+    status: 'lead',
     replied_at: new Date().toISOString(),
     follow_up_count: 0,
     notes: 'Source: CINC CRM',

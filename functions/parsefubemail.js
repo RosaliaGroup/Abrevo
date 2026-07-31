@@ -148,7 +148,7 @@ async function saveToSupabase(lead) {
       message: lead.message || null,
       property: lead.property || null,
       client: 'rosalia',
-      status: 'new',
+      status: 'lead',
       replied_at: new Date().toISOString(),
       follow_up_count: 0,
       notes: [

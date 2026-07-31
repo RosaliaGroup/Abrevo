@@ -923,7 +923,7 @@ async function processGoogleVoice(from, body) {
     const newLeadR = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
       method: 'POST',
       headers: { ...SB_H, Prefer: 'return=representation' },
-      body: JSON.stringify({ phone: gv.callerPhone, source: 'google_voice_sms', status: 'new', client: 'rosalia' })
+      body: JSON.stringify({ phone: gv.callerPhone, source: 'google_voice_sms', status: 'lead', client: 'rosalia' })
     });
     const newLeadData = await newLeadR.json();
     lead = Array.isArray(newLeadData) ? newLeadData[0] : newLeadData;
@@ -1490,7 +1490,7 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone, cl
       message: body?.substring(0, 500) || subject,
       client: client || 'rosalia',
       property: extractProperty(body, subject),
-      status: 'new',
+      status: 'lead',
       replied_at: new Date().toISOString(),
       follow_up_count: 0,
       email_reply: replyText,
@@ -2159,7 +2159,8 @@ exports.handler = async (event) => {
                                 (etDay === 6) ? (etHour >= 10 && etHour < 17) :
                                 (etHour >= 11 && etHour < 17);
             const smsBookingUrl = leadClient === 'iron65' ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
-            await buildAndSendLeadText(phone, realName || fromName, '', smsBookingUrl);
+            const smsProperty = extractProperty(body, subject) || '';
+            await buildAndSendLeadText(phone, realName || fromName, smsProperty, smsBookingUrl);
             if (callAllowed) {
               await triggerCall(phone, realName || fromName);
             }

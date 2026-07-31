@@ -121,7 +121,7 @@ async function ensureLead(phone, account, callTime) {
       phone,
       source: 'missed-call',
       client: 'iron65',
-      status: 'new',
+      status: 'lead',
       notes: `Missed call ${callTime} | Account: ${account}`,
       outreach_sms_at: new Date().toISOString(),
     }),
