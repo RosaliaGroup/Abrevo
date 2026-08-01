@@ -116,6 +116,25 @@ const TASK_SORTS = { created: "created_at.desc", due: "due_date.asc" };
 const LEAD_SOURCES = new Set(["email", "phone", "zillow", "webflow", "facebook", "instagram", "fub", "walk-in", "avail"]);
 const DEAL_STAGES = new Set(["inquiry", "toured", "applied", "approved", "lease_sent", "signed", "moved_in", "lost"]);
 const TASK_PRIORITIES = new Set(["normal", "high", "low"]);
+// Commission split. Listing takes 10% of the TOTAL; showing and lead generation
+// each take 25% of the NET remaining after the listing cut. Anything left stays
+// with the house. Defaults live here rather than in the browser so a tampered
+// request can't award someone 90%.
+const PARTICIPANT_ROLES = new Set(["listing", "showing", "lead_gen", "other"]);
+const ROLE_DEFAULTS = {
+  listing:  { pct: 10, basis: "total" },
+  showing:  { pct: 25, basis: "net" },
+  lead_gen: { pct: 25, basis: "net" },
+};
+const PCT_BASES = new Set(["total", "net"]);
+
+/** Money owed to one participant. Rounded to cents at the last step only. */
+function participantAmount(total, pct, basis) {
+  const t = Number(total) || 0;
+  const listingCut = t * (ROLE_DEFAULTS.listing.pct / 100);
+  const base = basis === "total" ? t : t - listingCut;
+  return Math.round(base * (Number(pct) / 100) * 100) / 100;
+}
 // FUB-style ladder. Allow-listed so a bad value from the browser can never
 // land in the column and fragment the vocabulary the way the old one did.
 const LEAD_STAGES = new Set(["lead", "attempted", "contacted", "appt_set", "applied", "rented", "dnc"]);
@@ -160,6 +179,13 @@ function vDate(v, field) {
   const s = vStr(v, 40, field, false);
   if (s && !Number.isFinite(Date.parse(s))) throw ValidationError(field);
   return s;
+}
+async function sbDelete(path) {
+  const res = await fetch(`${ENV().URL}/rest/v1/${path}`, {
+    method: "DELETE",
+    headers: sbHeaders({ Prefer: "return=minimal" }),
+  });
+  if (!res.ok) throw new Error(`sb_delete_${res.status}`);
 }
 async function sbPost(table, row) {
   const res = await fetch(`${ENV().URL}/rest/v1/${table}`, {
@@ -422,6 +448,52 @@ exports.handler = async (event) => {
     // email bodies, our replies, call summaries and transcripts, and text message
     // bodies. Each channel is queried separately and the lead ids unioned —
     // PostgREST can't join messages -> conversations -> leads in one request.
+    // Participants on a deal, with the money already worked out.
+    if (route.startsWith("/deals/") && route.endsWith("/participants") && method === "GET") {
+      const id = route.slice("/deals/".length, -"/participants".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+      const rows = await sbGet(`deal_participants?deal_id=eq.${encodeURIComponent(id)}&select=id,agent_id,role,label,pct,basis,amount&order=created_at.asc`);
+      return json(200, { ok: true, data: rows || [] });
+    }
+
+    if (route.startsWith("/deals/") && route.endsWith("/participants") && method === "POST") {
+      if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
+      const id = route.slice("/deals/".length, -"/participants".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+      let body; try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { ok: false, error: "invalid_json" }); }
+      if (!Array.isArray(body.participants)) return json(400, { ok: false, error: "participants_required" });
+
+      const deal = await sbGet(`deals?id=eq.${encodeURIComponent(id)}&select=commission_total&limit=1`);
+      const total = (Array.isArray(deal) && deal[0] && Number(deal[0].commission_total)) || 0;
+
+      const rows = [];
+      for (const p of body.participants.slice(0, 12)) {
+        if (!PARTICIPANT_ROLES.has(p.role)) return json(400, { ok: false, error: "bad_role" });
+        const d = ROLE_DEFAULTS[p.role];
+        // A core role uses its fixed split unless explicitly overridden; 'other'
+        // must always state its own percentage.
+        const pct = p.pct === undefined || p.pct === null || p.pct === "" ? (d ? d.pct : null) : Number(p.pct);
+        if (pct === null || !isFinite(pct) || pct < 0 || pct > 100) return json(400, { ok: false, error: "bad_pct" });
+        const basis = PCT_BASES.has(p.basis) ? p.basis : (d ? d.basis : "net");
+        rows.push({
+          deal_id: id,
+          agent_id: p.agent_id ? vId(p.agent_id, "agent_id") : null,
+          role: p.role,
+          label: vStr(p.label, 120, "label", false),
+          pct, basis,
+          amount: participantAmount(total, pct, basis),
+        });
+      }
+
+      // Replace wholesale: the UI edits the whole set at once, and this keeps the
+      // one-per-core-role index from rejecting an edit that reorders people.
+      await sbDelete(`deal_participants?deal_id=eq.${encodeURIComponent(id)}`);
+      if (rows.length) await sbPost("deal_participants", rows);
+      const paid = rows.reduce((a, r) => a + Number(r.amount || 0), 0);
+      return json(200, { ok: true, participants: rows, paid_out: Math.round(paid * 100) / 100,
+                         house: Math.round((total - paid) * 100) / 100 });
+    }
+
     if (route === "/search/comms" && method === "GET") {
       const q = vStr(qs.q, 100, "q", true);
       if (q.length < 2) return json(400, { ok: false, error: "query_too_short" });
@@ -538,6 +610,7 @@ exports.handler = async (event) => {
             lead_id: vId(body.lead_id, "lead_id"),
             property: vStr(body.property, 500, "property", false),
             monthly_rent: vNum(body.monthly_rent, "monthly_rent"),
+            commission_total: vNum(body.commission_total, "commission_total"),
             stage: vEnum(body.stage, DEAL_STAGES, "stage", true),
             agent_id: vId(body.agent_id, "agent_id"),
             notes: vStr(body.notes, 5000, "notes", false),
