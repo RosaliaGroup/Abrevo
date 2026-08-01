@@ -1,4 +1,5 @@
 const { google } = require('googleapis');
+const { parseBookingStart } = require('./lib/bookingTime');
 const nodemailer = require('nodemailer');
 
 const SUPABASE_URL = 'https://fhkgpepkwibxbxsepetd.supabase.co';
@@ -168,6 +169,9 @@ exports.handler = async (event) => {
         },
         body: JSON.stringify({
           preferred_date: new_date,
+          // Keep the calendar in step: without this a rescheduled booking would
+          // still show at its original time.
+          starts_at: parseBookingStart(new_date, new_time),
           preferred_time: new_time,
           calendar_event_id: newEvent?.id || null,
         }),

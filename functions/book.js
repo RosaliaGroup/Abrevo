@@ -1,5 +1,6 @@
 ﻿const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
+const { parseBookingStart } = require('./lib/bookingTime');
 
 function resolveDate(raw) {
   if (!raw || !raw.trim()) return { date: null, display: 'TBD' };
@@ -355,6 +356,9 @@ exports.handler = async (event) => {
         type: data.type,
         preferred_date: data.preferred_date,
         preferred_time: data.preferred_time,
+        // Parsed timestamp for the calendar. The free-text fields above stay as
+        // written — they're the audit trail if a parse is ever wrong.
+        starts_at: parseBookingStart(data.preferred_date, data.preferred_time),
         budget: data.budget,
         apartment_size: data.apartment_size,
         preferred_area: data.preferred_area,
