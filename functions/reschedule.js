@@ -179,7 +179,7 @@ exports.handler = async (event) => {
     );
 
     // Text caller
-    const callerMsg = `Appointment rescheduled!\n\n📍 ${booking.type}\n📅 ${new_date} at ${new_time}\n\nQuestions? Call (862) 333-1681`;
+    const callerMsg = `Tour moved!\n\n📍 ${booking.type}\n📅 ${new_date} at ${new_time}\n\nWe'll text you the day before to confirm.\nQuestions? Call (862) 333-1681`;
     const r1 = await sendSMS(normalizedPhone, callerMsg, { optOut: true });
     console.log('Caller SMS:', JSON.stringify(r1));
 

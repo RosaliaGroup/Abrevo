@@ -391,6 +391,50 @@ exports.handler = async (event) => {
       console.error('Supabase error:', err.message);
     }
 
+    // 2b. Make sure this person exists as a LEAD.
+    // Someone who books by phone was only ever written to `bookings`, so they
+    // were invisible in the CRM — no thread, no stage, no follow-up. 211 of 653
+    // bookings had no lead. Match on the last 10 digits of the phone, the
+    // convention used throughout, then on email.
+    try {
+      const digits = String(data.phone || '').replace(/\D/g, '').slice(-10);
+      let existing = null;
+      if (digits) {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?phone=ilike.*${digits}*&select=id&limit=1`,
+          { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } });
+        const rows = await r.json();
+        if (Array.isArray(rows) && rows.length) existing = rows[0];
+      }
+      if (!existing && data.email) {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(data.email)}&select=id&limit=1`,
+          { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } });
+        const rows = await r.json();
+        if (Array.isArray(rows) && rows.length) existing = rows[0];
+      }
+      if (existing) {
+        // They booked, so they're past 'lead' — but never drag someone backwards
+        // from applied/rented/dnc.
+        await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${existing.id}&status=in.(lead,attempted,contacted)`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+          body: JSON.stringify({ status: 'appt_set', stage_changed_at: new Date().toISOString(), stage_changed_by: 'auto:booking' }),
+        });
+      } else {
+        await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Prefer: 'return=minimal' },
+          body: JSON.stringify({
+            name: data.full_name || 'Guest', phone: data.phone || null, email: data.email || null,
+            property: propertyAddress, source: 'booking', client: clientId, status: 'appt_set',
+            stage_changed_at: new Date().toISOString(), stage_changed_by: 'auto:booking',
+          }),
+        });
+        console.log('Created lead from booking:', data.full_name);
+      }
+    } catch (err) {
+      console.error('Lead upsert error:', err.message);
+    }
+
     // 3. Send SMS to caller (lead) — tour confirmation with reschedule link
     if (data.phone) {
       const rescheduleUrl = isIron65(propertyAddress)
@@ -404,9 +448,9 @@ exports.handler = async (event) => {
       const haveTime = displayTime && displayTime !== 'TBD';
       let callerMsg;
       if (haveDate && haveTime) {
-        callerMsg = `Your tour is confirmed!\n${propertyAddress}\n${displayDate} at ${displayTime}\nNeed to reschedule? ${rescheduleUrl}`;
+        callerMsg = `Tour reserved!\n${propertyAddress}\n${displayDate} at ${displayTime}\n\nWe'll text you the day before to confirm.\nNeed a different time? ${rescheduleUrl}`;
       } else if (haveDate) {
-        callerMsg = `Your tour is confirmed!\n${propertyAddress}\n${displayDate} - we'll text shortly to confirm the time.\nNeed to reschedule? ${rescheduleUrl}`;
+        callerMsg = `Tour reserved!\n${propertyAddress}\n${displayDate} - we'll text shortly to confirm the time.\nNeed a different day? ${rescheduleUrl}`;
       } else {
         callerMsg = `Tour request received for ${propertyAddress}.\nWe'll text you shortly to confirm a date and time.\nQuestions? Call (862) 333-1681`;
       }
@@ -455,9 +499,9 @@ exports.handler = async (event) => {
 
       const emailSubject = isSpecialist
         ? 'We Received Your Inquiry — Rosalia Group'
-        : 'Appointment Confirmed - Rosalia Group';
+        : 'Tour Reserved - Rosalia Group';
 
-      const emailHeading = isSpecialist ? 'Inquiry Received' : 'Appointment Confirmed';
+      const emailHeading = isSpecialist ? 'Inquiry Received' : 'Tour Reserved';
       const emailGreeting = isSpecialist
         ? 'Thank you for reaching out. A leasing specialist will be in touch with you shortly to discuss your needs and schedule a tour.'
         : 'Your private tour has been confirmed. We look forward to welcoming you.';

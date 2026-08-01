@@ -13,6 +13,8 @@
 
 const { verifyTelnyxSignature } = require('./_lib/telnyxSignature');
 const { recordInboundOnLead } = require('./lib/leadStage');
+const { detectIntent, intentReply } = require('./lib/inboundIntent');
+const { sendSMS } = require('./lib/sms');
 const { createCommContext } = require('./_lib/commContext');
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
@@ -77,6 +79,20 @@ function makeHandler(deps = {}) {
         const from = p.from && p.from.phone_number;
         const text = p.text != null ? p.text : '';
         await recordInboundOnLead(from, text);
+
+        // Answer a reschedule or cancellation request. A lead asking "can we do
+        // 3:30?" previously got silence — the message was stored and shown in the
+        // CRM, but nothing replied, so a direct question sat unanswered.
+        //
+        // This sends the booking link rather than moving the appointment: only
+        // the form knows real availability, and a misparsed time means someone
+        // arrives at an empty building.
+        try {
+          const intent = detectIntent(text);
+          if (intent) await replyToIntent(from, text, intent);
+        } catch (e) {
+          console.warn('[telnyx-inbound] intent reply failed:', e.message);
+        }
       }
 
       return reply(200, { ok: true, stored: !res.deduped, deduped: Boolean(res.deduped),
@@ -85,6 +101,44 @@ function makeHandler(deps = {}) {
       return reply(500, { ok: false, error: { code: 'internal_error' } });
     }
   };
+}
+
+/**
+ * Reply to a detected intent with the lead's own reschedule link.
+ *
+ * Best-effort: the webhook's job is to acknowledge Telnyx, so a failure here
+ * must never produce a non-2xx (which would make Telnyx retry the message).
+ */
+async function replyToIntent(phone, text, intent) {
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://fhkgpepkwibxbxsepetd.supabase.co';
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+  if (!SUPABASE_KEY) return;
+
+  const digits = String(phone || '').replace(/\D/g, '').slice(-10);
+  if (!digits) return;
+
+  // Their most recent upcoming booking supplies the short code, so the link
+  // opens on the right appointment.
+  let booking = null;
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/bookings?phone=ilike.*${digits}*&select=full_name,short_code,client,starts_at&order=created_at.desc&limit=1`,
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+    );
+    const rows = await r.json();
+    if (Array.isArray(rows) && rows.length) booking = rows[0];
+  } catch (e) {
+    console.warn('[telnyx-inbound] booking lookup failed:', e.message);
+  }
+
+  const first = String((booking && booking.full_name) || '').trim().split(/\s+/)[0] || '';
+  const isIron65 = /iron\s*-?\s*65/i.test(String((booking && booking.client) || ''));
+  const body = intentReply(intent, first, booking && booking.short_code, isIron65);
+  if (!body) return;
+
+  // cooldownHours guards against a back-and-forth turning into repeated links.
+  const res = await sendSMS(phone, body, { optOut: true, cooldownHours: 1, createdBy: 'intent:' + intent });
+  console.log(`[telnyx-inbound] intent=${intent} replied=${res && res.success}`);
 }
 
 exports.handler = makeHandler();

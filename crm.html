@@ -504,6 +504,11 @@ tr:hover td{background:rgba(201,168,76,0.03)}
       <textarea id="ld-msg-text" rows="2" placeholder="Type a message…" style="width:100%;background:var(--bg-input,#12161c);color:inherit;border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical"></textarea>
       <button class="btn btn-sm btn-green" id="ld-msg-send" style="margin-top:6px">Send text</button>
     </div>
+    <div id="ld-email-compose" style="display:none;margin-top:12px">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:5px">Reply by email</div>
+      <textarea id="ld-email-text" rows="3" placeholder="Type your reply…" style="width:100%;background:var(--bg-input,#12161c);color:inherit;border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical"></textarea>
+      <button class="btn btn-sm btn-outline" onclick="sendLeadEmail()" style="margin-top:6px">Send email</button>
+    </div>
   </div>
   <div class="detail-panel" id="detail-activity">
     <div id="ld-activity-list" style="max-height:300px;overflow-y:auto"></div>
@@ -512,6 +517,7 @@ tr:hover td{background:rgba(201,168,76,0.03)}
   <div class="detail-panel" id="detail-tasks">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <button class="btn btn-sm btn-gold" onclick="addTaskForLead()">+ Add Task</button>
+      <button class="btn btn-sm btn-outline" onclick="createDealForLead()">+ Create Deal</button>
       <a href="#" onclick="event.preventDefault();closeModal('lead-detail-modal');showPage('tasks')" style="font-size:14px">View all tasks &rarr;</a>
     </div>
     <div id="ld-tasks-list"></div>
@@ -1225,9 +1231,15 @@ async function loadLeadMessages(lead) {
   // timeline (A→B race). __ldLeadId is reset at the top of each invocation.
   if (lead.id !== __ldLeadId) return;
 
+  // Email is available independently of a phone number — a lead with only an
+  // address could previously see their thread but had no way to answer it.
+  const emailBox = document.getElementById('ld-email-compose');
+  if (emailBox) emailBox.style.display = lead.email ? 'block' : 'none';
+
   if (!lead.phone) {
     renderLeadTimeline([], calls, emails);
-    ldMsgErr('No phone number on this lead, so there is no text thread.');
+    ldMsgErr(lead.email ? 'No phone number on this lead — reply by email below.'
+                        : 'No phone number or email on this lead.');
     return;
   }
 
@@ -1260,6 +1272,32 @@ async function loadLeadMessages(lead) {
   } else {
     compose.style.display = 'block';
   }
+}
+
+// Reply by email. The server picks the recipient off the lead record and threads
+// the reply against their last inbound Message-ID, so it lands in the same Gmail
+// conversation instead of arriving as an orphan.
+async function sendLeadEmail() {
+  const lead = allLeads.find(l => l.id === __ldLeadId);
+  if (!lead || !lead.email) { ldMsgErr('No email address on this lead.'); return; }
+  const ta = document.getElementById('ld-email-text');
+  const body = (ta.value || '').trim();
+  if (!body) return;
+  ldMsgErr('');
+  // Its own function, not part of the /api/* router, so call the path directly
+  // and carry the same session cookie + CSRF header apiSend uses.
+  let r;
+  try {
+    const res = await fetch('/.netlify/functions/email-reply', {
+      method: 'POST', credentials: 'same-origin',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, __csrf ? { 'X-CSRF-Token': __csrf } : {}),
+      body: JSON.stringify({ leadId: __ldLeadId, body }),
+    });
+    r = await res.json().catch(() => ({ ok: false, error: 'bad_response' }));
+  } catch (e) { r = { ok: false, error: 'network' }; }
+  if (!r || r.ok === false) { ldMsgErr('Could not send: ' + ((r && r.error) || 'unknown error')); return; }
+  ta.value = '';
+  await loadLeadMessages(lead);
 }
 
 async function sendLeadMessage() {
@@ -1313,7 +1351,9 @@ async function loadPipeline() {
   board.innerHTML = STAGES.map(stage => {
     const deals = allDeals.filter(d => d.stage === stage);
     return '<div class="kanban-col"><div class="kanban-col-header"><h4>'+STAGE_LABELS[stage]+'</h4><span class="count">'+deals.length+'</span></div><div class="kanban-cards">'+deals.map(d => {
-      const lead = allLeads.find(l => l.id === d.lead_id);
+      // d.leads is embedded by the API; allLeads only holds the newest 500, so
+      // relying on it alone showed 'Unknown' for any older deal.
+      const lead = d.leads || allLeads.find(l => l.id === d.lead_id);
       return '<div class="kanban-card" onclick="openDealDetail(\''+d.id+'\')"><div class="name">'+esc(lead?.name||d.lead_name||'Unknown')+'</div><div class="prop">'+esc(d.property||'-')+'</div>'+(d.monthly_rent?'<div class="amount">$'+Number(d.monthly_rent).toLocaleString()+'/mo</div>':'')+'</div>';
     }).join('')+'</div></div>';
   }).join('');
@@ -1424,6 +1464,19 @@ async function saveLead() {
   closeModal('add-lead-modal');
   allLeads = await apiGet('/leads?mode=crm-list') || [];
   loadLeads();
+}
+
+// Start a deal from the lead you're already looking at, rather than opening the
+// Pipeline tab and hunting for them in a dropdown of 500.
+function createDealForLead() {
+  const lead = allLeads.find(l => l.id === __ldLeadId);
+  if (!lead) return;
+  closeModal('lead-detail-modal');
+  openDealModal();
+  const sel = document.getElementById('ad-lead');
+  if (sel) sel.value = lead.id;
+  const prop = document.getElementById('ad-property');
+  if (prop && lead.property) prop.value = lead.property;
 }
 
 function openDealModal() {
