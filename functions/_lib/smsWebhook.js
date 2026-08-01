@@ -14,6 +14,7 @@
  */
 
 const { classifyKeyword, REPLIES } = require('./compliance');
+const { createLeadLinker } = require('./leadLinker');
 
 function isUnique(err) {
   return err && (err.name === 'UniqueViolationError' || err.code === 'unique_violation');
@@ -22,9 +23,12 @@ function isUnique(err) {
 // Delivery status precedence (monotonic). failed and delivered are terminal.
 const RANK = { queued: 1, sent: 2, delivered: 3, failed: 3 };
 
-function createSmsWebhookProcessor({ repo, conversationService, clock } = {}) {
+function createSmsWebhookProcessor({ repo, conversationService, clock, leadLinker } = {}) {
   if (!repo || !conversationService) throw new Error('createSmsWebhookProcessor: repo + conversationService required');
   const now = clock || (() => new Date().toISOString());
+  // Phase 2A-1: inbound → unique-Rosalia-lead auto-linker. Injectable for tests;
+  // in production it reads Rosalia's line from env. Never throws or sends.
+  const linker = leadLinker || createLeadLinker({ repo, rosaliaNumber: process.env.TELNYX_FROM_ROSALIA });
 
   function extractInbound(event) {
     const p = (event && event.data && event.data.payload) || {};
@@ -52,7 +56,7 @@ function createSmsWebhookProcessor({ repo, conversationService, clock } = {}) {
   }
 
   async function processInbound(event) {
-    const { providerMessageId, from, text } = extractInbound(event);
+    const { providerMessageId, from, to, text } = extractInbound(event);
     if (!providerMessageId) return { ok: false, reason: 'no_provider_message_id' };
 
     const conv = await conversationService.getOrCreateConversation({ phone: from, createdBy: 'inbound-webhook' });
@@ -98,6 +102,14 @@ function createSmsWebhookProcessor({ repo, conversationService, clock } = {}) {
         last_message_preview: String(text).slice(0, 140),
         last_message_direction: 'inbound',
       });
+    }
+
+    // Phase 2A-1: best-effort auto-link to a unique Rosalia lead. Runs AFTER
+    // the message + recency are persisted and only on the first (non-deduped)
+    // delivery. The linker never throws, sends, or mutates compliance/DNC/opt-out
+    // state, so a lookup or link failure can never affect the webhook outcome.
+    if (!deduped) {
+      await linker.linkInboundConversation({ conversationId: conv.conversation.id, from, to });
     }
 
     return { ok: true, deduped, message, conversationId: conv.conversation.id, compliance };

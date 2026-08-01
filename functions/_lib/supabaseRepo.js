@@ -107,6 +107,22 @@ function createSupabaseRepo(opts = {}) {
       return Array.isArray(r.json) ? r.json : [];
     },
 
+    // Tenant-scoped coarse lead lookup for inbound-SMS auto-linking (Phase
+    // 2A-1). The query pins client='rosalia' so Mechanical / non-Rosalia leads
+    // can NEVER be returned; it matches an exact E.164 or a last-10-digit
+    // substring. The caller (leadLinker) re-normalizes each candidate for an
+    // exact confirmation. Read-only.
+    async findLeadsByPhone(e164, last10) {
+      const or = [];
+      if (e164) or.push(`phone.eq.${String(e164).replace('+', '%2B')}`);
+      if (last10) or.push(`phone.ilike.*${enc(String(last10))}*`);
+      if (or.length === 0) return [];
+      const r = await rest('GET',
+        `/leads?select=id,phone,client&client=eq.rosalia&or=(${or.join(',')})&limit=25`);
+      if (!r.ok) throw new Error(`findLeadsByPhone failed: ${r.status} ${r.text.slice(0, 200)}`);
+      return Array.isArray(r.json) ? r.json : [];
+    },
+
     /** Idempotent: returns the new link, or null if the pair already existed. */
     async insertLinkIfAbsent({ conversation_id, entity_type, entity_id }) {
       const r = await rest('POST', '/conversation_links', {
