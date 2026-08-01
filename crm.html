@@ -240,6 +240,18 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     <div class="stat-card"><div class="label">Tours This Week</div><div class="value" id="stat-tours-week">-</div></div>
     <div class="stat-card"><div class="label">Commission Pending</div><div class="value" id="stat-commission">-</div></div>
   </div>
+  <div style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
+      <h2 style="margin:0">Appointments</h2>
+      <button class="btn btn-sm btn-outline" onclick="calShift(-7)">&larr;</button>
+      <span id="cal-range" style="font-size:14px;color:var(--text-muted)"></span>
+      <button class="btn btn-sm btn-outline" onclick="calShift(7)">&rarr;</button>
+      <button class="btn btn-sm btn-outline" onclick="calShift(0)">This week</button>
+      <span id="cal-unscheduled" style="margin-left:auto;font-size:14px"></span>
+    </div>
+    <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px"></div>
+  </div>
+
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
     <div>
       <h2 style="margin-bottom:12px;display:flex;align-items:center;gap:8px">Needs a reply
@@ -604,6 +616,84 @@ function statusBadge(s) {
 }
 function agentName(id) { const a = allAgents.find(a => a.id === id); return a ? a.name : 'Unassigned'; }
 
+// ── DASHBOARD: APPOINTMENT CALENDAR ──
+// A week view of bookings that have a parsed starts_at. Bookings whose time was
+// captured as 'Tuesday' or 'tomorrow' can't be placed on a day, so they're
+// counted separately as "need a time" rather than guessed onto the grid.
+let __calOffset = 0;   // weeks from the current one
+
+function calWeekStart(offsetWeeks) {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - d.getDay() + offsetWeeks * 7);   // Sunday
+  return d;
+}
+
+function calShift(delta) {
+  __calOffset = delta === 0 ? 0 : __calOffset + delta / 7;
+  loadCalendar();
+}
+
+async function loadCalendar() {
+  const grid = document.getElementById('cal-grid');
+  if (!grid) return;
+  const start = calWeekStart(__calOffset);
+  const end = new Date(start); end.setDate(end.getDate() + 6);
+  const iso = d => d.toISOString().slice(0, 10);
+
+  document.getElementById('cal-range').textContent =
+    start.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' – ' +
+    end.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+  const rows = await apiGet('/calendar?from=' + iso(start) + '&to=' + iso(end)) || [];
+
+  // Bucket by local day, not UTC — a 9pm appointment must not land on tomorrow.
+  const byDay = {};
+  rows.forEach(r => {
+    const d = new Date(r.starts_at);
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    (byDay[key] = byDay[key] || []).push(r);
+  });
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  let html = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start); d.setDate(d.getDate() + i);
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const items = byDay[key] || [];
+    const isToday = d.getTime() === today.getTime();
+    html += '<div style="background:var(--bg2);border:1px solid '+(isToday?'var(--gold)':'var(--border)')+';border-radius:var(--radius);padding:10px;min-height:112px">'
+      + '<div style="font-size:13px;color:'+(isToday?'var(--gold)':'var(--text-muted)')+';margin-bottom:8px">'
+      + d.toLocaleDateString([], { weekday: 'short' }) + ' ' + d.getDate() + '</div>'
+      + (items.length ? items.map(r =>
+          '<div onclick="openBookingLead(\''+esc(r.phone||'')+'\')" style="cursor:pointer;background:rgba(255,255,255,.05);border-left:3px solid '
+          + (r.confirmed_at ? 'var(--green,#4caf50)' : 'var(--gold)') + ';border-radius:4px;padding:5px 7px;margin-bottom:5px">'
+          + '<div style="font-size:13px;color:var(--gold)">'
+          + new Date(r.starts_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '</div>'
+          + '<div style="font-size:13px">' + esc((r.full_name || 'Guest').slice(0, 20)) + '</div>'
+          + '<div style="font-size:12px;color:var(--text-muted)">' + esc((r.type || '').slice(0, 24)) + '</div>'
+          + '</div>').join('')
+        : '<div style="font-size:12px;color:var(--text-muted)">—</div>')
+      + '</div>';
+  }
+  grid.innerHTML = html;
+
+  // Bookings with no usable time still need chasing, so surface the count.
+  const pending = await apiGet('/calendar?unscheduled=1') || [];
+  const el = document.getElementById('cal-unscheduled');
+  if (el) el.innerHTML = pending.length
+    ? '<span style="color:var(--gold)">' + pending.length + ' booking' + (pending.length===1?'':'s') + ' need a time</span>'
+    : '';
+}
+
+// Open the lead behind an appointment, matched on phone.
+function openBookingLead(phone) {
+  const d = String(phone||'').replace(/\D/g,'').slice(-10);
+  const lead = allLeads.find(l => String(l.phone||'').replace(/\D/g,'').slice(-10) === d);
+  if (lead) openLeadDetail(lead.id);
+  else if (d) openThreadByPhone(phone);
+}
+
 // ── DASHBOARD: COMMUNICATIONS ──
 // Two views of the same thread list. "Needs a reply" is the triage queue —
 // conversations where THEY spoke last. "Recent" is everything, newest first.
@@ -727,6 +817,7 @@ async function createLeadFromThread() {
 // ── DASHBOARD ──
 async function loadDashboard() {
   loadDashComms();   // side-by-side comms panels; independent of the stats below
+  loadCalendar();
   const today = new Date().toISOString().split('T')[0];
   const weekAgo = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
 
@@ -1059,11 +1150,19 @@ function renderLeadTimeline(messages, calls, emails) {
     if (inb) items.push({ at: emails.created_at, kind: 'email', dir: 'in', body: inb, subj, addr });
     if (emails.email_reply) items.push({ at: emails.replied_at || emails.created_at, kind: 'email', dir: 'out', body: emails.email_reply, subj, addr });
   }
-  // Tie-break on direction: readmail stores the inbound email and its reply with
-  // timestamps in the same second, so a plain time sort can show the reply above
-  // the message it answers. Inbound always comes first at equal times.
+  // Oldest first, so a thread reads top to bottom.
+  //
+  // Tie-break within two seconds rather than on an exact match: readmail writes
+  // the inbound email and its reply milliseconds apart, and their stored
+  // timestamps can even land out of order. A plain sort then shows the reply
+  // above the message it answers, which reads as if we replied first. Inbound
+  // always wins inside that window.
   const rank = (it) => (it.kind === 'email' ? (it.dir === 'in' ? 0 : 1) : (it.m && it.m.direction === 'inbound' ? 0 : 1));
-  items.sort((a,b) => String(a.at||'').localeCompare(String(b.at||'')) || rank(a) - rank(b));
+  const t = (it) => Date.parse(it.at || '') || 0;
+  items.sort((a, b) => {
+    const d = t(a) - t(b);
+    return Math.abs(d) <= 2000 ? (rank(a) - rank(b)) || d : d;
+  });
 
   const el = document.getElementById('ld-timeline');
   if (!items.length) {

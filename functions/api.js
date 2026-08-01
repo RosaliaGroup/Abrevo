@@ -494,6 +494,21 @@ exports.handler = async (event) => {
                          house: Math.round((total - paid) * 100) / 100 });
     }
 
+    // Appointments in a date window, for the dashboard calendar. Only bookings
+    // with a parsed starts_at appear — a booking whose time was recorded as
+    // 'Tuesday' can't be placed, and guessing would send someone to an empty
+    // building. Those surface via ?unscheduled=1 instead.
+    if (route === "/calendar" && method === "GET") {
+      if (qs.unscheduled === "1") {
+        const rows = await sbGet(`bookings?starts_at=is.null&select=id,full_name,phone,type,preferred_date,preferred_time,client,created_at&order=created_at.desc&limit=50`);
+        return json(200, { ok: true, data: rows || [] });
+      }
+      const from = vDate(qs.from, "from") || new Date().toISOString().slice(0, 10);
+      const to = vDate(qs.to, "to") || new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+      const rows = await sbGet(`bookings?starts_at=gte.${encodeURIComponent(from)}&starts_at=lte.${encodeURIComponent(to + "T23:59:59")}&select=id,full_name,phone,email,type,starts_at,client,calendar_event_id,confirmed_at&order=starts_at.asc&limit=300`);
+      return json(200, { ok: true, data: rows || [] });
+    }
+
     if (route === "/search/comms" && method === "GET") {
       const q = vStr(qs.q, 100, "q", true);
       if (q.length < 2) return json(400, { ok: false, error: "query_too_short" });
