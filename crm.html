@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Installable on a phone: Share > Add to Home Screen (iOS) or the install
+       prompt (Android). Opens standalone, without browser chrome. -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Rosalia">
 <title>Rosalia CRM</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -173,6 +180,10 @@ tr:hover td{background:rgba(201,168,76,0.03)}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       Dashboard
     </div>
+    <div class="nav-item" onclick="showPage('messages')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Messages
+    </div>
     <div class="nav-item" onclick="showPage('leads')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Leads
@@ -213,6 +224,10 @@ tr:hover td{background:rgba(201,168,76,0.03)}
   <div class="mobile-nav-item" onclick="showPage('leads')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
     Leads
+  </div>
+  <div class="mobile-nav-item" onclick="showPage('messages')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Texts
   </div>
   <div class="mobile-nav-item" onclick="showPage('pipeline')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg>
@@ -269,6 +284,16 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 </div>
 
 <!-- LEADS -->
+<div class="page-section" id="page-messages">
+  <h1>Messages</h1>
+  <div style="display:flex;gap:10px;margin:16px 0;flex-wrap:wrap">
+    <input id="msg-new-phone" placeholder="Text a number: (201) 555-0123" style="min-width:230px">
+    <button class="btn btn-sm btn-gold" onclick="startNewThread()">Start</button>
+    <button class="btn btn-sm btn-outline" id="msg-filter-btn" onclick="toggleMsgFilter()">Needs a reply</button>
+  </div>
+  <div id="msg-list"></div>
+</div>
+
 <div class="page-section" id="page-leads">
   <div class="main-header">
     <h1>Leads</h1>
@@ -587,6 +612,7 @@ function showPage(page) {
   document.querySelectorAll('.mobile-nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => { if (n.textContent.trim().toLowerCase().replace(/[\-\s]/g,'').includes(page)) n.classList.add('active'); });
   document.querySelectorAll('.mobile-nav-item').forEach(n => { const t = n.textContent.trim().toLowerCase(); if ((page==='dashboard' && t==='home') || t===page || (page==='pipeline' && t==='deals')) n.classList.add('active'); });
+  if (page === 'messages') loadMessagesPage();
   if (page === 'leads') loadLeads();
   if (page === 'pipeline') loadPipeline();
   if (page === 'tasks') loadTasks();
@@ -622,6 +648,78 @@ function statusBadge(s) {
 }
 function agentName(id) { const a = allAgents.find(a => a.id === id); return a ? a.name : 'Unassigned'; }
 
+// ── MESSAGES PAGE ──
+// A full inbox inside the CRM. Threads previously lived only on a lead's card or
+// in the separate communications.html page, so texting someone meant finding
+// them as a lead first — impossible for a number that isn't one yet.
+let __msgUnreadOnly = false;
+
+function toggleMsgFilter() {
+  __msgUnreadOnly = !__msgUnreadOnly;
+  const b = document.getElementById('msg-filter-btn');
+  if (b) { b.textContent = __msgUnreadOnly ? 'Showing: needs a reply' : 'Needs a reply'; b.className = 'btn btn-sm ' + (__msgUnreadOnly ? 'btn-gold' : 'btn-outline'); }
+  loadMessagesPage();
+}
+
+async function loadMessagesPage() {
+  const el = document.getElementById('msg-list');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
+  const r = await commApi('listConversations', { query: { limit: 100 } });
+  if (!r.ok || !Array.isArray(r.conversations)) { el.innerHTML = '<p style="color:var(--text-muted)">Unavailable</p>'; return; }
+
+  let rows = r.conversations;
+  if (__msgUnreadOnly) rows = rows.filter(c => c.last_message_direction === 'inbound');
+  if (!rows.length) { el.innerHTML = '<p style="color:var(--text-muted)">' + (__msgUnreadOnly ? 'Every thread has been answered.' : 'No conversations yet') + '</p>'; return; }
+
+  el.innerHTML = rows.map(c => {
+    const waiting = c.last_message_direction === 'inbound';
+    // Name the lead when we know them, so the list reads as people not numbers.
+    const d = String(c.normalized_phone || '').replace(/\D/g, '').slice(-10);
+    const lead = allLeads.find(l => String(l.phone || '').replace(/\D/g, '').slice(-10) === d);
+    return '<div onclick="openLeadByPhone(\'' + esc(c.normalized_phone) + '\')" '
+      + 'style="cursor:pointer;padding:13px 15px;margin-bottom:8px;border-radius:var(--radius);background:var(--bg2);'
+      + 'border:1px solid var(--border);border-left:3px solid ' + (waiting ? 'var(--gold)' : 'transparent') + '">'
+      + '<div style="display:flex;justify-content:space-between;gap:10px">'
+      + '<span style="font-size:15px">' + esc(lead ? lead.name : fmtPhone(c.normalized_phone)) + '</span>'
+      + '<span style="font-size:13px;color:var(--text-muted);white-space:nowrap">' + fmtStamp(c.last_message_at) + '</span></div>'
+      + (lead ? '<div style="font-size:13px;color:var(--text-muted)">' + esc(fmtPhone(c.normalized_phone)) + '</div>' : '')
+      + '<div style="font-size:14px;color:var(--text-muted);margin-top:4px">'
+      + (waiting ? '' : '<span>You: </span>') + esc((c.last_message_preview || '').slice(0, 70)) + '</div></div>';
+  }).join('');
+}
+
+// Text a number that may not be a lead at all.
+function startNewThread() {
+  const v = (document.getElementById('msg-new-phone').value || '').trim();
+  const d = v.replace(/\D/g, '');
+  if (d.length < 10) { alert('Enter a 10-digit phone number.'); return; }
+  document.getElementById('msg-new-phone').value = '';
+  openLeadByPhone(d.length === 10 ? '+1' + d : '+' + d);
+}
+
+// Tour requests that never got a slot. They can't go on the calendar — there's
+// no date to place them on — so they'd otherwise be invisible. This is the
+// "someone needs to call these people" list.
+let __unscheduled = [];
+
+function showUnscheduled() {
+  const grid = document.getElementById('cal-grid');
+  if (!grid) return;
+  if (!__unscheduled.length) { loadCalendar(); return; }
+  grid.style.gridTemplateColumns = '1fr';
+  grid.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+    + '<strong>Tour requests with no time booked</strong>'
+    + '<button class="btn btn-sm btn-outline" onclick="calShift(0)">Back to calendar</button></div>'
+    + __unscheduled.map(b =>
+        '<div onclick="openBookingLead(\''+esc(b.phone||'')+'\')" style="cursor:pointer;display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+        + '<div><div style="font-size:15px">'+esc(b.full_name||'Guest')+'</div>'
+        + '<div style="font-size:13px;color:var(--text-muted)">'+esc(fmtPhone(b.phone||''))+' &middot; '+esc((b.type||'').slice(0,32))+'</div></div>'
+        + '<div style="font-size:13px;color:var(--text-muted);white-space:nowrap">'+fmtDate(b.created_at)+'</div></div>').join('')
+    + '</div>';
+}
+
 // ── DASHBOARD: APPOINTMENT CALENDAR ──
 // A week view of bookings that have a parsed starts_at. Bookings whose time was
 // captured as 'Tuesday' or 'tomorrow' can't be placed on a day, so they're
@@ -643,6 +741,7 @@ function calShift(delta) {
 async function loadCalendar() {
   const grid = document.getElementById('cal-grid');
   if (!grid) return;
+  grid.style.gridTemplateColumns = 'repeat(7,1fr)';   // may have been switched to the list view
   const start = calWeekStart(__calOffset);
   const end = new Date(start); end.setDate(end.getDate() + 6);
   const iso = d => d.toISOString().slice(0, 10);
@@ -688,8 +787,10 @@ async function loadCalendar() {
   const pending = await apiGet('/calendar?unscheduled=1') || [];
   const el = document.getElementById('cal-unscheduled');
   if (el) el.innerHTML = pending.length
-    ? '<span style="color:var(--gold)">' + pending.length + ' booking' + (pending.length===1?'':'s') + ' need a time</span>'
+    ? '<a href="#" onclick="event.preventDefault();showUnscheduled()" style="color:var(--gold)">'
+      + pending.length + ' booking' + (pending.length===1?'':'s') + ' need a time &rarr;</a>'
     : '';
+  __unscheduled = pending;
 }
 
 // Open the lead behind an appointment, matched on phone.
