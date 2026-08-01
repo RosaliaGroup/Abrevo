@@ -83,6 +83,7 @@ const { getGoogleCredentials } = require('./lib/googleCreds');
 const { cleanName } = require('./lib/leadName');
 const { extractProperty, propertyFromClient } = require('./lib/leadProperty');
 const { logEmail } = require('./lib/emailLog');
+const { enrichLead } = require('./lib/leadContact');
 
 const VAPI_KEY = process.env.VAPI_KEY;
 
@@ -1076,7 +1077,7 @@ function fetchUnreadEmails(forceDays) {
 async function getLeadData(fromEmail) {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(fromEmail)}&limit=1`,
+      `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(fromEmail)}&select=*&limit=1`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const data = await res.json();
@@ -1473,7 +1474,7 @@ async function recordEmails(leadId, fromEmail, subject, body, replyText, message
 
 async function saveLead(fromEmail, fromName, subject, body, replyText, phone, client, messageId) {
   const checkRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(fromEmail)}&limit=1`,
+    `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(fromEmail)}&select=*&limit=1`,
     { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
   );
   const existing = await checkRes.json();
@@ -1488,8 +1489,14 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone, cl
         replied_at: new Date().toISOString(),
         email_reply: replyText,
         phone: existing[0].phone || phone || null,  // keep existing phone; only fill if missing
+        // (contact enrichment runs after this PATCH — see enrichLead below)
         property: existing[0].property || extractProperty(body, subject) || propertyFromClient(client) || null,
       }),
+    });
+    // A reply often carries the real address behind a Zillow relay, or a phone
+    // number typed into the body. Capture it rather than letting it pass.
+    await enrichLead(SUPABASE_URL, SUPABASE_KEY, existing[0].id, existing[0], {
+      phone, email: fromEmail, name: fromName,
     });
     await recordEmails(existing[0].id, fromEmail, subject, body, replyText, messageId);
     return existing[0];

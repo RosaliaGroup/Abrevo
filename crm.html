@@ -1038,8 +1038,14 @@ async function openLeadDetail(id) {
       + '<div style="font-size:13px;color:var(--text-muted)">Last message from them &middot; '+fmtStamp(lead.last_inbound_at)+'</div>'
       + '<div style="font-size:13px;margin-top:3px">'+esc(lead.last_inbound_preview||'')+'</div></div>'
     : '<div style="margin-top:10px;font-size:14px;color:var(--text-muted)">No reply from this lead yet</div>';
-  document.getElementById('ld-stage-wrap').innerHTML = stageSel + lastIn;
+  document.getElementById('ld-stage-wrap').innerHTML = altList + stageSel + lastIn;
 
+  // Show every address we hold. A Zillow lead's primary is an anonymised relay;
+  // the real one arrives later via a booking or a reply, and both stay valid.
+  const altList = Array.isArray(lead.alt_emails) && lead.alt_emails.length
+    ? '<div style="font-size:13px;color:var(--text-muted);margin-top:3px">also: '
+      + lead.alt_emails.map(e => esc(e)).join(', ') + '</div>'
+    : '';
   document.getElementById('ld-contact').innerHTML = esc(lead.email||'') + (lead.phone ? ' &middot; ' + fmtPhone(lead.phone) : '') + (lead.phone ? ' &middot; <a href="tel:'+esc(lead.phone)+'">Call</a> &middot; <a href="#" onclick="event.preventDefault();showDetailTab(\'messages\');return false;">Text</a>' : '');
 
   const info = document.getElementById('ld-info-content');

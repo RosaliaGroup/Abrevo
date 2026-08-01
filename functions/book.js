@@ -1,5 +1,6 @@
 ﻿const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
+const { enrichLead } = require('./lib/leadContact');
 const { parseBookingStart } = require('./lib/bookingTime');
 
 function resolveDate(raw) {
@@ -400,18 +401,26 @@ exports.handler = async (event) => {
       const digits = String(data.phone || '').replace(/\D/g, '').slice(-10);
       let existing = null;
       if (digits) {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?phone=ilike.*${digits}*&select=id&limit=1`,
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?phone=ilike.*${digits}*&select=id,name,phone,email,alt_emails&limit=1`,
           { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } });
         const rows = await r.json();
         if (Array.isArray(rows) && rows.length) existing = rows[0];
       }
       if (!existing && data.email) {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(data.email)}&select=id&limit=1`,
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(data.email)}&select=id,name,phone,email,alt_emails&limit=1`,
           { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } });
         const rows = await r.json();
         if (Array.isArray(rows) && rows.length) existing = rows[0];
       }
       if (existing) {
+        // Write back whatever they just gave us. A lead created from a Zillow
+        // inquiry holds a relay address and no phone; booking by phone supplies
+        // both, and until now none of it was saved — the CRM kept showing a
+        // contactless record while `bookings` held the real details.
+        await enrichLead(SUPABASE_URL, SUPABASE_KEY, existing.id, existing, {
+          phone: data.phone, email: data.email, name: data.full_name,
+        });
+
         // They booked, so they're past 'lead' — but never drag someone backwards
         // from applied/rented/dnc.
         await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${existing.id}&status=in.(lead,attempted,contacted)`, {

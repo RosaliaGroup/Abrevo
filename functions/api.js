@@ -83,7 +83,7 @@ async function recordAttempt(ip, username, success) {
 const LEAD_MODES = {
   list: () => `leads?client=eq.rosalia&order=created_at.desc&limit=50&select=name,email,phone,source,client,created_at`,
   all: () => `leads?select=*&order=created_at.desc&limit=500`,
-  "crm-list": () => `leads?order=created_at.desc&limit=500&select=id,name,email,phone,source,property,status,assigned_to,client,notes,last_contact_at,replied_at,created_at,call_attempts,last_inbound_at,last_inbound_preview,stage_changed_at`,
+  "crm-list": () => `leads?order=created_at.desc&limit=500&select=id,name,email,phone,source,property,status,assigned_to,client,notes,last_contact_at,replied_at,created_at,call_attempts,last_inbound_at,last_inbound_preview,stage_changed_at,alt_emails`,
   "monitor-replied": () => `leads?select=name,replied_at,property&replied_at=not.is.null&order=replied_at.desc&limit=20`,
   "monitor-callattempts": () => `leads?select=call_attempts,phone,updated_at&limit=500`,
   search: (q) =>
@@ -570,6 +570,11 @@ exports.handler = async (event) => {
         }
         if (body.name !== undefined) patch.name = vStr(body.name, 200, "name", true);
         if (body.email !== undefined) patch.email = body.email === "" ? null : vEmail(body.email, "email");
+        // Secondary addresses: a Zillow relay kept alongside the real one, so
+        // replies to the original thread still reach them.
+        if (Array.isArray(body.alt_emails)) {
+          patch.alt_emails = body.alt_emails.slice(0, 5).map((e) => vEmail(e, "alt_email")).filter(Boolean);
+        }
         if (body.phone !== undefined) patch.phone = body.phone === "" ? null : normalizePhone(body.phone);
         if (body.property !== undefined) patch.property = vStr(body.property, 500, "property", false);
         if (body.assigned_to !== undefined) patch.assigned_to = body.assigned_to === "" ? null : vId(body.assigned_to, "assigned_to");
