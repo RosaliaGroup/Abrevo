@@ -22,11 +22,12 @@ function createFakeRepo() {
   const byPhone = new Map();            // normalized_phone -> id
   const links = [];                     // {id, conversation_id, entity_type, entity_id}
   const messages = [];                  // message rows
+  const leads = [];                     // {id, phone, client} — seeded by tests
   let cN = 0, mN = 0, lN = 0;
 
   const repo = {
     UniqueViolationError,
-    _state: { conversations, messages, links },
+    _state: { conversations, messages, links, leads },
 
     async getConversationByPhone(e164) {
       const id = byPhone.get(e164);
@@ -62,6 +63,16 @@ function createFakeRepo() {
       return links
         .filter((l) => l.entity_type === entityType && l.entity_id === eid)
         .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
+        .map((l) => ({ ...l }));
+    },
+    // Mirrors supabaseRepo.findLeadsByPhone: tenant-scoped (client='rosalia')
+    // coarse match on exact E.164 or last-10-digit substring. Non-Rosalia leads
+    // are never returned, exactly as the real query pins client='rosalia'.
+    async findLeadsByPhone(e164, last10) {
+      return leads
+        .filter((l) => l.client === 'rosalia' && (
+          (e164 && String(l.phone) === String(e164)) ||
+          (last10 && String(l.phone).includes(String(last10)))))
         .map((l) => ({ ...l }));
     },
     async insertLinkIfAbsent({ conversation_id, entity_type, entity_id }) {
