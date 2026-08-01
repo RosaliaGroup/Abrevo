@@ -167,6 +167,7 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     <button type="submit" id="login-btn" style="width:100%;padding:12px;border:0;border-radius:8px;background:#e8b800;color:#111;font-weight:700;cursor:pointer;">Sign in</button>
   </form>
 </div>
+<button id="pw-btn" onclick="openModal('change-pw-modal')" style="display:none;position:fixed;bottom:16px;right:120px;z-index:60;background:var(--bg3);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer">Password</button>
 <button id="logout-btn" onclick="apiLogout()" style="display:none;position:fixed;bottom:16px;right:16px;z-index:9998;padding:8px 14px;border:1px solid #333;border-radius:8px;background:#15151f;color:#aaa;cursor:pointer;font-size:14px;">Log out</button>
 <div class="app">
 <!-- Sidebar -->
@@ -487,6 +488,35 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 </div>
 </div>
 
+<div class="modal-overlay" id="change-pw-modal" onclick="if(event.target===this)closeModal(this.id)">
+  <div class="modal" style="max-width:520px">
+    <h2 style="margin-bottom:6px">Change password</h2>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:16px">
+      This generates a new password hash. Paste it into Netlify to finish — the password itself is never stored anywhere.
+    </p>
+    <div id="pw-err" style="display:none;background:rgba(255,80,80,.12);border:1px solid rgba(255,80,80,.35);color:#ff9a9a;padding:9px 11px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
+    <div class="form-group"><label>Current password</label><input type="password" id="pw-current"></div>
+    <div class="form-group"><label>New password</label><input type="password" id="pw-next" placeholder="At least 12 characters, with a number"></div>
+    <div class="form-group"><label>Repeat new password</label><input type="password" id="pw-next2"></div>
+    <div id="pw-result" style="display:none;margin-top:14px">
+      <div style="font-size:14px;margin-bottom:6px">Almost done — two steps left:</div>
+      <ol style="font-size:14px;color:var(--text-muted);line-height:1.7;padding-left:20px;margin:0 0 10px">
+        <li>Netlify &rarr; Site configuration &rarr; Environment variables &rarr; <strong>OPERATOR_PASSWORD_HASH</strong></li>
+        <li>Replace its value with the hash below, save, then redeploy</li>
+      </ol>
+      <textarea id="pw-hash" readonly rows="3" style="width:100%;background:var(--bg-input,#12161c);color:var(--gold);border:1px solid var(--border);border-radius:6px;padding:9px;font:13px monospace;resize:vertical"></textarea>
+      <button class="btn btn-sm btn-outline" onclick="copyHash()" style="margin-top:8px">Copy hash</button>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:10px">
+        Your new password only works after the redeploy finishes. The old one keeps working until then.
+      </p>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-outline" onclick="closeModal('change-pw-modal')">Close</button>
+      <button class="btn btn-gold" id="pw-submit" onclick="changePassword()">Generate new hash</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="thread-modal" onclick="if(event.target===this)closeModal(this.id)">
 <div class="modal" style="max-width:520px">
   <h2 id="th-title" style="margin-bottom:2px"></h2>
@@ -555,6 +585,7 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 let __csrf = null;
 function showLoginGate(show) {
   var g = document.getElementById('login-gate'); var lo = document.getElementById('logout-btn');
+  var pw = document.getElementById('pw-btn'); if (pw) pw.style.display = lo && lo.style.display !== 'none' ? '' : 'none';
   var loggedIn = (show === false);
   if (g) g.style.display = loggedIn ? 'none' : 'flex';
   if (lo) lo.style.display = loggedIn ? 'block' : 'none';
@@ -647,6 +678,57 @@ function statusBadge(s) {
   return '<span class="badge '+(cls[s]||'badge-new')+'">'+esc(stageLabel(s))+'</span>';
 }
 function agentName(id) { const a = allAgents.find(a => a.id === id); return a ? a.name : 'Unassigned'; }
+
+// ── CHANGE PASSWORD ──
+// The hash lives in a Netlify environment variable, which a running function
+// can't rewrite — so this generates the hash and hands it over to paste. It
+// isn't a "forgot password" flow: with credentials in env there's nowhere to
+// send a reset link, and the current password is required so a borrowed laptop
+// can't change it.
+function pwErr(m) {
+  const e = document.getElementById('pw-err');
+  if (!e) return;
+  if (!m) { e.style.display = 'none'; return; }
+  e.style.display = 'block'; e.textContent = m;
+}
+
+async function changePassword() {
+  const cur = document.getElementById('pw-current').value;
+  const next = document.getElementById('pw-next').value;
+  const next2 = document.getElementById('pw-next2').value;
+  pwErr('');
+  if (!cur) { pwErr('Enter your current password.'); return; }
+  if (next !== next2) { pwErr('The two new passwords do not match.'); return; }
+  if (next.length < 12) { pwErr('Use at least 12 characters — this account reaches every lead record.'); return; }
+
+  const btn = document.getElementById('pw-submit');
+  btn.disabled = true;
+  const r = await apiSend('POST', '/auth/change-password', { current: cur, next: next });
+  btn.disabled = false;
+
+  if (!r || r.ok === false) {
+    const map = {
+      current_password_wrong: 'That current password is not right.',
+      too_short: 'Use at least 12 characters.',
+      needs_letter_and_number: 'Include at least one letter and one number.',
+      same_as_current: 'The new password is the same as the current one.',
+      locked_out: 'Too many failed attempts — wait a few minutes.',
+    };
+    pwErr(map[r && r.error] || ('Could not change the password: ' + ((r && r.error) || 'unknown')));
+    return;
+  }
+  document.getElementById('pw-hash').value = r.hash;
+  document.getElementById('pw-result').style.display = 'block';
+  ['pw-current','pw-next','pw-next2'].forEach(id => { document.getElementById(id).value = ''; });
+  btn.style.display = 'none';
+}
+
+function copyHash() {
+  const t = document.getElementById('pw-hash');
+  t.select();
+  try { document.execCommand('copy'); alert('Hash copied. Paste it into OPERATOR_PASSWORD_HASH in Netlify.'); }
+  catch (e) { alert('Select the text and copy it manually.'); }
+}
 
 // ── MESSAGES PAGE ──
 // A full inbox inside the CRM. Threads previously lived only on a lead's card or
