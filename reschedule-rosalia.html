@@ -156,6 +156,34 @@
   </div>
 </div>
 <script>
+// Pre-fill from the short code in the reschedule link. Everything here is
+// already known — name, phone, email, property — and asking someone to retype
+// it is how you get a mistyped number that no longer matches their booking.
+var __code = new URLSearchParams(location.search).get('code') || '';
+(function prefill(){
+  if (!__code) return;
+  fetch('/.netlify/functions/booking-lookup?code=' + encodeURIComponent(__code))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || !d.ok || !d.booking) return;
+      var b = d.booking;
+      var set = function(id, v){ var e = document.getElementById(id); if (e && v) { e.value = v; e.readOnly = true; e.style.opacity = '.75'; } };
+      set('full_name', b.full_name);
+      set('phone', b.phone);
+      set('email', b.email);
+      // Property is a <select> here, so match the option rather than assigning.
+      var p = document.getElementById('property_name') || document.getElementById('property');
+      if (p && b.property) {
+        for (var i = 0; i < p.options.length; i++) {
+          if (p.options[i].text.trim() === b.property.trim()) { p.selectedIndex = i; break; }
+        }
+      }
+      var cur = document.getElementById('current-slot');
+      if (cur && b.current_date) cur.textContent = 'Currently booked: ' + b.current_date + (b.current_time ? ' at ' + b.current_time : '');
+    })
+    .catch(function(){ /* leave the form blank and let them fill it in */ });
+})();
+
   var params = new URLSearchParams(window.location.search);
   var phoneParam = params.get('phone');
   if (phoneParam) document.getElementById('phone').value = phoneParam;
@@ -192,7 +220,7 @@
       var res = await fetch('/.netlify/functions/reschedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ property: property_name, property_name: property_name, phone: phone, new_date: new_date, new_time: new_time, full_name: full_name, email: email })
+        body: JSON.stringify({ property: property_name, property_name: property_name, phone: phone, short_code: __code, new_date: new_date, new_time: new_time, full_name: full_name, email: email })
       });
       var data = await res.json();
       if (res.ok && data.success) {

@@ -135,11 +135,35 @@
   </div>
 </div>
 <script>
+// Pre-fill from the short code in the reschedule link. Name, phone, email and
+// property are already known — asking someone to retype them is how you get a
+// mistyped number that no longer matches their booking.
+var __code = new URLSearchParams(location.search).get('code') || '';
+(function prefill(){
+  if (!__code) return;
+  fetch('/.netlify/functions/booking-lookup?code=' + encodeURIComponent(__code))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || !d.ok || !d.booking) return;
+      var b = d.booking;
+      var set = function(id, v){ var e = document.getElementById(id); if (e && v) { e.value = v; e.readOnly = true; e.style.opacity = '.75'; } };
+      set('full_name', b.full_name);
+      set('phone', b.phone);
+      set('email', b.email);
+      var p = document.getElementById('property_name') || document.getElementById('property');
+      if (p && b.property && p.options) {
+        for (var i = 0; i < p.options.length; i++) {
+          if (p.options[i].text.trim() === b.property.trim()) { p.selectedIndex = i; break; }
+        }
+      }
+    })
+    .catch(function(){ /* leave the form blank and let them fill it in */ });
+})();
+
   var params = new URLSearchParams(window.location.search);
   var phoneParam = params.get('phone');
   if (phoneParam) document.getElementById('phone').value = phoneParam;
   var today = new Date().toISOString().split('T')[0];
-  });
 
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
   document.getElementById('new_date').min = tomorrow;
@@ -166,7 +190,7 @@
     try {
       var payload = {
         full_name: full_name,
-        phone: phone,
+        phone: phone, short_code: __code,
         email: email,
         new_date: new_date,
         new_time: new_time,

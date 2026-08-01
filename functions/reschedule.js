@@ -115,18 +115,30 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
 
   try {
-    const { phone, new_date, new_time } = JSON.parse(event.body || '{}');
+    const { phone, new_date, new_time, short_code } = JSON.parse(event.body || '{}');
     if (!phone || !new_date || !new_time) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'phone, new_date, new_time required' }) };
     }
 
-    let normalizedPhone = phone.toString().replace(/\D/g, '');
-    if (!normalizedPhone.startsWith('+')) normalizedPhone = '+1' + normalizedPhone;
-    console.log('Reschedule for phone:', normalizedPhone);
+    // The old code stripped non-digits and THEN checked startsWith('+') — which
+    // could never be true, so '+1862...' became '+1' + '1862...'. Build the E.164
+    // form from the digits instead.
+    const digits = phone.toString().replace(/\D/g, '');
+    const last10 = digits.slice(-10);
+    const normalizedPhone = digits.length === 10 ? '+1' + digits
+                          : digits.length === 11 ? '+' + digits
+                          : '+' + digits;
+    console.log('Reschedule for phone:', normalizedPhone, '| last10:', last10);
 
-    // Find latest booking
+    // Match on the LAST 10 DIGITS, not an exact string. 23 bookings are stored
+    // without the +1 prefix ('8624239396'), and an exact match on '+1862...'
+    // could never find them — the form just said "No existing booking found".
+    // A short_code, when present, is the more precise key and wins.
+    const query = short_code
+      ? `bookings?short_code=eq.${encodeURIComponent(short_code)}&limit=1`
+      : `bookings?phone=ilike.*${encodeURIComponent(last10)}*&order=created_at.desc&limit=1`;
     const findRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/bookings?phone=eq.${encodeURIComponent(normalizedPhone)}&order=created_at.desc&limit=1`,
+      `${SUPABASE_URL}/rest/v1/${query}`,
       { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
     );
     const bookings = await findRes.json();
