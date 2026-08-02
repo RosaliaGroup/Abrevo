@@ -418,8 +418,22 @@ exports.handler = async (event) => {
   }
 
   const flagCount = ctx.flags.length;
-  const subject =
-    `${flagCount ? '[Needs attention] ' : ''}Call Recap — ${ctx.callerName || ctx.caller} — ${assistant}`;
+
+  // Escalation subjects. The assistant is scripted to say these exact phrases,
+  // so the transcript is a reliable signal for what the call actually needs.
+  const said = String(ctx.transcript || '');
+  const wantsManagement = /escalate this to management/i.test(said);
+  const wantsCallback   = /message the agent to call you back/i.test(said);
+  const who = ctx.callerName || ctx.caller;
+
+  let subject;
+  if (wantsManagement) {
+    subject = `Resident needs to speak with management — ${who} — ${ctx.caller || ''}`;
+  } else if (wantsCallback) {
+    subject = `Call caller back — ${who} — ${ctx.caller || ''}`;
+  } else {
+    subject = `${flagCount ? '[Needs attention] ' : ''}Call Recap — ${who} — ${assistant}`;
+  }
 
   try {
     const transporter = nodemailer.createTransport({
