@@ -180,6 +180,9 @@ tr:hover td{background:rgba(201,168,76,0.03)}
   .sidebar{display:none}
   .main{margin-left:0;padding:14px 12px 92px}
   .mobile-nav{display:flex}
+  /* Clear the bottom nav bar, and let the buttons wrap rather than run off-screen. */
+  #util-bar{bottom:76px;right:10px;left:10px;justify-content:center}
+  #util-bar button{font-size:13px;padding:8px 11px}
   .stats{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
   .stat-card{padding:12px 13px}
   .stat-card .label{font-size:12px}
@@ -254,9 +257,14 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     <div style="text-align:center;margin-top:14px"><a href="#" onclick="event.preventDefault();requestReset()" style="font-size:13px;color:#888;text-decoration:none">Forgot password?</a></div>
   </form>
 </div>
-<button id="alerts-btn" onclick="enableAlerts()" style="display:none;position:fixed;bottom:16px;right:232px;z-index:60;background:var(--bg3);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer">Turn on alerts</button>
-<button id="pw-btn" onclick="openModal('change-pw-modal')" style="display:none;position:fixed;bottom:16px;right:120px;z-index:60;background:var(--bg3);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer">Password</button>
-<button id="logout-btn" onclick="apiLogout()" style="display:none;position:fixed;bottom:16px;right:16px;z-index:9998;padding:8px 14px;border:1px solid #333;border-radius:8px;background:#15151f;color:#aaa;cursor:pointer;font-size:14px;">Log out</button>
+
+
+
+<div id="util-bar" style="display:none;position:fixed;bottom:16px;right:16px;z-index:9998;gap:8px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 32px)">
+  <button id="alerts-btn" onclick="enableAlerts()" style="background:var(--bg3);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:9px 13px;font:inherit;font-size:14px;cursor:pointer">Turn on alerts</button>
+  <button id="pw-btn" onclick="openModal('change-pw-modal')" style="background:var(--bg3);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:9px 13px;font:inherit;font-size:14px;cursor:pointer">Password</button>
+  <button id="logout-btn" onclick="apiLogout()" style="background:var(--bg3);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:9px 13px;font:inherit;font-size:14px;cursor:pointer">Sign out</button>
+</div>
 <div class="app">
 <!-- Sidebar -->
 <nav class="sidebar">
@@ -685,12 +693,13 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 // ── Authenticated API client (server holds the Supabase credentials) ──
 let __csrf = null;
 function showLoginGate(show) {
-  var g = document.getElementById('login-gate'); var lo = document.getElementById('logout-btn');
-  var pw = document.getElementById('pw-btn'); if (pw) pw.style.display = lo && lo.style.display !== 'none' ? '' : 'none';
-  var al = document.getElementById('alerts-btn'); if (al) { al.style.display = pw ? pw.style.display : 'none'; updateAlertButton(); }
+  var g = document.getElementById('login-gate'); var lo = document.getElementById('util-bar');
+  // The buttons live inside #util-bar now, so the container controls visibility;
+  // setting them individually here would hide them inside a shown bar.
+  updateAlertButton();
   var loggedIn = (show === false);
   if (g) g.style.display = loggedIn ? 'none' : 'flex';
-  if (lo) lo.style.display = loggedIn ? 'block' : 'none';
+  if (lo) lo.style.display = loggedIn ? 'flex' : 'none';
 }
 async function apiRaw(path, opts) {
   try {
