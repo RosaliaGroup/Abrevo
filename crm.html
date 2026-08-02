@@ -165,6 +165,7 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     <input id="login-pass" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;padding:12px;margin-bottom:10px;border-radius:8px;border:1px solid #333;background:#0b0b12;color:#fff;box-sizing:border-box;">
     <div id="login-err" style="color:#e55;font-size:13px;min-height:18px;margin-bottom:10px;"></div>
     <button type="submit" id="login-btn" style="width:100%;padding:12px;border:0;border-radius:8px;background:#e8b800;color:#111;font-weight:700;cursor:pointer;">Sign in</button>
+    <div style="text-align:center;margin-top:14px"><a href="#" onclick="event.preventDefault();requestReset()" style="font-size:13px;color:#888;text-decoration:none">Forgot password?</a></div>
   </form>
 </div>
 <button id="pw-btn" onclick="openModal('change-pw-modal')" style="display:none;position:fixed;bottom:16px;right:120px;z-index:60;background:var(--bg3);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer">Password</button>
@@ -488,6 +489,19 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 </div>
 </div>
 
+<div class="modal-overlay" id="reset-pw-modal" onclick="if(event.target===this)closeModal(this.id)">
+  <div class="modal" style="max-width:460px">
+    <h2 style="margin-bottom:6px">Set a new password</h2>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:16px">This link works once, and expires 30 minutes after it was sent.</p>
+    <div id="rp-err" style="display:none;background:rgba(255,80,80,.12);border:1px solid rgba(255,80,80,.35);color:#ff9a9a;padding:9px 11px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
+    <div class="form-group"><label>New password</label><input type="password" id="rp-next" placeholder="At least 12 characters, with a number"></div>
+    <div class="form-group"><label>Repeat it</label><input type="password" id="rp-next2"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+      <button class="btn btn-gold" onclick="completeReset()">Set password</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="change-pw-modal" onclick="if(event.target===this)closeModal(this.id)">
   <div class="modal" style="max-width:520px">
     <h2 style="margin-bottom:6px">Change password</h2>
@@ -678,6 +692,62 @@ function statusBadge(s) {
   return '<span class="badge '+(cls[s]||'badge-new')+'">'+esc(stageLabel(s))+'</span>';
 }
 function agentName(id) { const a = allAgents.find(a => a.id === id); return a ? a.name : 'Unassigned'; }
+
+// ── PASSWORD RESET ──
+// Emails a one-time link to a FIXED address (never one supplied by the caller —
+// that would make this an account-takeover endpoint). The response is identical
+// whether or not mail was actually sent.
+async function requestReset() {
+  if (!confirm('Email a password reset link to the account owner?')) return;
+  try {
+    await fetch('/.netlify/functions/auth-reset?action=request', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+  } catch (e) { /* opaque either way */ }
+  alert('If the account exists, a reset link has been emailed. It expires in 30 minutes.');
+}
+
+async function completeReset() {
+  const err = document.getElementById('rp-err');
+  const show = m => { err.style.display = 'block'; err.textContent = m; };
+  const next = document.getElementById('rp-next').value;
+  const next2 = document.getElementById('rp-next2').value;
+  err.style.display = 'none';
+  if (next !== next2) { show('The two passwords do not match.'); return; }
+  if (next.length < 12) { show('Use at least 12 characters.'); return; }
+
+  const token = typeof location !== 'undefined' ? (new URLSearchParams(location.search).get('reset') || '') : '';
+  let r;
+  try {
+    const res = await fetch('/.netlify/functions/auth-reset?action=complete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, next: next }),
+    });
+    r = await res.json().catch(() => ({ ok: false }));
+  } catch (e) { r = { ok: false, error: 'network' }; }
+
+  if (!r || r.ok === false) {
+    const map = {
+      invalid_or_used: 'This link has already been used, or is not valid.',
+      expired: 'This link has expired — request a new one.',
+      too_short: 'Use at least 12 characters.',
+      needs_letter_and_number: 'Include at least one letter and one number.',
+    };
+    show(map[r && r.error] || 'Could not set the password.');
+    return;
+  }
+  closeModal('reset-pw-modal');
+  // Drop the token from the URL so it isn't left in history or a shared link.
+  if (typeof history !== 'undefined' && typeof location !== 'undefined') history.replaceState({}, '', location.pathname);
+  alert('Password updated. Sign in with your new password.');
+}
+
+// Arriving from the emailed link. Guarded because crm.leadmsg.race.test.js loads
+// this script in a vm sandbox with no `location` — an unguarded read here breaks
+// the whole test file, not just this line.
+if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('reset')) {
+  document.addEventListener('DOMContentLoaded', function () { openModal('reset-pw-modal'); });
+}
 
 // ── CHANGE PASSWORD ──
 // The hash lives in a Netlify environment variable, which a running function
