@@ -1460,6 +1460,26 @@ async function buildAndSendLeadText(phone, leadName, property, bookingUrl) {
 // a real thread rather than only the most recent exchange (email_reply used to be
 // overwritten each time). Never throws — replying to leads matters more than
 // logging it.
+/**
+ * Record an email we are deliberately not auto-replying to.
+ *
+ * Seven separate code paths used to `continue` here — replied recently, DNC,
+ * already booked, needs a specialist, duplicate within 10 minutes, and so on —
+ * which discarded the lead's message entirely. It never reached the CRM, never
+ * alerted, and was only visible in the Gmail inbox.
+ *
+ * Suppressing the automated reply is right in all those cases. Losing what the
+ * person actually said is not.
+ */
+async function recordWithoutReply(reason, args) {
+  try {
+    await saveLead(args.email, args.name, args.subject, args.body, null, args.phone, args.client, args.messageId);
+    console.log(`Recorded without auto-reply (${reason}):`, args.email);
+  } catch (e) {
+    console.error(`Failed to record email (${reason}):`, e.message);
+  }
+}
+
 async function recordEmails(leadId, fromEmail, subject, body, replyText, messageId) {
   // Alert here rather than in the caller: both the new-lead and existing-lead
   // paths run this, so a first-time inquiry notifies too.
@@ -2067,7 +2087,9 @@ exports.handler = async (event) => {
         const receivedAt = parsed.date || null;
         if (!skipRecentCheck && !isReply && await repliedRecently(checkEmail, 4, receivedAt)) {
           console.log('Skipping (replied recently):', checkEmail, '(new email, 4h window)');
-          results.skipped++;
+          await recordWithoutReply('replied-recently-4h', { email: realEmail || fromEmail, name: realName || fromName,
+            subject, body, phone, client: leadClient, messageId: parsed.messageId });
+          results.processed++;
           continue;
         }
 
@@ -2086,24 +2108,29 @@ exports.handler = async (event) => {
         const leadContext = await getLeadContext(checkEmail, realName);
 
         if (leadContext?.status === 'dnc') {
-          console.log('Skipping DNC lead:', checkEmail);
-          results.skipped++;
+          console.log('DNC lead — recording, not replying:', checkEmail);
+          await recordWithoutReply('dnc', { email: realEmail || fromEmail, name: realName || fromName,
+            subject, body, phone, client: leadClient, messageId: parsed.messageId });
+          results.processed++;
           continue;
         }
 
         // Skip AI reply entirely if lead already has an upcoming booking (new emails only, not thread replies)
         if (!isReply && await hasExistingBooking(phone, realEmail || fromEmail)) {
           console.log('Skipping (already booked):', realEmail || fromEmail);
-          results.skipped++;
+          await recordWithoutReply('already-booked', { email: realEmail || fromEmail, name: realName || fromName,
+            subject, body, phone, client: leadClient, messageId: parsed.messageId });
+          results.processed++;
           continue;
         }
 
         // Skip AI reply for specialist-status leads — create task for human follow-up
         const leadData = await getLeadData(checkEmail);
         if (leadData?.status === 'needs_specialist' && !isReply) {
-          await createTask(realName || fromName, checkEmail, phone, 'specialist_followup', `Specialist lead sent new email: "${body.slice(0,300)}"`);
-          console.log('Skipping (specialist lead):', checkEmail);
-          results.skipped++;
+          console.log('Specialist lead — recording, not replying:', checkEmail);
+          await recordWithoutReply('needs-specialist', { email: realEmail || fromEmail, name: realName || fromName,
+            subject, body, phone, client: leadClient, messageId: parsed.messageId });
+          results.processed++;
           continue;
         }
 
@@ -2120,7 +2147,11 @@ exports.handler = async (event) => {
             await createTask(leadName, checkEmail, phone, 'opt_out', `Lead requested opt-out: "${body.slice(0,200)}"`);
             await fetch(`${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(checkEmail)}`, { method: 'PATCH', headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'dnc', call_attempts: 99 }) });
             console.log('Opt-out processed for:', checkEmail);
-            results.skipped++;
+            // Record their words too. An opt-out request is exactly the message
+            // you want on file, and a task alone doesn't preserve what they said.
+            await recordWithoutReply('opt-out', { email: realEmail || fromEmail, name: realName || fromName,
+              subject, body, phone, client: leadClient, messageId: parsed.messageId });
+            results.processed++;
             continue;
           }
           if (wantsFloorPlan) {
@@ -2137,7 +2168,9 @@ exports.handler = async (event) => {
         // Cross-run dedup: if another cron run already replied in the last 10 min, skip
         if (!isReply && await repliedRecently(checkEmail, 10/60)) {
           console.log('Skipping (cross-run duplicate, replied <10min ago):', checkEmail);
-          results.skipped++;
+          await recordWithoutReply('duplicate-10min', { email: realEmail || fromEmail, name: realName || fromName,
+            subject, body, phone, client: leadClient, messageId: parsed.messageId });
+          results.processed++;
           continue;
         }
 
