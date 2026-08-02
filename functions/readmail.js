@@ -2071,11 +2071,16 @@ exports.handler = async (event) => {
           continue;
         }
 
-        // Reply threads (Re:) — skip if we already replied within 24hrs
-        if (isReply && await repliedRecently(checkEmail, 24, receivedAt)) {
-          console.log('Skipping reply thread — already replied to', checkEmail, 'within 24hrs');
-          results.skipped++;
-          continue;
+        // Reply threads (Re:) — don't AUTO-REPLY again within 24hrs, but do still
+        // record the message and alert.
+        //
+        // This used to `continue`, discarding the email entirely: a lead who
+        // answered our reply minutes later was never stored, never alerted, and
+        // never appeared in the CRM. The throttle exists to prevent a reply
+        // loop, not to make the lead's own words vanish.
+        const suppressAutoReply = isReply && await repliedRecently(checkEmail, 24, receivedAt);
+        if (suppressAutoReply) {
+          console.log('Reply thread — recording but not auto-replying to', checkEmail, '(replied within 24hrs)');
         }
 
         const leadContext = await getLeadContext(checkEmail, realName);
@@ -2140,7 +2145,19 @@ exports.handler = async (event) => {
         if (calendarAppt) console.log('Calendar appointment found:', calendarAppt.date, calendarAppt.time);
         if (leadContext) console.log('Lead context found:', leadContext.status);
 
-        let replyText = await generateReply(from, subject, body, previousReply, leadContext, calendarAppt, realName, leadClient);
+        // Within the 24h window we record and alert, but send nothing — that's
+        // what the throttle is actually for.
+        let replyText = suppressAutoReply
+          ? null
+          : await generateReply(from, subject, body, previousReply, leadContext, calendarAppt, realName, leadClient);
+        if (suppressAutoReply) {
+          // Still store the lead's message and notify, then move on.
+          try {
+            await saveLead(realEmail || fromEmail, realName || fromName, subject, body, null, phone, leadClient, parsed.messageId);
+          } catch (e) { console.warn('save on suppressed reply failed:', e.message); }
+          results.processed++;
+          continue;
+        }
         if (!replyText) {
           console.error('generateReply returned empty for:', fromEmail, '| subject:', subject);
           await syslog('warn', `Empty AI reply for ${fromEmail}`, { email: fromEmail, subject });
