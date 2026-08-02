@@ -31,6 +31,20 @@ exports.handler = async (event) => {
   if (!session.ok) return json(session.status || 401, { ok: false, error: 'unauthorized' });
   if (!SUPABASE_KEY) return json(500, { ok: false, error: 'server_not_configured' });
 
+  // GET ?endpoint=... — is THIS device actually registered? The UI asks before
+  // claiming alerts work; previously it reported success from the POST's status
+  // code alone, which said nothing about whether a row existed.
+  if (event.httpMethod === 'GET') {
+    const endpoint = (event.queryStringParameters || {}).endpoint || '';
+    if (!endpoint) return json(400, { ok: false, error: 'endpoint_required' });
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}&select=id&limit=1`,
+      { headers: sb() }
+    );
+    const rows = await r.json();
+    return json(200, { ok: true, registered: Array.isArray(rows) && rows.length > 0 });
+  }
+
   if (event.httpMethod === 'DELETE') {
     const endpoint = (event.queryStringParameters || {}).endpoint || '';
     if (!endpoint) return json(400, { ok: false, error: 'endpoint_required' });

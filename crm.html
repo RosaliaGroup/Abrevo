@@ -387,8 +387,7 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px">
       <h2 style="margin:0 0 6px">Alerts</h2>
       <p style="color:var(--text-muted);font-size:14px;margin:0 0 14px">
-        Get notified when a lead texts you. Alerts arrive while the CRM is open —
-        on iPhone, only when it's been added to your home screen.
+        Get notified when a lead texts you, even when the app is closed.
       </p>
       <button class="btn btn-gold" id="alerts-btn" onclick="enableAlerts()">Turn on alerts</button>
       <div id="alerts-state" style="font-size:14px;color:var(--text-muted);margin-top:10px"></div>
@@ -1020,10 +1019,17 @@ async function enableAlerts() {
         headers: Object.assign({ 'Content-Type': 'application/json' }, __csrf ? { 'X-CSRF-Token': __csrf } : {}),
         body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys }),
       });
-      pushOk = res.ok;
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
         pushErr = 'Server rejected the registration: ' + (b.error || res.status);
+      } else {
+        // Confirm the row exists rather than trusting a 2xx. The previous
+        // version reported "including when the app is closed" purely because
+        // the POST returned OK, which said nothing about whether it stored.
+        const chk = await fetch('/.netlify/functions/push-subscribe?endpoint=' + encodeURIComponent(j.endpoint), { credentials: 'same-origin' });
+        const cj = await chk.json().catch(() => ({}));
+        pushOk = Boolean(cj && cj.registered);
+        if (!pushOk) pushErr = 'The server accepted the request but did not store this device.';
       }
     }
   } catch (e) {
@@ -1034,8 +1040,8 @@ async function enableAlerts() {
 
   updateAlertButton();
   new Notification('Rosalia CRM', {
-    body: pushOk ? 'Alerts are on, including when the app is closed.'
-                 : 'Alerts are on while the CRM is open.',
+    body: pushOk ? "You'll get alerts when a lead texts you."
+                 : 'Alerts are on, but only while this page is open.',
     icon: '/icon-192.png',
   });
 }
@@ -1051,8 +1057,9 @@ function updateAlertButton() {
     const perm = (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported';
     // Surface a registration failure here — a silent fallback to in-app alerts
     // looks identical to success until you notice nothing ever arrives.
-    if (window.__pushErr) { st.innerHTML = '<span style="color:#ff9a9a">Background alerts unavailable: ' + esc(window.__pushErr) + '</span>'; return; }
-    st.textContent = __alertsOn && perm === 'granted' ? 'You will be notified when a lead replies, including when the app is closed.'
+    if (window.__pushErr) { st.innerHTML = '<span style="color:#ff9a9a">' + esc(window.__pushErr) + '</span>'; return; }
+    st.textContent = __alertsOn && perm === 'granted' ? "You'll get alerts when a lead texts you."
+
       : perm === 'denied' ? 'Notifications are blocked for this site — enable them in your browser settings.'
       : perm === 'unsupported' ? 'This browser does not support alerts.'
       : '';
