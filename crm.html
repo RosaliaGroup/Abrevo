@@ -147,7 +147,16 @@ tr:hover td{background:rgba(201,168,76,0.03)}
   .sidebar{display:none}
   .main{margin-left:0;padding:14px 12px 92px}
   .mobile-nav{display:flex}
-  .stats{grid-template-columns:1fr 1fr;gap:10px}
+  .stats{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+  .stat-card{padding:12px 13px}
+  .stat-card .label{font-size:12px}
+  .stat-card .value{font-size:24px}
+  /* The week view is 7 stacked day cards on a phone; empty days waste the whole
+     screen before you reach anything useful. */
+  #cal-grid > div:has(> div:only-child){padding:8px 10px;min-height:0}
+  #cal-grid{gap:6px}
+  h2{margin-bottom:8px}
+  #dash-awaiting,#dash-recent{max-height:230px}
   .kanban{flex-direction:column}
   .kanban-col{min-width:100%;max-width:100%;max-height:none}
   .form-row{grid-template-columns:1fr}
@@ -297,10 +306,10 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 <div class="page-section active" id="page-dashboard">
   <div class="main-header"><h1>Dashboard</h1></div>
   <div class="stats">
-    <div class="stat-card"><div class="label">New Leads Today</div><div class="value" id="stat-new-leads">-</div></div>
-    <div class="stat-card"><div class="label">Active Deals</div><div class="value" id="stat-active-deals">-</div></div>
-    <div class="stat-card"><div class="label">Tours This Week</div><div class="value" id="stat-tours-week">-</div></div>
-    <div class="stat-card"><div class="label">Commission Pending</div><div class="value" id="stat-commission">-</div></div>
+    <div class="stat-card" onclick="statDrill('new-leads')" style="cursor:pointer"><div class="label">New Leads Today</div><div class="value" id="stat-new-leads">-</div></div>
+    <div class="stat-card" onclick="statDrill('deals')" style="cursor:pointer"><div class="label">Active Deals</div><div class="value" id="stat-active-deals">-</div></div>
+    <div class="stat-card" onclick="statDrill('tours')" style="cursor:pointer"><div class="label">Tours This Week</div><div class="value" id="stat-tours-week">-</div></div>
+    <div class="stat-card" onclick="statDrill('commission')" style="cursor:pointer"><div class="label">Commission Pending</div><div class="value" id="stat-commission">-</div></div>
   </div>
   <div style="margin-bottom:24px">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
@@ -1016,6 +1025,24 @@ function showUnscheduled() {
         + '<div style="font-size:13px;color:var(--text-muted)">'+esc(fmtPhone(b.phone||''))+' &middot; '+esc((b.type||'').slice(0,32))+'</div></div>'
         + '<div style="font-size:13px;color:var(--text-muted);white-space:nowrap">'+fmtDate(b.created_at)+'</div></div>').join('')
     + '</div>';
+}
+
+// Each stat opens what it counts. A number with nothing behind it just raises
+// the question of who it refers to, and on a phone there's no sidebar to go
+// hunting through.
+function statDrill(which) {
+  if (which === 'new-leads') {
+    // Today's arrivals, newest first.
+    showPage('leads');
+    const el = document.getElementById('lead-search'); if (el) el.value = '';
+    __commResults = null;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todays = allLeads.filter(l => new Date(l.created_at) >= today);
+    if (todays.length) { __commResults = todays; loadLeads(); }
+    return;
+  }
+  if (which === 'deals' || which === 'commission') { showPage('pipeline'); return; }
+  if (which === 'tours') { showPage('dashboard'); const g = document.getElementById('cal-grid'); if (g) g.scrollIntoView({ behavior: 'smooth' }); return; }
 }
 
 // ── DASHBOARD: APPOINTMENT CALENDAR ──
@@ -1783,7 +1810,7 @@ async function loadTasks() {
   document.getElementById('tasks-body').innerHTML = filtered.map(t => {
     const lead = allLeads.find(l => l.id === t.lead_id);
     const overdue = t.status !== 'completed' && t.due_date && t.due_date < now;
-    return '<tr><td>'+esc(t.title)+'</td><td>'+esc(lead?.name||'-')+'</td><td>'+agentName(t.assigned_to)+'</td><td style="'+(overdue?'color:var(--red)':'')+'">'+ fmtDate(t.due_date)+(overdue?' ⚠':'')+'</td><td>'+statusBadge(t.status||'pending')+'</td><td>'+(t.status!=='completed'?'<button class="btn btn-sm btn-green" onclick="completeTask(\''+t.id+'\')">Done</button>':'✓')+'</td></tr>';
+    return '<tr'+(lead ? ' onclick="openLeadDetail(\''+lead.id+'\')" style="cursor:pointer"' : '')+'><td>'+esc(t.title)+'</td><td>'+esc(lead?.name||'-')+'</td><td>'+agentName(t.assigned_to)+'</td><td style="'+(overdue?'color:var(--red)':'')+'">'+ fmtDate(t.due_date)+(overdue?' ⚠':'')+'</td><td>'+statusBadge(t.status||'pending')+'</td><td>'+(t.status!=='completed'?'<button class="btn btn-sm btn-green" onclick="completeTask(\''+t.id+'\')">Done</button>':'✓')+'</td></tr>';
   }).join('');
 }
 
