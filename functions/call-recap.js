@@ -208,6 +208,9 @@ function buildHtml(ctx) {
     ${recording ? `<div style="margin-bottom:20px;"><a href="${esc(recording)}" style="color:#0b5cad;">Listen to the recording</a></div>` : ''}
 
     <details>
+      ${(String(transcript||'').match(/Escalation details:\s*([^\n.]+)/i) || [])[1]
+        ? `<div style="background:#fff8e1;border:1px solid #ffe082;padding:10px 12px;margin-bottom:12px;font-size:14px;"><strong>Escalation:</strong> ${esc(String(transcript).match(/Escalation details:\s*([^\n.]+)/i)[1].trim())}</div>`
+        : ''}
       <summary style="cursor:pointer;font-size:13px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Full transcript</summary>
       <pre style="white-space:pre-wrap;font-size:12.5px;line-height:1.55;background:#fafafa;border:1px solid #eee;padding:12px;margin-top:10px;">${esc(transcript || 'No transcript available.')}</pre>
     </details>
@@ -426,9 +429,16 @@ exports.handler = async (event) => {
   const wantsCallback   = /message the agent to call you back/i.test(said);
   const who = ctx.callerName || ctx.caller;
 
+  // The assistant reads back "Escalation details: Name, Unit N, phone" once the
+  // resident confirms all three, so pull that straight into the subject.
+  const detailMatch = said.match(/Escalation details:\s*([^\n.]+)/i);
+  const escalation = detailMatch ? detailMatch[1].trim() : '';
+
   let subject;
   if (wantsManagement) {
-    subject = `Resident needs to speak with management — ${who} — ${ctx.caller || ''}`;
+    subject = escalation
+      ? `Resident needs to speak with management — ${escalation}`
+      : `Resident needs to speak with management — ${who} — ${ctx.caller || ''}`;
   } else if (wantsCallback) {
     subject = `Call back lead — ${who} — ${ctx.caller || ''}`;
   } else {
