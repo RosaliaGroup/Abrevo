@@ -14,6 +14,7 @@
 const { verifyTelnyxSignature } = require('./_lib/telnyxSignature');
 const { recordInboundOnLead } = require('./lib/leadStage');
 const { detectIntent, intentReply } = require('./lib/inboundIntent');
+const { sendPush } = require('./lib/webpush');
 const { sendSMS } = require('./lib/sms');
 const { createCommContext } = require('./_lib/commContext');
 
@@ -93,6 +94,11 @@ function makeHandler(deps = {}) {
         } catch (e) {
           console.warn('[telnyx-inbound] intent reply failed:', e.message);
         }
+
+        // Push a notification to every registered device. This is what makes an
+        // alert useful — it arrives whether or not the CRM is open.
+        try { await pushInboundAlert(from, text); }
+        catch (e) { console.warn('[telnyx-inbound] push failed:', e.message); }
       }
 
       return reply(200, { ok: true, stored: !res.deduped, deduped: Boolean(res.deduped),
@@ -139,6 +145,55 @@ async function replyToIntent(phone, text, intent) {
   // cooldownHours guards against a back-and-forth turning into repeated links.
   const res = await sendSMS(phone, body, { optOut: true, cooldownHours: 1, createdBy: 'intent:' + intent });
   console.log(`[telnyx-inbound] intent=${intent} replied=${res && res.success}`);
+}
+
+/**
+ * Notify every registered device that a lead has texted.
+ *
+ * Best-effort throughout: this runs inside the Telnyx webhook, and a push
+ * failure must never produce a non-2xx (Telnyx would retry the message).
+ */
+async function pushInboundAlert(phone, text) {
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://fhkgpepkwibxbxsepetd.supabase.co';
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+  if (!SUPABASE_KEY || !process.env.VAPID_PRIVATE_KEY) return;
+  const H = { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+
+  // Name the sender when we know them — "New message from Flavia" beats a number.
+  let who = phone;
+  try {
+    const d = String(phone || '').replace(/\D/g, '').slice(-10);
+    if (d) {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?phone=ilike.*${d}*&select=name&limit=1`, { headers: H });
+      const rows = await r.json();
+      if (Array.isArray(rows) && rows[0] && rows[0].name) who = rows[0].name;
+    }
+  } catch (e) { /* fall back to the number */ }
+
+  const subsRes = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?select=id,endpoint,p256dh,auth&failures=lt.5`, { headers: H });
+  const subs = await subsRes.json();
+  if (!Array.isArray(subs) || !subs.length) return;
+
+  const payload = {
+    title: `New message from ${who}`,
+    body: String(text || '').slice(0, 140),
+    tag: 'rosalia-' + String(phone || '').slice(-10),
+    url: '/crm',
+  };
+
+  for (const sub of subs) {
+    const res = await sendPush(sub, payload);
+    if (res.gone) {
+      // The browser dropped this subscription — remove it rather than retrying
+      // forever.
+      await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?id=eq.${sub.id}`, { method: 'DELETE', headers: H });
+    } else if (!res.ok) {
+      await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?id=eq.${sub.id}`, {
+        method: 'PATCH', headers: H, body: JSON.stringify({ failures: 1 }),
+      });
+    }
+  }
+  console.log(`[telnyx-inbound] pushed to ${subs.length} device(s)`);
 }
 
 exports.handler = makeHandler();

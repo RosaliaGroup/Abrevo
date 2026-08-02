@@ -968,6 +968,17 @@ function copyHash() {
 let __alertsOn = false;
 let __lastSeenInbound = null;
 
+// Public VAPID key. Safe to ship — it only lets a browser subscribe; sending
+// requires the private half, which stays on the server.
+const VAPID_PUBLIC = 'BOiZEJ00xxIrQK5sEuktm8jBO50sz4tvHve-c-oEtRgJ3G0oRj3maqtsXCdcJJ0h4grgsnzIjJlzuREaXShGokA';
+
+function urlB64ToUint8(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const b64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(b64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
 async function enableAlerts() {
   if (typeof Notification === 'undefined') { alert('This browser does not support alerts.'); return; }
   const perm = await Notification.requestPermission();
@@ -976,9 +987,42 @@ async function enableAlerts() {
     return;
   }
   __alertsOn = true;
-  localStorage.setItem('abrevo_alerts', '1');
+  try { localStorage.setItem('abrevo_alerts', '1'); } catch (e) {}
+
+  // Register for BACKGROUND push. Without this an alert only arrives while a
+  // tab is open, which defeats the purpose — you'd be told about a text at the
+  // moment you were already looking at the screen.
+  let pushOk = false;
+  try {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlB64ToUint8(VAPID_PUBLIC),
+        });
+      }
+      const j = sub.toJSON();
+      const res = await fetch('/.netlify/functions/push-subscribe', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, __csrf ? { 'X-CSRF-Token': __csrf } : {}),
+        body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys }),
+      });
+      pushOk = res.ok;
+    }
+  } catch (e) {
+    console.warn('push registration failed', e);
+  }
+
   updateAlertButton();
-  new Notification('Rosalia CRM', { body: 'Alerts are on. You will be notified when a lead replies.', icon: '/icon-192.png' });
+  new Notification('Rosalia CRM', {
+    body: pushOk ? 'Alerts are on, including when the app is closed.'
+                 : 'Alerts are on while the CRM is open.',
+    icon: '/icon-192.png',
+  });
 }
 
 function updateAlertButton() {
@@ -1001,14 +1045,15 @@ function updateAlertButton() {
 // already loads, so this adds one request a minute rather than a new pipeline.
 async function checkForNewInbound() {
   if (!__alertsOn || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-  if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-    // Looking at it already — no need to interrupt.
-  }
   try {
     const r = await commApi('listConversations', { query: { limit: 20 } });
     if (!r.ok || !Array.isArray(r.conversations)) return;
     const inbound = r.conversations.filter(c => c.last_message_direction === 'inbound');
     if (!inbound.length) return;
+    // Sort explicitly. The list is ordered by newest CONVERSATION, so inbound[0]
+    // was often an older thread whose timestamp never advanced — which is why
+    // no alert ever fired.
+    inbound.sort((a, b) => String(b.last_message_at || '').localeCompare(String(a.last_message_at || '')));
     const newest = inbound[0];
     // First run just records where we are, so enabling alerts doesn't fire a
     // notification for every message already sitting in the inbox.
@@ -1030,7 +1075,7 @@ async function checkForNewInbound() {
 
 if (typeof window !== 'undefined') {
   try { __alertsOn = localStorage.getItem('abrevo_alerts') === '1'; } catch (e) {}
-  if (typeof setInterval === 'function') setInterval(checkForNewInbound, 60000);
+  if (typeof setInterval === 'function') setInterval(checkForNewInbound, 20000);
 }
 
 // ── MESSAGES PAGE ──
