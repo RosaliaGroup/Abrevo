@@ -1461,6 +1461,16 @@ async function buildAndSendLeadText(phone, leadName, property, bookingUrl) {
 // overwritten each time). Never throws — replying to leads matters more than
 // logging it.
 async function recordEmails(leadId, fromEmail, subject, body, replyText, messageId) {
+  // Alert here rather than in the caller: both the new-lead and existing-lead
+  // paths run this, so a first-time inquiry notifies too.
+  try {
+    await pushToAll({
+      title: 'Email from ' + (fromEmail || 'a lead'),
+      body: String(subject || '').slice(0, 120),
+      tag: 'email-' + (fromEmail || ''),
+    });
+  } catch (e) { /* never block the reply */ }
+
   try {
     await logEmail({ leadId, direction: 'inbound', subject, body,
                      fromEmail, toEmail: 'inquiries@rosaliagroup.com', messageId });
@@ -1500,13 +1510,7 @@ async function saveLead(fromEmail, fromName, subject, body, replyText, phone, cl
       phone, email: fromEmail, name: fromName,
     });
     await recordEmails(existing[0].id, fromEmail, subject, body, replyText, messageId);
-    // Alert on an inbound email too — a text isn't the only thing worth knowing
-    // about the moment it lands.
-    try {
-      await pushToAll({ title: `Email from ${fromName || fromEmail}`,
-                        body: String(subject || '').slice(0, 120),
-                        tag: 'email-' + fromEmail });
-    } catch (e) { /* never block the reply */ }
+
     return existing[0];
   }
   const res = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
