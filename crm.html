@@ -1049,8 +1049,11 @@ async function enableAlerts() {
 function updateAlertButton() {
   const b = document.getElementById('alerts-btn');
   if (b) {
-    b.textContent = __alertsOn ? 'Alerts are on' : 'Turn on alerts';
-    b.disabled = __alertsOn;
+    b.textContent = __alertsOn ? 'Alerts are on — tap to re-check' : 'Turn on alerts';
+    // Never disable it. The flag persists across reloads, so a stale 'on' from
+    // an earlier build left the button unclickable and registration could never
+    // be retried. Re-registering an already-registered device is harmless.
+    b.disabled = false;
   }
   const st = document.getElementById('alerts-state');
   if (st) {
@@ -1100,6 +1103,20 @@ async function checkForNewInbound() {
 
 if (typeof window !== 'undefined') {
   try { __alertsOn = localStorage.getItem('abrevo_alerts') === '1'; } catch (e) {}
+  // Confirm against the server on load: a local flag says what we once asked
+  // for, not whether this device is actually registered to receive anything.
+  (async function verifyPushOnLoad() {
+    try {
+      if (!('serviceWorker' in navigator)) return;
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = reg && await reg.pushManager.getSubscription();
+      if (!sub) { __alertsOn = false; updateAlertButton(); return; }
+      const r = await fetch('/.netlify/functions/push-subscribe?endpoint=' + encodeURIComponent(sub.endpoint), { credentials: 'same-origin' });
+      const j = await r.json().catch(() => ({}));
+      __alertsOn = Boolean(j && j.registered);
+      updateAlertButton();
+    } catch (e) { /* leave the local flag alone */ }
+  })();
   if (typeof setInterval === 'function') setInterval(checkForNewInbound, 20000);
 }
 

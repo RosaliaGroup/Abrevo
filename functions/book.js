@@ -1,5 +1,6 @@
 ﻿const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
+const { pushToAll } = require('./lib/pushAlert');
 const { enrichLead } = require('./lib/leadContact');
 const { parseBookingStart } = require('./lib/bookingTime');
 
@@ -443,6 +444,15 @@ exports.handler = async (event) => {
     } catch (err) {
       console.error('Lead upsert error:', err.message);
     }
+
+    // Alert on a new booking — the most time-sensitive event there is.
+    try {
+      await pushToAll({
+        title: 'Tour booked · ' + (data.full_name || 'Guest'),
+        body: `${propertyAddress}${displayDate && displayDate !== 'TBD' ? ' — ' + displayDate + ' at ' + displayTime : ' — time to confirm'}`,
+        tag: 'booking-' + (data.phone || ''),
+      });
+    } catch (e) { /* never block the booking */ }
 
     // 3. Send SMS to caller (lead) — tour confirmation with reschedule link
     if (data.phone) {

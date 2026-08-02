@@ -19,6 +19,7 @@
  */
 
 const crypto = require('crypto');
+const { pushToAll } = require('./lib/pushAlert');
 const nodemailer = require('nodemailer');
 const { header } = require('./lib/auth');
 
@@ -392,6 +393,16 @@ exports.handler = async (event) => {
   // Persist the call BEFORE the email step. Logging must not depend on mail
   // config being present — the early return below used to drop the whole event.
   const logged = await logCall(ctx, { durationSec, endedReason });
+
+  // Alert when an AI call finishes, with the outcome — that's the moment you'd
+  // want to follow up, not whenever you next open the CRM.
+  try {
+    await pushToAll({
+      title: `Call ended · ${ctx.callerName || ctx.caller || 'unknown'}`,
+      body: (ctx.summary || 'No summary').slice(0, 140),
+      tag: 'call-' + (ctx.caller || ''),
+    });
+  } catch (e) { /* never block the recap email */ }
 
   if (!FROM_USER || !FROM_PASS) {
     console.error('[call-recap] GMAIL_USER or GMAIL_PASS_INQUIRIES not set — cannot email');
