@@ -573,12 +573,12 @@
       </div>
     </div>
 
-    <div class="section-label section-gap">Qualification</div>
+    
 
     <div class="field-row">
       <div class="field-group">
-        <label>Monthly Income</label>
-        <select id="income_qualifies">
+        
+        <select id="income_qualifies" style="display:none">
           <option value="">Select range</option>
           <option value="Under $5,000">Under $5,000</option>
           <option value="$5,000 - $7,000">$5,000 – $7,000</option>
@@ -587,8 +587,8 @@
         </select>
       </div>
       <div class="field-group">
-        <label>Credit Score</label>
-        <select id="credit_qualifies">
+        
+        <select id="credit_qualifies" style="display:none">
           <option value="">Select range</option>
           <option value="Below 600">Below 600</option>
           <option value="600 - 649">600 – 649</option>
@@ -713,8 +713,8 @@
     const move_in_date_raw = document.getElementById('move_in_date').value;
     const preferred_date = document.getElementById('preferred_date').value;
     const preferred_time = document.getElementById('preferred_time').value;
-    const income_qualifies = document.getElementById('income_qualifies').value || 'Not provided';
-    const credit_qualifies = document.getElementById('credit_qualifies').value || 'Not provided';
+    const income_qualifies = '';
+    const credit_qualifies = '';
     const additional_notes = document.getElementById('additional_notes').value.trim();
 
     // Format move-in date nicely
