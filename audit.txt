@@ -1,0 +1,26 @@
+?? $null
+?? audit.txt
+?? "mechanical 2026/"
+?? package-lock.json
+?? sms-campaign-hvac.js
+---
+---
+---
+---
+---
+C:/Users/ana/OneDrive/Desktop/Abrevo-Clean                                                                                a8f2965 [main]
+C:/Users/ana/Abrevo-comms-investigate                                                                                     c8a8e8f (detached HEAD)
+C:/Users/ana/Abrevo-comms-phase1                                                                                          6fdb9f7 [feature/comms-timeline-phase1]
+C:/Users/ana/Abrevo-comms-reconciled                                                                                      cef2797 [security/communications-reconciled]
+C:/Users/ana/Abrevo-consolidated                                                                                          837ff8a [security/communications-consolidated]
+C:/Users/ana/Abrevo-followup-personalization                                                                              8710d80 [fix/followup-personalization]
+C:/Users/ana/Abrevo-gate-a                                                                                                dfeb418 [security/gate-a-integration]
+C:/Users/ana/Abrevo-gate-a-auth                                                                                           54ab99d [security/gate-a-auth-routing]
+C:/Users/ana/Abrevo-gate-a-validation                                                                                     0adf72b [security/gate-a-validation]
+C:/Users/ana/Abrevo-hotfix-phone-greeting                                                                                 c3384ca [hotfix/phone-greeting]
+C:/Users/ana/Abrevo-lead-msg-recon                                                                                        bd88b53 [feature/lead-messages-reconciliation]
+C:/Users/ana/Abrevo-outbound-fix                                                                                          9e5729b [fix/comms-outbound-rosalia-sender]
+C:/Users/ana/Abrevo-phase0                                                                                                b708150 [security/gate-a-local-verification]
+C:/Users/ana/Abrevo-phase27                                                                                               f248fc0 [fix/phase0-neutralize-client-textbelt]
+C:/Users/ana/Abrevo-webflow-phone                                                                                         fd31e67 [fix/webflow-phone-fallback]
+C:/Users/ana/AppData/Local/Temp/claude/C--Users-ana/6faf22b2-f719-44e0-94c5-3064727dabba/scratchpad/gate-a-healthcheck-wt 232eb85 [security/gate-a-healthcheck]
