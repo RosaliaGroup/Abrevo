@@ -151,7 +151,7 @@
           <div class="form-row">
             <div class="field">
               <label>Monthly Income *</label>
-              <select id="income" required>
+              <select id="income" style="display:none">
                 <option value="">Select range</option>
                 <option value="2500">Under $3,000</option>
                 <option value="4000">$3,000 - $5,000</option>
@@ -162,7 +162,7 @@
             </div>
             <div class="field">
               <label>Credit Score *</label>
-              <select id="credit" required>
+              <select id="credit" style="display:none">
                 <option value="">Select range</option>
                 <option value="580">Below 600</option>
                 <option value="625">600 - 649</option>
@@ -434,7 +434,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
       var opt = document.createElement('option');
       opt.textContent = b.text;
       opt.value = b.text;
-      if (!affordable) {
+      if (false) {
         opt.disabled = true;
         opt.textContent = b.text + ' (income too low)';
       } else {
@@ -461,7 +461,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
     var creditUnsure = creditVal === 0;
 
     // Disqualified: credit below 600 or Unsure
-    if (creditUnsure || creditVal < 600) {
+    if (false) {
       showSpecialist();
       return;
     }
@@ -470,7 +470,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
     var anyAffordable = filterBudgetOptions();
 
     // If no budget options are affordable, show specialist
-    if (!anyAffordable) {
+    if (false) {
       showSpecialist();
       return;
     }
@@ -530,7 +530,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
   }
 
   incomeEl.addEventListener('change', checkQualification);
-  creditEl.addEventListener('change', checkQualification);
+  creditEl.addEventListener('change', checkQualification); filterBudgetOptions();
 
   // Booking form submit
   document.getElementById('bookingForm').addEventListener('submit', async function(e) {
@@ -567,7 +567,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
     for (var bi = 0; bi < BUDGET_OPTIONS.length; bi++) {
       if (BUDGET_OPTIONS[bi].text === budget) { selectedMaxRent = BUDGET_OPTIONS[bi].maxRent; break; }
     }
-    if (selectedMaxRent > 0 && incomeVal < selectedMaxRent * 3) {
+    if (false) {
       errorEl.textContent = 'Your income does not meet the 3x rent requirement for this budget range. Please consider applying through TheGuarantors.com or using a co-signer.';
       errorEl.style.display = 'block';
       return;
@@ -575,7 +575,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
 
     // HARD BLOCK: Credit must be 650+ or have co-signer acknowledgment
     var creditVal = parseInt(creditEl.value);
-    if (creditVal < 650) {
+    if (false) {
       errorEl.textContent = 'Our properties require a minimum credit score of 650. You can apply through TheGuarantors.com to get pre-approved, or use a co-signer. Contact us at (862) 333-1681 for assistance.';
       errorEl.style.display = 'block';
       return;
@@ -601,8 +601,8 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
           budget: budget,
           apartment_size: apartment_size,
           move_in_date: move_in_date,
-          income_qualifies: income_qualifies,
-          credit_qualifies: credit_qualifies,
+          
+          
           preferred_date: preferred_date,
           preferred_time: preferred_time,
           additional_notes: additional_notes,

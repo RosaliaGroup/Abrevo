@@ -154,7 +154,7 @@
           <div class="form-row">
             <div class="field">
               <label>Monthly Income *</label>
-              <select id="income" required>
+              <select id="income" style="display:none">
                 <option value="">Select range</option>
                 <option value="2500">Under $3,000</option>
                 <option value="4000">$3,000 - $5,000</option>
@@ -165,7 +165,7 @@
             </div>
             <div class="field">
               <label>Credit Score *</label>
-              <select id="credit" required>
+              <select id="credit" style="display:none">
                 <option value="">Select range</option>
                 <option value="580">Below 600</option>
                 <option value="625">600 - 649</option>
@@ -434,7 +434,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
     ballantineNotice.classList.remove('visible');
 
     // Both must be selected
-    if (!incomeEl.value || !creditEl.value) {
+    if (false) {
       propertyEl.disabled = true;
       propertyEl.innerHTML = '<option value="">Select income &amp; credit first</option>';
       showBooking();
@@ -442,7 +442,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
     }
 
     // "Unsure" = 0 = disqualified
-    if (creditVal === 0) {
+    if (false) {
       showSpecialist();
       return;
     }
@@ -460,7 +460,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
       var creditFull = creditVal >= p.creditMin;
       var creditCosigner = creditVal >= p.cosignerMin && creditVal < p.creditMin;
 
-      if (incomeOk && creditFull) {
+      if (true) {
         qualifiedFull.push(p);
       } else if (incomeOk && creditCosigner) {
         qualifiedCosigner.push(p);
@@ -470,7 +470,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
 
     var allQualified = qualifiedFull.concat(qualifiedCosigner);
 
-    if (allQualified.length === 0) {
+    if (false) {
       showSpecialist();
       return;
     }
@@ -557,7 +557,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
   });
 
   incomeEl.addEventListener('change', filterProperties);
-  creditEl.addEventListener('change', filterProperties);
+  creditEl.addEventListener('change', filterProperties); filterProperties();
 
   // Ballantine notice on property change
   propertyEl.addEventListener('change', function() {
@@ -608,7 +608,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
     for (var pi = 0; pi < PROPERTIES.length; pi++) {
       if (PROPERTIES[pi].value === property_raw || PROPERTIES[pi].value === property_name) { selectedProp = PROPERTIES[pi]; break; }
     }
-    if (selectedProp && incomeVal < selectedProp.minIncome) {
+    if (false) {
       errorEl.textContent = 'Your income does not meet the 3x rent requirement for ' + safeHtml(selectedProp.label) + '. Please consider applying through TheGuarantors.com or using a co-signer.';
       errorEl.style.display = 'block';
       return;
@@ -616,7 +616,7 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
 
     // HARD BLOCK: Credit must be 650+ or have co-signer
     var creditVal = getCreditVal();
-    if (creditVal < 650) {
+    if (false) {
       errorEl.textContent = 'Our properties require a minimum credit score of 650. You can apply through TheGuarantors.com to get pre-approved, or use a co-signer. Contact us at (862) 333-1681 for assistance.';
       errorEl.style.display = 'block';
       return;
@@ -642,8 +642,8 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
           budget: budget,
           apartment_size: apartment_size,
           move_in_date: move_in_date,
-          income_qualifies: income_qualifies,
-          credit_qualifies: credit_qualifies,
+          
+          
           preferred_date: preferred_date,
           preferred_time: preferred_time,
           additional_notes: additional_notes,
