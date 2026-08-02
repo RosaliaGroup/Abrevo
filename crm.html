@@ -260,11 +260,7 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 
 
 
-<div id="util-bar" style="display:none;position:fixed;bottom:16px;right:16px;z-index:9998;gap:8px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 32px)">
-  <button id="alerts-btn" onclick="enableAlerts()" style="background:var(--bg3);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:9px 13px;font:inherit;font-size:14px;cursor:pointer">Turn on alerts</button>
-  <button id="pw-btn" onclick="openModal('change-pw-modal')" style="background:var(--bg3);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:9px 13px;font:inherit;font-size:14px;cursor:pointer">Password</button>
-  <button id="logout-btn" onclick="apiLogout()" style="background:var(--bg3);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:9px 13px;font:inherit;font-size:14px;cursor:pointer">Sign out</button>
-</div>
+<div id="util-bar" style="display:none"></div>
 <div class="app">
 <!-- Sidebar -->
 <nav class="sidebar">
@@ -276,6 +272,10 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     <div class="nav-item active" onclick="showPage('dashboard')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10.6 3.09V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16.11 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.2.61.76 1.03 1.4 1.03H23a2 2 0 0 1 0 4h-.09c-.64 0-1.2.42-1.4 1.03z"/></svg>
+      Settings
     </div>
     <div class="nav-item" onclick="showPage('messages')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -381,6 +381,33 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 </div>
 
 <!-- LEADS -->
+<div class="page-section" id="page-settings">
+  <h1>Settings</h1>
+  <div style="max-width:620px;margin-top:20px">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px">
+      <h2 style="margin:0 0 6px">Alerts</h2>
+      <p style="color:var(--text-muted);font-size:14px;margin:0 0 14px">
+        Get notified when a lead texts you. Alerts arrive while the CRM is open —
+        on iPhone, only when it's been added to your home screen.
+      </p>
+      <button class="btn btn-gold" id="alerts-btn" onclick="enableAlerts()">Turn on alerts</button>
+      <div id="alerts-state" style="font-size:14px;color:var(--text-muted);margin-top:10px"></div>
+    </div>
+
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px">
+      <h2 style="margin:0 0 6px">Password</h2>
+      <p style="color:var(--text-muted);font-size:14px;margin:0 0 14px">Change the operator sign-in password.</p>
+      <button class="btn btn-outline" onclick="openModal('change-pw-modal')">Change password</button>
+    </div>
+
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px">
+      <h2 style="margin:0 0 6px">Session</h2>
+      <p style="color:var(--text-muted);font-size:14px;margin:0 0 14px">Signed in as <strong id="settings-user">operator</strong>.</p>
+      <button class="btn btn-outline" onclick="apiLogout()">Sign out</button>
+    </div>
+  </div>
+</div>
+
 <div class="page-section" id="page-messages">
   <h1>Messages</h1>
   <div style="display:flex;gap:10px;margin:16px 0;flex-wrap:wrap">
@@ -400,7 +427,7 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     <select id="lead-filter-status" onchange="loadLeads()"><option value="">All Status</option><option value="lead">Lead</option><option value="attempted">Attempted contact</option><option value="contacted">Contacted</option><option value="appt_set">Appointment Set</option><option value="applied">Applied</option><option value="rented">Rented</option><option value="dnc">Do Not Contact</option></select>
     <select id="lead-filter-source" onchange="loadLeads()"><option value="">All Sources</option><option value="email">Email</option><option value="zillow">Zillow</option><option value="avail">Avail</option><option value="webflow">Webflow</option><option value="fub">FUB</option><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="phone">Phone</option></select>
     <select id="lead-filter-agent" onchange="loadLeads()"><option value="">All Agents</option></select>
-    <input type="text" id="lead-search" placeholder="Search name or email..." oninput="loadLeads()" style="min-width:200px">
+    <input type="text" id="lead-search" placeholder="Search name, phone or email..." oninput="loadLeads()" style="min-width:200px">
     <input type="text" id="comm-search" placeholder="Search texts, emails, calls..." onkeydown="if(event.key==='Enter')searchComms()" style="min-width:230px">
     <button class="btn btn-sm btn-outline" onclick="searchComms()">Search</button>
     <button class="btn btn-sm btn-outline" id="comm-clear" onclick="clearCommSearch()" style="display:none">Clear</button>
@@ -956,9 +983,18 @@ async function enableAlerts() {
 
 function updateAlertButton() {
   const b = document.getElementById('alerts-btn');
-  if (!b) return;
-  b.textContent = __alertsOn ? 'Alerts on' : 'Turn on alerts';
-  b.style.opacity = __alertsOn ? '.6' : '1';
+  if (b) {
+    b.textContent = __alertsOn ? 'Alerts are on' : 'Turn on alerts';
+    b.disabled = __alertsOn;
+  }
+  const st = document.getElementById('alerts-state');
+  if (st) {
+    const perm = (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported';
+    st.textContent = __alertsOn && perm === 'granted' ? 'You will be notified when a lead replies.'
+      : perm === 'denied' ? 'Notifications are blocked for this site — enable them in your browser settings.'
+      : perm === 'unsupported' ? 'This browser does not support alerts.'
+      : '';
+  }
 }
 
 // Poll for new inbound messages. Reuses the conversations list the dashboard
@@ -1351,6 +1387,22 @@ async function changeStage(id, status) {
   loadLeads();
 }
 
+// Fall back to a server-side lookup across every lead, not just the 500 held
+// in the browser. Debounced so typing doesn't fire a request per keystroke.
+let __serverSearchTimer = null;
+async function serverLeadSearch(q) {
+  clearTimeout(__serverSearchTimer);
+  __serverSearchTimer = setTimeout(async () => {
+    const rows = await apiGet('/search/leads?q=' + encodeURIComponent(q));
+    if (!rows || !rows.length) return;
+    // Only adopt the results if the box still holds the same query.
+    const cur = (document.getElementById('lead-search').value || '').toLowerCase();
+    if (cur !== q) return;
+    __commResults = rows;
+    loadLeads();
+  }, 350);
+}
+
 // ── SEARCH COMMUNICATIONS ──
 // The existing filter only matches name and email. This searches what was
 // actually SAID — text bodies, email bodies, our replies, call summaries and
@@ -1367,6 +1419,12 @@ async function searchComms() {
   loadLeads();
   if (!rows.length) alert('Nothing found mentioning "' + q + '".');
 }
+
+// Clearing the name/phone box also drops any server results it pulled in.
+document.addEventListener('DOMContentLoaded', function () {
+  const el = document.getElementById('lead-search');
+  if (el) el.addEventListener('input', function () { if (!this.value) { __commResults = null; } });
+});
 
 function clearCommSearch() {
   __commResults = null;
@@ -1472,7 +1530,17 @@ async function loadLeads() {
   if (status) filtered = filtered.filter(l => (l.status||'').toLowerCase() === status);
   if (source) filtered = filtered.filter(l => (l.source||'').toLowerCase().includes(source));
   if (agent) filtered = filtered.filter(l => l.assigned_to === agent);
-  if (search) filtered = filtered.filter(l => ((l.name||'')+(l.email||'')).toLowerCase().includes(search));
+  // Match phone as well as name and email — a phone number was the one thing it
+  // never matched, and it's the most natural thing to paste in.
+  if (search) {
+    const d = search.replace(/\D/g, '');
+    filtered = filtered.filter(l =>
+      ((l.name||'')+(l.email||'')+(l.property||'')).toLowerCase().includes(search) ||
+      (d.length >= 4 && String(l.phone||'').replace(/\D/g,'').includes(d)));
+    // allLeads holds only the newest 500 of 3,000+, so a miss locally is not a
+    // miss overall — ask the server before reporting nothing.
+    if (!filtered.length && search.length >= 2 && !__commResults) serverLeadSearch(search);
+  }
 
   const tbody = document.getElementById('leads-body');
   tbody.innerHTML = filtered.map(l => {

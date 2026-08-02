@@ -551,6 +551,23 @@ exports.handler = async (event) => {
       return json(200, { ok: true, data: rows || [] });
     }
 
+    // Find a lead by name, email or phone across ALL of them. The browser holds
+    // only the newest 500, so client-side filtering silently missed the rest —
+    // and it never matched phone numbers at all.
+    if (route === "/search/leads" && method === "GET") {
+      const q = vStr(qs.q, 100, "q", true);
+      if (q.length < 2) return json(400, { ok: false, error: "query_too_short" });
+      const digits = q.replace(/\D/g, "");
+      const like = `*${encodeURIComponent(q)}*`;
+      // A numeric query is a phone number: match on the last 10 digits, the
+      // convention used throughout, so formatting differences don't matter.
+      const filter = digits.length >= 7
+        ? `or=(phone.ilike.*${encodeURIComponent(digits.slice(-10))}*,name.ilike.${like})`
+        : `or=(name.ilike.${like},email.ilike.${like},property.ilike.${like})`;
+      const rows = await sbGet(`leads?${filter}&select=id,name,email,phone,source,property,status,assigned_to,notes,last_contact_at,replied_at,created_at,call_attempts,last_inbound_at,last_inbound_preview,stage_changed_at,alt_emails&order=created_at.desc&limit=100`);
+      return json(200, { ok: true, data: rows || [] });
+    }
+
     if (route === "/search/comms" && method === "GET") {
       const q = vStr(qs.q, 100, "q", true);
       if (q.length < 2) return json(400, { ok: false, error: "query_too_short" });
