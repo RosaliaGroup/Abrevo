@@ -71,7 +71,7 @@ exports.handler = async (event) => {
     return json(400, { ok: false, error: 'unrecognised_push_service' });
   }
 
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?on_conflict=endpoint`, {
     method: 'POST',
     // merge-duplicates: re-registering the same device updates it rather than
     // erroring on the unique endpoint.
@@ -83,8 +83,12 @@ exports.handler = async (event) => {
     }),
   });
   if (!res.ok) {
-    console.error('[push-subscribe] store failed:', res.status);
-    return json(500, { ok: false, error: 'could_not_store' });
+    // Return the reason, not just "could_not_store". A generic failure message
+    // meant three rounds of guessing at a database error the server already had
+    // in front of it.
+    const detail = await res.text().catch(() => '');
+    console.error('[push-subscribe] store failed:', res.status, detail.slice(0, 300));
+    return json(500, { ok: false, error: 'could_not_store', status: res.status, detail: detail.slice(0, 200) });
   }
   console.log('[push-subscribe] device registered');
   return json(200, { ok: true });

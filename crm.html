@@ -1021,7 +1021,7 @@ async function enableAlerts() {
       });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
-        pushErr = 'Server rejected the registration: ' + (b.error || res.status);
+        pushErr = 'Server rejected the registration: ' + (b.error || res.status) + (b.detail ? ' — ' + b.detail : '');
       } else {
         // Confirm the row exists rather than trusting a 2xx. The previous
         // version reported "including when the app is closed" purely because
