@@ -143,6 +143,39 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 .mobile-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:14px;color:var(--text-muted);cursor:pointer;padding:4px 8px}
 .mobile-nav-item.active{color:var(--gold)}
 .mobile-nav-item svg{width:20px;height:20px}
+/* Clickable rows need to look clickable. On a phone you tap and find out; with
+   a cursor, a row that does nothing on hover reads as inert. */
+@media(hover:hover){
+  tbody tr[onclick]{cursor:pointer;transition:background .12s}
+  tbody tr[onclick]:hover{background:rgba(201,168,76,0.06)}
+  .stat-card[onclick]{transition:border-color .12s,transform .12s}
+  .stat-card[onclick]:hover{border-color:var(--gold);transform:translateY(-1px)}
+  .agent-card[onclick]:hover{border-color:var(--gold)}
+  #cal-grid div[onclick]:hover{background:rgba(255,255,255,.09)}
+}
+
+/* Responsive scale. There was a single 768px breakpoint, so a small laptop and
+   a large monitor got identical styling: cramped on one, stretched on the other. */
+@media(min-width:1600px){
+  .main{padding:32px 48px 100px}
+  .page-section{max-width:1500px}
+  .stats{grid-template-columns:repeat(4,1fr);gap:20px}
+}
+@media(max-width:1280px){
+  :root{--sidebar-w:190px}
+  .main{padding:24px 22px 100px}
+  .stats{gap:12px}
+}
+@media(max-width:1024px){
+  :root{--sidebar-w:170px}
+  .main{padding:20px 16px 100px}
+  .nav-item{font-size:14px;padding:11px 12px}
+  #leads-table th:nth-child(3),#leads-table th:nth-child(6),
+  #leads-table td:nth-child(3),#leads-table td:nth-child(6){display:none}
+  .stat-card .value{font-size:26px}
+  .modal{max-width:92vw !important}
+}
+
 @media(max-width:768px){
   .sidebar{display:none}
   .main{margin-left:0;padding:14px 12px 92px}
@@ -1045,6 +1078,15 @@ function statDrill(which) {
   if (which === 'tours') { showPage('dashboard'); const g = document.getElementById('cal-grid'); if (g) g.scrollIntoView({ behavior: 'smooth' }); return; }
 }
 
+// Show one agent's leads — "Ana: 47 leads" should open the 47.
+function agentLeads(agentId) {
+  showPage('leads');
+  const sel = document.getElementById('lead-filter-agent');
+  if (sel) sel.value = agentId;
+  __commResults = null;
+  loadLeads();
+}
+
 // ── DASHBOARD: APPOINTMENT CALENDAR ──
 // A week view of bookings that have a parsed starts_at. Bookings whose time was
 // captured as 'Tuesday' or 'tomorrow' can't be placed on a day, so they're
@@ -1452,6 +1494,12 @@ async function openLeadDetail(id) {
   const lead = allLeads.find(l => l.id === id);
   if (!lead) return;
   document.getElementById('ld-name').textContent = lead.name || 'Unknown';
+  // Show every address we hold. A Zillow lead's primary is an anonymised relay;
+  // the real one arrives later via a booking or a reply, and both stay valid.
+  const altList = Array.isArray(lead.alt_emails) && lead.alt_emails.length
+    ? '<div style="font-size:13px;color:var(--text-muted);margin-top:3px">also: '
+      + lead.alt_emails.map(e => esc(e)).join(', ') + '</div>'
+    : '';
   // Stage control + the lead's own last message, at the top of the card where
   // they're actually useful — you shouldn't have to open Messages to see whether
   // someone has replied.
@@ -1466,12 +1514,6 @@ async function openLeadDetail(id) {
     : '<div style="margin-top:10px;font-size:14px;color:var(--text-muted)">No reply from this lead yet</div>';
   document.getElementById('ld-stage-wrap').innerHTML = altList + stageSel + lastIn;
 
-  // Show every address we hold. A Zillow lead's primary is an anonymised relay;
-  // the real one arrives later via a booking or a reply, and both stay valid.
-  const altList = Array.isArray(lead.alt_emails) && lead.alt_emails.length
-    ? '<div style="font-size:13px;color:var(--text-muted);margin-top:3px">also: '
-      + lead.alt_emails.map(e => esc(e)).join(', ') + '</div>'
-    : '';
   document.getElementById('ld-contact').innerHTML = esc(lead.email||'') + (lead.phone ? ' &middot; ' + fmtPhone(lead.phone) : '') + (lead.phone ? ' &middot; <a href="tel:'+esc(lead.phone)+'">Call</a> &middot; <a href="#" onclick="event.preventDefault();showDetailTab(\'messages\');return false;">Text</a>' : '');
 
   const info = document.getElementById('ld-info-content');
@@ -1825,9 +1867,11 @@ async function loadAgents() {
   const grid = document.getElementById('agents-grid');
   grid.innerHTML = allAgents.map(a => {
     const leads = allLeads.filter(l => l.assigned_to === a.id).length;
-    const deals = allDeals.filter(d => d.agent_id === a.id).length;
-    const signed = allDeals.filter(d => d.agent_id === a.id && d.stage === 'signed').length;
-    return '<div class="agent-card"><h3>'+esc(a.name)+'</h3><div class="role">'+esc(a.role||'Agent')+'</div>'+(a.phone?'<div style="font-size:14px;color:var(--text-muted);margin-bottom:12px">'+fmtPhone(a.phone)+' &middot; '+esc(a.email||'')+'</div>':'')+'<div class="agent-stats"><div class="agent-stat"><div class="num">'+leads+'</div><div class="lbl">Leads</div></div><div class="agent-stat"><div class="num">'+deals+'</div><div class="lbl">Deals</div></div><div class="agent-stat"><div class="num">'+signed+'</div><div class="lbl">Signed</div></div></div></div>';
+    // deals.assigned_to, not agent_id — the counts read the wrong column and
+    // were always zero.
+    const deals = allDeals.filter(d => d.assigned_to === a.id).length;
+    const signed = allDeals.filter(d => d.assigned_to === a.id && d.stage === 'signed').length;
+    return '<div class="agent-card" onclick="agentLeads(\''+a.id+'\')" style="cursor:pointer"><h3>'+esc(a.name)+'</h3><div class="role">'+esc(a.role||'Agent')+'</div>'+(a.phone?'<div style="font-size:14px;color:var(--text-muted);margin-bottom:12px">'+fmtPhone(a.phone)+' &middot; '+esc(a.email||'')+'</div>':'')+'<div class="agent-stats"><div class="agent-stat"><div class="num">'+leads+'</div><div class="lbl">Leads</div></div><div class="agent-stat"><div class="num">'+deals+'</div><div class="lbl">Deals</div></div><div class="agent-stat"><div class="num">'+signed+'</div><div class="lbl">Signed</div></div></div></div>';
   }).join('') || '<p style="color:var(--text-muted)">No agents yet. Add one to get started.</p>';
 }
 

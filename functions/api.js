@@ -372,10 +372,10 @@ exports.handler = async (event) => {
       return json(200, { ok: true, data: await sbGet(`agents?select=id,name,email,phone,role&order=name.asc&limit=200`) });
     }
     if (route === "/deals" && method === "GET") {
-      return json(200, { ok: true, data: await sbGet(`deals?select=id,lead_id,property,monthly_rent,commission_total,stage,agent_id,notes,created_at,leads(name,phone,email,property)&order=created_at.desc&limit=500`) });
+      return json(200, { ok: true, data: await sbGet(`deals?select=id,lead_id,property,monthly_rent,commission_total,stage,assigned_to,notes,created_at,leads(name,phone,email,property)&order=created_at.desc&limit=500`) });
     }
     if (route === "/commissions" && method === "GET") {
-      return json(200, { ok: true, data: await sbGet(`commissions?select=id,deal_id,agent_id,amount,status,paid_at,created_at&order=created_at.desc&limit=500`) });
+      return json(200, { ok: true, data: await sbGet(`commissions?select=id,agent_id,rate,status,paid_at,notes,created_at&order=created_at.desc&limit=500`) });
     }
     if (route === "/sequences" && method === "GET") {
       return json(200, { ok: true, data: await sbGet(`follow_up_sequences?select=*&order=name.asc&limit=100`) });
@@ -674,7 +674,7 @@ exports.handler = async (event) => {
             monthly_rent: vNum(body.monthly_rent, "monthly_rent"),
             commission_total: vNum(body.commission_total, "commission_total"),
             stage: vEnum(body.stage, DEAL_STAGES, "stage", true),
-            agent_id: vId(body.agent_id, "agent_id"),
+            assigned_to: vId(body.agent_id, "agent_id"),
             notes: vStr(body.notes, 5000, "notes", false),
           };
         } else if (route === "/tasks") {
