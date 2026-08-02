@@ -430,7 +430,7 @@ exports.handler = async (event) => {
   if (wantsManagement) {
     subject = `Resident needs to speak with management — ${who} — ${ctx.caller || ''}`;
   } else if (wantsCallback) {
-    subject = `Call caller back — ${who} — ${ctx.caller || ''}`;
+    subject = `Call back lead — ${who} — ${ctx.caller || ''}`;
   } else {
     subject = `${flagCount ? '[Needs attention] ' : ''}Call Recap — ${who} — ${assistant}`;
   }
