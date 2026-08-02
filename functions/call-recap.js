@@ -15,7 +15,8 @@
  *   VAPI_WEBHOOK_SECRET  — must match the x-vapi-secret header set in Vapi
  *   GMAIL_USER
  *   GMAIL_PASS_INQUIRIES
- *   RECAP_EMAIL_TO       — optional; defaults to listings2@rosaliagroup.com
+ *   RECAP_EMAIL_IRON65   — optional; defaults to listings2@rosaliagroup.com
+ *   RECAP_EMAIL_DEFAULT  — optional; defaults to inquiries@rosaliagroup.com
  */
 
 const crypto = require('crypto');
@@ -23,7 +24,14 @@ const { pushToAll } = require('./lib/pushAlert');
 const nodemailer = require('nodemailer');
 const { header } = require('./lib/auth');
 
-const TO = process.env.RECAP_EMAIL_TO || 'listings2@rosaliagroup.com';
+// Recap routing: Iron 65 calls go to the Iron 65 inbox, everything else to inquiries.
+// Env vars are optional per-brand overrides.
+const TO_IRON65  = process.env.RECAP_EMAIL_IRON65  || 'listings2@rosaliagroup.com';
+const TO_DEFAULT = process.env.RECAP_EMAIL_DEFAULT || 'inquiries@rosaliagroup.com';
+
+function recapRecipient(assistantName) {
+  return /iron ?65|mcwhorter/i.test(String(assistantName || '')) ? TO_IRON65 : TO_DEFAULT;
+}
 const FROM_USER = process.env.GMAIL_USER;
 const FROM_PASS = process.env.GMAIL_PASS_INQUIRIES;
 
@@ -418,13 +426,14 @@ exports.handler = async (event) => {
       service: 'gmail',
       auth: { user: FROM_USER, pass: FROM_PASS },
     });
+    const recipient = recapRecipient(assistant);
     await transporter.sendMail({
       from: `"Rosalia Group AI" <${FROM_USER}>`,
-      to: TO,
+      to: recipient,
       subject,
       html: buildHtml(ctx),
     });
-    console.log(`[call-recap] emailed ${TO} | ${assistant} | ${ctx.caller} | flags=${flagCount}`);
+    console.log(`[call-recap] emailed ${recipient} | ${assistant} | ${ctx.caller} | flags=${flagCount}`);
     return ok({ received: true, emailed: true, logged: logged.logged, flags: flagCount });
   } catch (err) {
     console.error('[call-recap] email failed:', err.message);
