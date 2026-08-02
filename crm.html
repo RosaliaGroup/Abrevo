@@ -992,9 +992,15 @@ async function enableAlerts() {
   // Register for BACKGROUND push. Without this an alert only arrives while a
   // tab is open, which defeats the purpose — you'd be told about a text at the
   // moment you were already looking at the screen.
+  // Registration reports WHY it failed. The previous version swallowed every
+  // error into a console warning, so a failure was indistinguishable from the
+  // browser simply not supporting push.
   let pushOk = false;
+  let pushErr = '';
   try {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
+    if (!('serviceWorker' in navigator)) { pushErr = 'This browser has no service worker support.'; }
+    else if (!('PushManager' in window)) { pushErr = 'This browser has no push support.'; }
+    else {
       const reg = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
       let sub = await reg.pushManager.getSubscription();
@@ -1005,6 +1011,9 @@ async function enableAlerts() {
         });
       }
       const j = sub.toJSON();
+      // Make sure we hold a CSRF token — it's issued by bootstrapSession, and
+      // without it the register endpoint returns 403.
+      if (!__csrf) { try { await bootstrapSession(); } catch (e) {} }
       const res = await fetch('/.netlify/functions/push-subscribe', {
         method: 'POST',
         credentials: 'same-origin',
@@ -1012,10 +1021,16 @@ async function enableAlerts() {
         body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys }),
       });
       pushOk = res.ok;
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        pushErr = 'Server rejected the registration: ' + (b.error || res.status);
+      }
     }
   } catch (e) {
-    console.warn('push registration failed', e);
+    pushErr = String(e && e.message || e);
   }
+  if (pushErr) console.warn('[push]', pushErr);
+  window.__pushErr = pushErr;   // visible in Settings, see updateAlertButton
 
   updateAlertButton();
   new Notification('Rosalia CRM', {
@@ -1034,7 +1049,10 @@ function updateAlertButton() {
   const st = document.getElementById('alerts-state');
   if (st) {
     const perm = (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported';
-    st.textContent = __alertsOn && perm === 'granted' ? 'You will be notified when a lead replies.'
+    // Surface a registration failure here — a silent fallback to in-app alerts
+    // looks identical to success until you notice nothing ever arrives.
+    if (window.__pushErr) { st.innerHTML = '<span style="color:#ff9a9a">Background alerts unavailable: ' + esc(window.__pushErr) + '</span>'; return; }
+    st.textContent = __alertsOn && perm === 'granted' ? 'You will be notified when a lead replies, including when the app is closed.'
       : perm === 'denied' ? 'Notifications are blocked for this site — enable them in your browser settings.'
       : perm === 'unsupported' ? 'This browser does not support alerts.'
       : '';
