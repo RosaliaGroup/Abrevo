@@ -236,6 +236,18 @@
   status = 200
   force = true
 
+# Last Saturdays event page
+[[redirects]]
+  from = "/last-saturdays"
+  to = "/last-saturdays.html"
+  status = 200
+  force = true
+[[redirects]]
+  from = "https://book.rosaliagroup.com/last-saturdays"
+  to = "/last-saturdays.html"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
