@@ -13,16 +13,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,400;1,6..96,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --black:#0C0908;
-  --char:#111010;
-  --card:#181414;
-  --oxblood:#1E0A0D;
+  --black:#000000;
+  --char:#000000;
+  --card:#000000;
+  --oxblood:#000000;
   --gold:#D4A94A;
   --gold2:#E2C97E;
-  --cream:#F2EBDD;
-  --dim:rgba(242,235,221,.66);
-  --faint:rgba(242,235,221,.38);
-  --ghost:rgba(242,235,221,.16);
+  --cream:#FFFFFF;
+  --dim:rgba(212,169,74,.8);
+  --faint:rgba(212,169,74,.6);
+  --ghost:rgba(212,169,74,.2);
   --rule:rgba(212,169,74,.22);
   --rule2:rgba(212,169,74,.35);
   --display:"Bodoni Moda",Didot,Georgia,serif;
@@ -33,7 +33,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{
-  background:var(--black);color:var(--cream);
+  background:#000000;color:var(--gold);
   font-family:var(--body);font-size:16px;line-height:1.7;font-weight:200;
   -webkit-font-smoothing:antialiased;overflow-x:hidden;
 }
@@ -43,15 +43,15 @@ img{max-width:100%;display:block}
 
 /* Typography */
 .kicker{font-size:11px;font-weight:400;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);margin:0 0 14px}
-h1,h2,h3{margin:0;font-family:var(--display);font-weight:400}
+h1,h2,h3{margin:0;font-family:var(--display);font-weight:400;color:#FFFFFF}
 h2{font-size:clamp(30px,5vw,52px);line-height:1.08;letter-spacing:-.01em}
 h3{font-size:20px;line-height:1.3}
 .gold{color:var(--gold)}
 p{margin:0 0 16px}
-.lede{font-size:clamp(15px,1.8vw,17px);color:var(--dim);max-width:60ch;line-height:1.8}
+.lede{font-size:clamp(15px,1.8vw,17px);color:var(--gold);max-width:60ch;line-height:1.8}
 
 section{padding:90px 0;position:relative}
-section+section{border-top:1px solid rgba(242,235,221,.06)}
+section+section{border-top:1px solid rgba(212,169,74,.2)}
 
 /* Logo */
 .logo-mark{position:absolute;top:28px;right:28px;width:52px;height:auto;opacity:.9;filter:brightness(1)}
@@ -62,11 +62,11 @@ section+section{border-top:1px solid rgba(242,235,221,.06)}
 
 /* Cards - the flyer's signature dark rounded panels */
 .panel{
-  background:var(--card);border:1px solid rgba(242,235,221,.08);
+  background:#000000;border:1px solid var(--gold);
   border-radius:var(--radius);padding:28px 26px;
   transition:border-color .2s;
 }
-.panel:hover{border-color:var(--rule2)}
+.panel:hover{border-color:var(--gold2)}
 .panel h4{font-family:var(--display);font-weight:600;font-size:18px;color:var(--gold);margin:0 0 10px}
 .panel p{font-size:14px;color:var(--dim);margin:0;line-height:1.65}
 
@@ -100,15 +100,15 @@ section+section{border-top:1px solid rgba(242,235,221,.06)}
 .pills-section .k{font-size:10px;font-weight:600;letter-spacing:.28em;text-transform:uppercase;color:var(--faint);margin:0 0 14px}
 .pills{display:flex;flex-wrap:wrap;gap:10px}
 .pill{
-  border:1px solid rgba(242,235,221,.12);border-radius:22px;
-  padding:10px 20px;font-size:13px;color:var(--dim);
+  border:1px solid var(--gold);border-radius:22px;
+  padding:10px 20px;font-size:13px;color:var(--gold);
   transition:border-color .2s,color .2s;
 }
-.pill:hover{border-color:var(--gold);color:var(--gold)}
+.pill:hover{border-color:var(--gold2);color:var(--gold2)}
 
 /* Next event panel */
 .next-panel{
-  margin:56px 0 0;background:var(--card);border:1px solid rgba(242,235,221,.08);
+  margin:56px 0 0;background:#000000;border:1px solid var(--gold);
   border-radius:var(--radius);padding:32px 30px;
   display:grid;grid-template-columns:1.3fr 1fr;gap:28px;align-items:center;
 }
@@ -117,7 +117,7 @@ section+section{border-top:1px solid rgba(242,235,221,.06)}
 .next-panel .when{font-size:14px;color:var(--dim);margin:10px 0 0;letter-spacing:.04em}
 .next-panel .desc{font-size:14px;color:var(--faint);margin:6px 0 0;font-style:italic;font-family:var(--display)}
 .countdown{display:flex;gap:clamp(12px,2.5vw,24px);justify-content:flex-end}
-.cd-unit{text-align:center;min-width:56px;background:rgba(12,9,8,.6);border:1px solid rgba(242,235,221,.08);padding:14px 10px;border-radius:6px}
+.cd-unit{text-align:center;min-width:56px;background:#000000;border:1px solid var(--gold);padding:14px 10px;border-radius:6px}
 .cd-num{font-family:var(--display);font-weight:600;font-size:clamp(26px,4vw,40px);line-height:1;color:var(--gold)}
 .cd-lab{font-size:9px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);margin-top:8px}
 
@@ -146,21 +146,21 @@ section+section{border-top:1px solid rgba(242,235,221,.06)}
 
 /* Stats row */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:48px}
-.stat{background:var(--card);border:1px solid rgba(242,235,221,.08);border-radius:var(--radius);padding:24px 20px;transition:border-color .2s}
-.stat:hover{border-color:var(--rule2)}
+.stat{background:#000000;border:1px solid var(--gold);border-radius:var(--radius);padding:24px 20px;transition:border-color .2s}
+.stat:hover{border-color:var(--gold2)}
 .stat .n{font-family:var(--display);font-weight:600;font-size:36px;line-height:1;color:var(--gold)}
 .stat .t{font-size:13px;color:var(--dim);margin:12px 0 0;line-height:1.5}
 
 /* Two parts - grid of cards like flyer page 8 */
 .parts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:40px}
-.part{background:var(--card);border:1px solid rgba(242,235,221,.08);border-radius:var(--radius);padding:30px 26px;transition:border-color .2s}
-.part:hover{border-color:var(--rule2)}
+.part{background:#000000;border:1px solid var(--gold);border-radius:var(--radius);padding:30px 26px;transition:border-color .2s}
+.part:hover{border-color:var(--gold2)}
 .part .time{font-size:11px;font-weight:600;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);margin:0 0 12px}
 .part h3{font-family:var(--display);font-weight:600;font-size:24px}
 .part p{font-size:14px;color:var(--dim);margin:14px 0 0;line-height:1.7}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
-.chips span{border:1px solid rgba(242,235,221,.1);border-radius:20px;padding:7px 14px;font-size:12px;color:var(--dim);transition:border-color .2s,color .2s}
-.chips span:hover{border-color:var(--gold);color:var(--gold)}
+.chips span{border:1px solid var(--gold);border-radius:20px;padding:7px 14px;font-size:12px;color:var(--gold);transition:border-color .2s,color .2s}
+.chips span:hover{border-color:var(--gold2);color:var(--gold2)}
 
 /* Tickets */
 .tickets{background:var(--char)}
@@ -168,11 +168,11 @@ section+section{border-top:1px solid rgba(242,235,221,.06)}
 .table-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:20px}
 .tier{
   display:flex;flex-direction:column;padding:28px 24px 24px;
-  background:var(--card);border:1px solid rgba(242,235,221,.08);border-radius:var(--radius);
+  background:#000000;border:1px solid var(--gold);border-radius:var(--radius);
   position:relative;overflow:hidden;transition:border-color .2s;
 }
-.tier:hover{border-color:var(--rule2)}
-.tier--feature{border-color:var(--rule2);background:linear-gradient(180deg,rgba(30,10,13,.5),var(--card))}
+.tier:hover{border-color:var(--gold2)}
+.tier--feature{border-color:var(--gold2);background:#000000}
 .tier-flag{align-self:flex-start;font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
   padding:5px 11px;margin-bottom:14px;border:1px solid var(--rule2);color:var(--gold);border-radius:3px}
 .tier h3{font-weight:600;font-size:19px}
@@ -213,10 +213,10 @@ section+section{border-top:1px solid rgba(242,235,221,.06)}
 .dd-alt a{color:var(--gold);text-decoration:none;border-bottom:1px solid var(--rule)}
 
 /* Season */
-.season-table{margin-top:40px;border-top:1px solid rgba(242,235,221,.08)}
+.season-table{margin-top:40px;border-top:1px solid var(--gold)}
 .srow{
   display:grid;grid-template-columns:160px 220px 1fr;gap:20px;align-items:baseline;
-  padding:18px 0;border-bottom:1px solid rgba(242,235,221,.06);transition:background .2s;
+  padding:18px 0;border-bottom:1px solid rgba(212,169,74,.3);transition:background .2s;
 }
 .srow:hover{background:rgba(212,169,74,.02)}
 .srow .d{font-size:13px;letter-spacing:.06em;color:var(--dim);white-space:nowrap}
@@ -228,11 +228,11 @@ section+section{border-top:1px solid rgba(242,235,221,.06)}
 .srow .tag{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);border:1px solid var(--rule2);padding:3px 7px;margin-left:8px;white-space:nowrap;border-radius:3px}
 
 /* Partner */
-.partner{background:var(--char)}
-.ptable{margin-top:40px;border-top:1px solid rgba(242,235,221,.08)}
+.partner{background:#000000}
+.ptable{margin-top:40px;border-top:1px solid var(--gold)}
 .prow{
   display:grid;grid-template-columns:200px 150px 140px 1fr 180px;gap:18px;align-items:center;
-  padding:22px 0;border-bottom:1px solid rgba(242,235,221,.06);transition:background .2s;
+  padding:22px 0;border-bottom:1px solid rgba(212,169,74,.3);transition:background .2s;
 }
 .prow:hover{background:rgba(212,169,74,.02)}
 .prow .pname{font-family:var(--display);font-weight:600;font-size:19px;color:var(--gold)}
@@ -241,8 +241,8 @@ section+section{border-top:1px solid rgba(242,235,221,.06)}
 .prow .ppos{font-size:14px;color:var(--dim);line-height:1.5}
 .prow .btn{padding:12px 14px;font-size:11px;width:100%}
 .pnote-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:40px}
-.pnote{background:var(--card);border:1px solid rgba(242,235,221,.08);border-radius:var(--radius);padding:26px 22px;transition:border-color .2s}
-.pnote:hover{border-color:var(--rule2)}
+.pnote{background:#000000;border:1px solid var(--gold);border-radius:var(--radius);padding:26px 22px;transition:border-color .2s}
+.pnote:hover{border-color:var(--gold2)}
 .pnote .k{font-size:10px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin:0 0 10px}
 .pnote p{font-size:13px;color:var(--dim);margin:0;line-height:1.6}
 
@@ -256,7 +256,7 @@ section+section{border-top:1px solid rgba(242,235,221,.06)}
 
 /* FAQ */
 .faq{margin-top:36px;max-width:800px}
-.faq details{border-bottom:1px solid rgba(242,235,221,.06);padding:20px 0}
+.faq details{border-bottom:1px solid rgba(212,169,74,.3);padding:20px 0}
 .faq summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:18px;font-size:16px;font-weight:400;transition:color .2s}
 .faq summary:hover{color:var(--gold)}
 .faq summary::-webkit-details-marker{display:none}
@@ -265,7 +265,7 @@ section+section{border-top:1px solid rgba(242,235,221,.06)}
 .faq details p{margin:12px 0 0;color:var(--dim);font-size:14px;max-width:66ch}
 
 /* Footer */
-footer{padding:70px 0 130px;text-align:center;border-top:1px solid rgba(242,235,221,.06);background:var(--char)}
+footer{padding:70px 0 130px;text-align:center;border-top:1px solid var(--gold);background:#000000}
 .foot-logo{width:66px;margin:0 auto 20px;opacity:.7}
 .foot-title{font-family:var(--display);font-weight:400;font-size:28px;text-transform:uppercase;letter-spacing:.03em;color:var(--cream)}
 .foot-it{font-family:var(--display);font-style:italic;color:var(--gold);font-size:16px;margin:8px 0 0}
@@ -279,7 +279,7 @@ footer{padding:70px 0 130px;text-align:center;border-top:1px solid rgba(242,235,
 .sticky{
   position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;align-items:center;gap:10px;
   padding:10px 14px calc(10px + env(safe-area-inset-bottom));
-  background:rgba(12,9,8,.96);backdrop-filter:blur(10px);border-top:1px solid var(--rule2);
+  background:rgba(0,0,0,.96);backdrop-filter:blur(10px);border-top:1px solid var(--gold);
 }
 .sticky .sb{flex:1;min-width:0}
 .sticky .sb-t{font-family:var(--display);font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -443,18 +443,8 @@ footer{padding:70px 0 130px;text-align:center;border-top:1px solid rgba(242,235,
 
 <section class="dd" id="designated-driver">
   <div class="wrap">
-    <div class="two-col">
-      <div>
-        <p class="kicker">Chauffeur service</p>
-        <h2 style="color:var(--gold)">Let somebody else<br>take the wheel.</h2>
-        <p class="lede" style="color:var(--gold)">Six hours of brunch and cocktails, and then the drive home. Book one of our chauffeurs and you don't have to think about it — tell us what you need and we'll come back with a price.</p>
-        <ul class="dd-list">
-          <li><b>Quoted per request.</b> Every booking is priced individually — the vehicle, how many people are riding, where you're headed and how long you need a chauffeur all change the number.</li>
-          <li><b>Book ahead or on the day.</b> Reserve when you buy your ticket, or ask the host at the door if plans change over the course of the afternoon.</li>
-          <li><b>One chauffeur, one table.</b> If your whole party came together, one booking usually covers the group — say so in the request and we'll price it that way.</li>
-          <li><b>Tell us early if you can.</b> Chauffeurs are limited each month, and the last hour of the event is when everyone asks at once.</li>
-        </ul>
-      </div>
+    <div style="max-width:560px;margin:0 auto">
+      <p class="kicker" style="text-align:center">Chauffeur service</p>
       <div class="dd-card">
         <p class="kicker">Request a chauffeur</p>
         <div class="big">You enjoy it.<br>We'll get you<br>home.</div>
