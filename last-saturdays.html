@@ -186,25 +186,25 @@ section+section{border-top:1px solid rgba(242,235,221,.06)}
 .sub-label{font-size:11px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--faint);margin:40px 0 0}
 .fine{font-size:13px;color:var(--faint);margin:30px 0 0;max-width:76ch;letter-spacing:.02em;line-height:1.7}
 
-/* Designated driver */
-.dd{background:linear-gradient(120deg,rgba(30,10,13,.4),var(--black) 60%)}
-.dd-list{list-style:none;padding:0;margin:22px 0 0}
-.dd-list li{padding:14px 0 14px 26px;position:relative;border-bottom:1px solid rgba(242,235,221,.06);color:var(--dim);font-size:15px}
-.dd-list li::before{content:"\25C6";position:absolute;left:0;top:15px;color:var(--gold);font-size:9px}
-.dd-list li b{color:var(--cream);font-weight:500}
+/* Chauffeur service */
+.dd{background:var(--black)}
+.dd-list{list-style:none;padding:0;margin:28px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.dd-list li{padding:20px 22px;position:relative;border:1px solid var(--gold);border-radius:var(--radius);color:var(--gold);font-size:15px;background:var(--black)}
+.dd-list li::before{display:none}
+.dd-list li b{color:var(--gold);font-weight:500;display:block;margin-bottom:6px}
 .dd-card{
-  background:var(--card);border:1px solid rgba(242,235,221,.08);border-radius:var(--radius);
+  background:var(--black);border:1px solid var(--gold);border-radius:var(--radius);
   padding:36px 30px;text-align:center;
 }
-.dd-card .big{font-family:var(--display);font-weight:600;font-size:clamp(24px,3.2vw,32px);line-height:1.2}
-.dd-card p{font-size:14px;color:var(--dim);margin:16px 0 22px}
+.dd-card .big{font-family:var(--display);font-weight:400;font-size:clamp(24px,3.2vw,32px);line-height:1.2;color:var(--gold)}
+.dd-card p{font-size:14px;color:var(--gold);margin:16px 0 22px}
 .dd-form{display:grid;gap:10px;text-align:left;margin-top:18px}
 .dd-form .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.dd-form label{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:5px}
+.dd-form label{font-size:10px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:5px}
 .dd-form input,.dd-form select,.dd-form textarea{
-  width:100%;padding:12px 13px;background:rgba(12,9,8,.7);color:var(--cream);
-  border:1px solid rgba(242,235,221,.1);border-radius:6px;
-  font-family:var(--body);font-size:14px;font-weight:300;transition:border-color .2s;
+  width:100%;padding:12px 13px;background:var(--black);color:var(--gold);
+  border:1px solid var(--gold);border-radius:6px;
+  font-family:var(--body);font-size:14px;font-weight:200;transition:border-color .2s;
 }
 .dd-form textarea{resize:vertical;min-height:68px}
 .dd-form input:focus,.dd-form select:focus,.dd-form textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold)}
@@ -445,18 +445,18 @@ footer{padding:70px 0 130px;text-align:center;border-top:1px solid rgba(242,235,
   <div class="wrap">
     <div class="two-col">
       <div>
-        <p class="kicker">Designated driver service</p>
-        <h2>Let somebody else<br>take the <span class="gold">wheel</span>.</h2>
-        <p class="lede">Six hours of brunch and cocktails, and then the drive home. Book one of our designated drivers and you don't have to think about it — tell us what you need and we'll come back with a price.</p>
+        <p class="kicker">Chauffeur service</p>
+        <h2 style="color:var(--gold)">Let somebody else<br>take the wheel.</h2>
+        <p class="lede" style="color:var(--gold)">Six hours of brunch and cocktails, and then the drive home. Book one of our chauffeurs and you don't have to think about it — tell us what you need and we'll come back with a price.</p>
         <ul class="dd-list">
-          <li><b>Quoted per request.</b> Every booking is priced individually — the vehicle, how many people are riding, where you're headed and how long you need a driver all change the number.</li>
+          <li><b>Quoted per request.</b> Every booking is priced individually — the vehicle, how many people are riding, where you're headed and how long you need a chauffeur all change the number.</li>
           <li><b>Book ahead or on the day.</b> Reserve when you buy your ticket, or ask the host at the door if plans change over the course of the afternoon.</li>
-          <li><b>One driver, one table.</b> If your whole party came together, one booking usually covers the group — say so in the request and we'll price it that way.</li>
-          <li><b>Tell us early if you can.</b> Drivers are limited each month, and the last hour of the event is when everyone asks at once.</li>
+          <li><b>One chauffeur, one table.</b> If your whole party came together, one booking usually covers the group — say so in the request and we'll price it that way.</li>
+          <li><b>Tell us early if you can.</b> Chauffeurs are limited each month, and the last hour of the event is when everyone asks at once.</li>
         </ul>
       </div>
       <div class="dd-card">
-        <p class="kicker">Request a driver</p>
+        <p class="kicker">Request a chauffeur</p>
         <div class="big">You enjoy it.<br>We'll get you<br>home.</div>
         <p>Send us the details and we'll reply with a price. No payment now — nothing is booked until you confirm.</p>
         <div class="dd-form">
@@ -529,7 +529,7 @@ footer{padding:70px 0 130px;text-align:center;border-top:1px solid rgba(242,235,
       <details><summary>Do I have to be Greek or an HBCU alum?</summary><p>No. Divine Nine chapters and HBCU alumni are who the series is built around, but the room is open to professionals, entrepreneurs, creatives, educators, athletes and community builders alike.</p></details>
       <details><summary>What exactly does my ticket cover?</summary><p>General Admission includes a reserved seat, the live podcast hour, a brunch entr&eacute;e from a curated menu, and one signature cocktail or mimosa — with tax and a 20% gratuity already built into the price. VIP Front Row adds priority entry, a reserved front section, a premium entr&eacute;e, two signature cocktails, mimosa carafe service, a shared starter and a gift bag.</p></details>
       <details><summary>What's the Early Bird ticket?</summary><p>The first thirty tickets released each month go at the Early Bird price. When they're gone, general admission opens.</p></details>
-      <details><summary>How does the designated driver service work?</summary><p>It's booked separately from your ticket and quoted per request, because the price depends on the vehicle, how many people are riding, where you're going and how long you need a driver. Send the request form above and we'll come back with a price — nothing is booked until you confirm.</p></details>
+      <details><summary>How does the chauffeur service work?</summary><p>It's booked separately from your ticket and quoted per request, because the price depends on the vehicle, how many people are riding, where you're going and how long you need a chauffeur. Send the request form above and we'll come back with a price — nothing is booked until you confirm.</p></details>
       <details><summary>How do I book a table for my chapter or a birthday?</summary><p>Reserved tables seat six or eight and come with a bottle-service tier. Book one directly above, or email us if your group is larger.</p></details>
       <details><summary>Can I sell at the event?</summary><p>Marketplace Partner tables are reserved for Black-owned retail, beauty, apparel, food and wellness brands — a handful per event. It includes a table during service, a mention in the printed program, one social feature, and two general admission tickets.</p></details>
       <details><summary>Is there a dress code?</summary><p>Themed to the month. For The Kickoff Classic: classic HBCU style, school colors and letters, Greek paraphernalia, luxury tailgate.</p></details>
