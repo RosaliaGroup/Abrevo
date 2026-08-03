@@ -1,4 +1,4 @@
-﻿const { google } = require('googleapis');
+const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 const { pushToAll } = require('./lib/pushAlert');
 const { enrichLead } = require('./lib/leadContact');
@@ -218,8 +218,6 @@ Budget: ${data.budget || 'N/A'}
 Apartment Size: ${data.apartment_size || 'N/A'}
 Property: ${propertyAddress}
 Move-In Date: ${data.move_in_date || 'N/A'}
-Income Qualifies: ${data.income_qualifies || 'N/A'}
-Credit Qualifies: ${data.credit_qualifies || 'N/A'}
 
 Notes:
 ${data.additional_notes || 'N/A'}
@@ -365,8 +363,6 @@ exports.handler = async (event) => {
         apartment_size: data.apartment_size,
         preferred_area: data.preferred_area,
         move_in_date: data.move_in_date,
-        income_qualifies: data.income_qualifies,
-        credit_qualifies: data.credit_qualifies,
         additional_notes: data.additional_notes,
         client: clientId,
         calendar_event_id: calendarEvent?.id,
@@ -498,7 +494,7 @@ exports.handler = async (event) => {
 
     // 4. Send SMS to team (skip for null/healthcheck bookings)
     if (data.full_name && !data.full_name.includes('HEALTHCHECK') && client.notifyPhone) {
-      let teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${propertyAddress}\nDate: ${displayDate} at ${displayTime}\nBudget: ${displayBudget}\nSize: ${displaySize}\nMove-In: ${displayMoveIn}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\n\nNotes: ${data.additional_notes}`;
+      let teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${propertyAddress}\nDate: ${displayDate} at ${displayTime}\nBudget: ${displayBudget}\nSize: ${displaySize}\nMove-In: ${displayMoveIn}\n\nNotes: ${data.additional_notes}`;
       // Strip any URLs from team SMS
       teamMsg = teamMsg.replace(/https?:\/\/[^\s]+/gi, '').replace(/\s{2,}/g, ' ').trim();
       try {

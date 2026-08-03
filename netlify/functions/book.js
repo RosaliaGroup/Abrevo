@@ -70,8 +70,6 @@ async function addCalendarEvent(client, data, startDT, endDT) {
         `Apartment Size: ${data.apartment_size}`,
         `Preferred Area: ${data.preferred_area || 'Not provided'}`,
         `Move-In Date: ${data.move_in_date}`,
-        `Income Qualifies: ${data.income_qualifies}`,
-        `Credit Qualifies: ${data.credit_qualifies}`,
         `Notes: ${data.additional_notes || 'None'}`,
       ].join('\n'),
       start: { dateTime: startDT.toISOString(), timeZone: 'America/New_York' },
@@ -149,7 +147,7 @@ exports.handler = async (event) => {
     const callerSMS = await sendSMS(data.phone, callerMsg);
 
     // 3. SMS to team
-    const teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${data.type}\nDate: ${displayDate} at ${displayTime}\nBudget: ${data.budget}\nSize: ${data.apartment_size}\nArea: ${data.preferred_area || 'N/A'}\nMove-In: ${data.move_in_date}\nIncome: ${data.income_qualifies}\nCredit: ${data.credit_qualifies}\nNotes: ${data.additional_notes || 'None'}`;
+    const teamMsg = `New Booking!\n\nName: ${data.full_name}\nPhone: ${data.phone}\nEmail: ${data.email}\nProperty: ${data.type}\nDate: ${displayDate} at ${displayTime}\nBudget: ${data.budget}\nSize: ${data.apartment_size}\nArea: ${data.preferred_area || 'N/A'}\nMove-In: ${data.move_in_date}\nNotes: ${data.additional_notes || 'None'}`;
     const teamSMS = await sendSMS(client.notifyPhone, teamMsg);
 
     // 4. Email to caller + CC team

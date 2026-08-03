@@ -94,8 +94,6 @@ async function createCalendarEvent(calendar, booking, new_date, new_time) {
     'Budget: ' + (booking.budget || 'N/A'),
     'Apartment Size: ' + (booking.apartment_size || 'N/A'),
     'Move-In Date: ' + (booking.move_in_date || 'N/A'),
-    'Income: ' + (booking.income_qualifies || 'N/A'),
-    'Credit: ' + (booking.credit_qualifies || 'N/A'),
   ].join('\n');
 
   const event = await calendar.events.insert({
@@ -196,7 +194,7 @@ exports.handler = async (event) => {
     console.log('Caller SMS:', JSON.stringify(r1));
 
     // Text Ana
-    const teamMsg = `Rescheduled!\n\nName: ${booking.full_name}\nPhone: ${normalizedPhone}\nProperty: ${booking.type}\nNew Date: ${new_date} at ${new_time}\nBudget: ${booking.budget || 'N/A'}\nSize: ${booking.apartment_size || 'N/A'}\nMove-In: ${booking.move_in_date || 'N/A'}\nIncome: ${booking.income_qualifies || 'N/A'}\nCredit: ${booking.credit_qualifies || 'N/A'}`;
+    const teamMsg = `Rescheduled!\n\nName: ${booking.full_name}\nPhone: ${normalizedPhone}\nProperty: ${booking.type}\nNew Date: ${new_date} at ${new_time}\nBudget: ${booking.budget || 'N/A'}\nSize: ${booking.apartment_size || 'N/A'}\nMove-In: ${booking.move_in_date || 'N/A'}`;
     const r2 = await sendSMS(ANA_PHONE, teamMsg);
     console.log('Team SMS:', JSON.stringify(r2));
 
@@ -213,8 +211,6 @@ exports.handler = async (event) => {
         <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Budget:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.budget || 'N/A'}</td></tr>
         <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Apartment Size:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.apartment_size || 'N/A'}</td></tr>
         <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Move-In Date:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.move_in_date || 'N/A'}</td></tr>
-        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Income Qualifies:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.income_qualifies || 'N/A'}</td></tr>
-        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Credit Qualifies:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${booking.credit_qualifies || 'N/A'}</td></tr>
       </table>
       <p><em>New calendar event ID: ${newEvent?.id || 'N/A'}</em></p>
     `;
