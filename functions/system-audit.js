@@ -172,7 +172,12 @@ exports.handler = async () => {
     // The single most costly miss: a confirmed tour where nobody was reminded,
     // so they don't turn up and the slot is wasted. Checked from 4pm ET, by
     // which time the afternoon reminder job should have run.
-    const tmr = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+    // "Tomorrow" must be tomorrow in EASTERN time, not UTC. Between 8pm and
+    // midnight ET the UTC date has already rolled over, so a naive UTC+1day
+    // lands on the day after tomorrow and reports tours as unreminded that
+    // aren't due a reminder yet.
+    const etNow = new Date(Date.now() - 4 * 3600e3);          // EDT
+    const tmr = new Date(etNow.getTime() + 864e5).toISOString().slice(0, 10);
     const toursTomorrow = await sb(
       `bookings?starts_at=gte.${tmr}T00:00:00&starts_at=lte.${tmr}T23:59:59&select=id,full_name,starts_at,reminder_sent_at&limit=100`
     );
