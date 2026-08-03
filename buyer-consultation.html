@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book a Buyer Consultation — Rosalia Group</title>
+<style>
+  :root {
+    --ink: #16191C;
+    --ink-2: #5C6670;
+    --paper: #F5F6F4;
+    --card: #FFFFFF;
+    --line: #DFE3E0;
+    --green: #2F5D50;
+    --green-dark: #244A40;
+    --rust: #9C3B2E;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 620px; margin: 0 auto; padding: 0 20px 64px; }
+
+  /* ── masthead ─────────────────────────────────── */
+  header {
+    background: var(--ink);
+    color: #fff;
+    padding: 30px 20px 34px;
+    margin-bottom: 28px;
+  }
+  header .inner { max-width: 620px; margin: 0 auto; }
+
+  .brand {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.6);
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 30px;
+    line-height: 1.15;
+    font-weight: 400;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+
+  header p {
+    margin: 0;
+    color: rgba(255,255,255,.72);
+    font-size: 15px;
+  }
+
+  /* ── listing context ──────────────────────────── */
+  .listing {
+    display: none;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--green);
+    padding: 14px 16px;
+    margin-bottom: 26px;
+  }
+  .listing.show { display: block; }
+  .listing .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    margin-bottom: 4px;
+  }
+  .listing .addr { font-weight: 600; }
+  .listing .meta { font-size: 14px; color: var(--ink-2); }
+  .listing .courtesy {
+    font-size: 12px;
+    color: var(--ink-2);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* ── form ─────────────────────────────────────── */
+  fieldset {
+    border: 0;
+    border-top: 1px solid var(--line);
+    padding: 22px 0 0;
+    margin: 0 0 26px;
+  }
+  legend {
+    font-family: Georgia, serif;
+    font-size: 19px;
+    padding: 0 12px 0 0;
+    margin-left: -1px;
+  }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+
+  label { display: block; margin-bottom: 16px; }
+
+  .lbl {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 5px;
+  }
+  .hint {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 400;
+    color: var(--ink-2);
+    margin-bottom: 5px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 10px 11px;
+    font: inherit;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: 2px solid var(--green);
+    outline-offset: -1px;
+    border-color: var(--green);
+  }
+  textarea { min-height: 88px; resize: vertical; }
+
+  .choices { display: flex; flex-direction: column; gap: 8px; }
+  .choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 10px 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    cursor: pointer;
+    margin-bottom: 0;
+  }
+  .choice:hover { border-color: var(--green); }
+  .choice input { width: auto; margin: 3px 0 0; flex: 0 0 auto; }
+  .choice span { font-size: 14.5px; }
+  .choice.sel { border-color: var(--green); background: #F2F7F5; }
+
+  button {
+    width: 100%;
+    padding: 14px;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--green);
+    border: 0;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  button:hover { background: var(--green-dark); }
+  button:disabled { background: var(--ink-2); cursor: default; }
+
+  .note {
+    font-size: 13px;
+    color: var(--ink-2);
+    margin-top: 14px;
+    text-align: center;
+  }
+
+  .msg { padding: 14px; border-radius: 3px; margin-bottom: 20px; font-size: 15px; }
+  .msg.err { background: #FBEEEC; color: var(--rust); border: 1px solid #EBC9C3; }
+
+  /* ── done ─────────────────────────────────────── */
+  .done { display: none; text-align: center; padding: 40px 0; }
+  .done.show { display: block; }
+  .done h2 { font-family: Georgia, serif; font-weight: 400; font-size: 26px; margin: 0 0 12px; }
+  .done p { color: var(--ink-2); margin: 0 0 6px; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    margin-top: 34px;
+    font-size: 13px;
+    color: var(--ink-2);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <p class="brand">Rosalia Group</p>
+    <h1>Book a buyer consultation</h1>
+    <p>Tell us what you're looking for and Ana will follow up to set a time.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="listing" id="listing">
+    <div class="eyebrow">About</div>
+    <div class="addr" id="l-addr"></div>
+    <div class="meta" id="l-meta"></div>
+    <div class="courtesy" id="l-courtesy"></div>
+  </div>
+
+  <div id="error" class="msg err" style="display:none"></div>
+
+  <form id="form">
+    <fieldset>
+      <legend>You</legend>
+      <label>
+        <span class="lbl">Full name</span>
+        <input type="text" id="full_name" required autocomplete="name">
+      </label>
+      <div class="row">
+        <label>
+          <span class="lbl">Phone</span>
+          <input type="tel" id="phone" required autocomplete="tel">
+        </label>
+        <label>
+          <span class="lbl">Email</span>
+          <input type="email" id="email" required autocomplete="email">
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>What you're looking for</legend>
+      <label>
+        <span class="lbl">Towns or areas</span>
+        <span class="hint">Newark, Jersey City, East Orange, Elizabeth, Orange — or anywhere else in NJ.</span>
+        <input type="text" id="areas" placeholder="e.g. Newark, Belleville">
+      </label>
+      <div class="row">
+        <label>
+          <span class="lbl">Price range</span>
+          <select id="price_range">
+            <option value="">Select</option>
+            <option>Under $250,000</option>
+            <option>$250,000 – $400,000</option>
+            <option>$400,000 – $600,000</option>
+            <option>$600,000 – $850,000</option>
+            <option>Over $850,000</option>
+            <option>Not sure yet</option>
+          </select>
+        </label>
+        <label>
+          <span class="lbl">Timeline</span>
+          <select id="timeline">
+            <option value="">Select</option>
+            <option>Ready now</option>
+            <option>1 – 3 months</option>
+            <option>3 – 6 months</option>
+            <option>6 – 12 months</option>
+            <option>Just starting to look</option>
+          </select>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Financing</legend>
+      <div class="choices" id="financing">
+        <label class="choice"><input type="radio" name="financing" value="Pre-approved"><span>I'm pre-approved with a lender</span></label>
+        <label class="choice"><input type="radio" name="financing" value="Paying cash"><span>Paying cash</span></label>
+        <label class="choice"><input type="radio" name="financing" value="Needs lender referral"><span>Not yet — I'd like a lender referral</span></label>
+        <label class="choice"><input type="radio" name="financing" value="Still deciding"><span>Still working it out</span></label>
+      </div>
+      <label style="margin-top:16px">
+        <span class="lbl">Do you have a home to sell first?</span>
+        <select id="home_to_sell">
+          <option value="">Select</option>
+          <option>No</option>
+          <option>Yes — not listed yet</option>
+          <option>Yes — already listed</option>
+          <option>Yes — under contract</option>
+        </select>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>One last thing</legend>
+      <label>
+        <span class="lbl">Are you already working with an agent?</span>
+        <span class="hint">If you are, we won't interfere — just let us know.</span>
+        <select id="has_agent">
+          <option value="">Select</option>
+          <option>No</option>
+          <option>Yes</option>
+        </select>
+      </label>
+      <div class="row">
+        <label>
+          <span class="lbl">Preferred day</span>
+          <input type="date" id="preferred_date" required>
+        </label>
+        <label>
+          <span class="lbl">Preferred time</span>
+          <select id="preferred_time" required>
+            <option value="">Select</option>
+            <option>9:00 AM</option><option>10:00 AM</option><option>11:00 AM</option>
+            <option>12:00 PM</option><option>1:00 PM</option><option>2:00 PM</option>
+            <option>3:00 PM</option><option>4:00 PM</option><option>5:00 PM</option>
+          </select>
+        </label>
+      </div>
+      <label>
+        <span class="lbl">Anything else?</span>
+        <textarea id="notes" placeholder="Must-haves, questions, anything we should know."></textarea>
+      </label>
+    </fieldset>
+
+    <button type="submit" id="submit">Request consultation</button>
+    <p class="note">Ana will confirm by phone or email. No obligation.</p>
+  </form>
+
+  <div class="done" id="done">
+    <h2>Thank you</h2>
+    <p id="done-when"></p>
+    <p>Ana will be in touch to confirm.</p>
+  </div>
+
+  <footer>
+    Rosalia Group &middot; Licensed Real Estate Brokerage, New Jersey<br>
+    inquiries@rosaliagroup.com &middot; (551) 249-9795
+  </footer>
+</div>
+
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var listingId = params.get('listing') || '';
+  var phoneParam = params.get('phone');
+  if (phoneParam) document.getElementById('phone').value = phoneParam;
+
+  // Earliest bookable day is tomorrow.
+  var tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  document.getElementById('preferred_date').min = tomorrow;
+
+  var listingLabel = '';
+
+  // Pull the listing so the person can see what they enquired about, and
+  // so the courtesy line travels with the enquiry.
+  if (listingId) {
+    fetch('/.netlify/functions/listings-feed?id=' + encodeURIComponent(listingId))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var l = data.listings && data.listings[0];
+        if (!l) return;
+        listingLabel = [l.address_line, l.city, l.state].filter(Boolean).join(', ');
+        document.getElementById('l-addr').textContent = listingLabel;
+        document.getElementById('l-meta').textContent = [
+          '$' + Number(l.price).toLocaleString('en-US'),
+          l.bedrooms != null ? l.bedrooms + ' bd' : null,
+          l.bathrooms != null ? l.bathrooms + ' ba' : null
+        ].filter(Boolean).join(' · ');
+        document.getElementById('l-courtesy').textContent = l.courtesy_line || '';
+        document.getElementById('listing').classList.add('show');
+      })
+      .catch(function () { /* form still works without it */ });
+  }
+
+  // Highlight the chosen financing option.
+  document.getElementById('financing').addEventListener('change', function () {
+    [].forEach.call(document.querySelectorAll('#financing .choice'), function (c) {
+      c.classList.toggle('sel', c.querySelector('input').checked);
+    });
+  });
+
+  function val(id) { return (document.getElementById(id).value || '').trim(); }
+
+  function prettyDate(iso) {
+    var p = iso.split('-');
+    var months = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+    return months[parseInt(p[1], 10) - 1] + ' ' + parseInt(p[2], 10) + ' ' + p[0];
+  }
+
+  document.getElementById('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    var btn = document.getElementById('submit');
+    var err = document.getElementById('error');
+    err.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    var financing = document.querySelector('#financing input:checked');
+
+    var payload = {
+      full_name: val('full_name'),
+      phone: val('phone'),
+      email: val('email'),
+      type: 'Buyer Consultation' + (listingLabel ? ' — ' + listingLabel : ''),
+      property_address: listingLabel,
+      listing_id: listingId,
+      preferred_date: prettyDate(val('preferred_date')),
+      preferred_time: val('preferred_time'),
+      budget: val('price_range'),
+      preferred_area: val('areas'),
+      move_in_date: val('timeline'),
+      additional_notes: [
+        financing ? 'Financing: ' + financing.value : null,
+        val('home_to_sell') ? 'Home to sell: ' + val('home_to_sell') : null,
+        val('has_agent') ? 'Working with an agent: ' + val('has_agent') : null,
+        val('notes')
+      ].filter(Boolean).join(' | ')
+    };
+
+    fetch('/.netlify/functions/book?client=rosalia', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res && res.error) throw new Error(res.error);
+        document.getElementById('form').style.display = 'none';
+        document.getElementById('listing').style.display = 'none';
+        document.getElementById('done-when').textContent =
+          payload.preferred_date + ' at ' + payload.preferred_time;
+        document.getElementById('done').classList.add('show');
+        window.scrollTo(0, 0);
+      })
+      .catch(function (e) {
+        err.textContent = "Something went wrong. Please call (551) 249-9795 and we'll get you booked.";
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Request consultation';
+        console.error(e);
+      });
+  });
+})();
+</script>
+</body>
+</html>
