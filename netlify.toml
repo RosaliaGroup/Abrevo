@@ -22,10 +22,10 @@
 [functions."autocall"]
   schedule = "* * * * *"
   node_bundler = "nft"
-# Reconciles what ARRIVED against what was RECORDED. The healthcheck below only
-# proves each function responds — it cannot detect a function returning 200 while
-# silently discarding messages, which is exactly how lead emails were being lost.
-[functions."message-audit"]
+# Verifies OUTCOMES across the whole system: messages recorded, calls logged,
+# tours reminded, texts sent. The healthcheck below only proves each function
+# responds — it cannot see a function returning 200 while doing nothing useful.
+[functions."system-audit"]
   schedule = "17 * * * *"
   node_bundler = "nft"
 [functions."healthcheck"]
