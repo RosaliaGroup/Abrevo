@@ -285,6 +285,10 @@ tr:hover td{background:rgba(201,168,76,0.03)}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Leads
     </div>
+    <div class="nav-item" onclick="showPage('properties')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/></svg>
+      Properties
+    </div>
     <div class="nav-item" onclick="showPage('pipeline')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
       Deal Pipeline
@@ -435,6 +439,14 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 </div>
 
 <!-- DEAL PIPELINE -->
+<div class="page-section" id="page-properties">
+  <h1>Properties</h1>
+  <div id="prop-detail" style="display:none"></div>
+  <div class="table-wrap" id="prop-list-wrap"><table id="props-table"><thead><tr>
+    <th>Property</th><th>Leads</th><th>Active</th><th>Tours</th><th>Upcoming</th><th>Deals</th><th>Commission</th>
+  </tr></thead><tbody id="props-body"></tbody></table></div>
+</div>
+
 <div class="page-section" id="page-pipeline">
   <div class="main-header">
     <h1>Deal Pipeline</h1>
@@ -783,6 +795,7 @@ function showPage(page, fromHistory) {
   document.querySelectorAll('.mobile-nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => { if (n.textContent.trim().toLowerCase().replace(/[\-\s]/g,'').includes(page)) n.classList.add('active'); });
   document.querySelectorAll('.mobile-nav-item').forEach(n => { const t = n.textContent.trim().toLowerCase(); if ((page==='dashboard' && t==='home') || t===page || (page==='pipeline' && t==='deals') || (page==='messages' && t==='texts')) n.classList.add('active'); });
+  if (page === 'properties') loadProperties();
   if (page === 'messages') loadMessagesPage();
   if (page === 'leads') loadLeads();
   if (page === 'pipeline') loadPipeline();
@@ -1118,6 +1131,85 @@ if (typeof window !== 'undefined') {
     } catch (e) { /* leave the local flag alone */ }
   })();
   if (typeof setInterval === 'function') setInterval(checkForNewInbound, 20000);
+}
+
+// A lead's deals. The deal existed in the pipeline but left no trace on the
+// person it belongs to, so opening a lead gave no sign they had one.
+async function loadLeadDeals(leadId) {
+  const el = document.getElementById('ld-deals');
+  if (!el) return;
+  const rows = await apiGet('/leads/' + encodeURIComponent(leadId) + '/deals');
+  if (!rows || !rows.length) { el.innerHTML = ''; return; }
+  const money = n => n ? '$' + Number(n).toLocaleString() : '';
+  el.innerHTML = rows.map(d =>
+    '<div onclick="showPage(\'pipeline\')" style="cursor:pointer;margin-top:8px;padding:9px 11px;border-radius:6px;'
+    + 'background:rgba(255,255,255,.04);border-left:3px solid var(--gold)">'
+    + '<div style="font-size:12px;color:var(--text-muted)">Deal &middot; ' + esc(d.stage || '') + '</div>'
+    + '<div style="font-size:15px">' + esc(d.property || 'No property') + '</div>'
+    + (d.commission_total ? '<div style="font-size:13px;color:var(--text-muted)">Commission ' + money(d.commission_total) + '</div>' : '')
+    + '</div>').join('');
+}
+
+// ── PROPERTIES ──
+// There is no properties table — the building name is text on each lead, deal
+// and booking. This aggregates them so a building becomes something you can
+// open, rather than a string repeated across three tables.
+async function loadProperties() {
+  const body = document.getElementById('props-body');
+  if (!body) return;
+  document.getElementById('prop-detail').style.display = 'none';
+  document.getElementById('prop-list-wrap').style.display = '';
+  body.innerHTML = '<tr><td colspan="7" style="color:var(--text-muted)">Loading…</td></tr>';
+  const rows = await apiGet('/properties') || [];
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="7" style="color:var(--text-muted)">No properties yet</td></tr>'; return; }
+  const money = n => n ? '$' + Number(n).toLocaleString() : '—';
+  body.innerHTML = rows.map(p =>
+    '<tr onclick="openProperty(\''+esc(p.property).replace(/'/g,"\\'")+'\')" style="cursor:pointer">'
+    + '<td>'+esc(p.property)+'</td><td>'+p.leads+'</td><td>'+p.active+'</td>'
+    + '<td>'+p.tours+'</td><td>'+(p.upcoming||'—')+'</td><td>'+(p.deals||'—')+'</td>'
+    + '<td>'+money(p.commission)+'</td></tr>').join('');
+}
+
+// Everything tied to one building, in one place.
+async function openProperty(name) {
+  const box = document.getElementById('prop-detail');
+  if (!box) return;
+  document.getElementById('prop-list-wrap').style.display = 'none';
+  box.style.display = 'block';
+  box.innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
+  const d = await apiGet('/properties/detail?name=' + encodeURIComponent(name));
+  if (!d) { box.innerHTML = '<p>Could not load this property.</p>'; return; }
+
+  const money = n => n ? '$' + Number(n).toLocaleString() : '—';
+  const card = (title, inner) =>
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">'
+    + '<h2 style="margin:0 0 10px">'+title+'</h2>'+inner+'</div>';
+
+  const leads = (d.leads||[]).slice(0,30).map(l =>
+    '<div onclick="openLeadDetail(\''+l.id+'\')" style="cursor:pointer;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;gap:10px">'
+    + '<span>'+esc(l.name||'Unknown')+'</span>'
+    + '<span style="color:var(--text-muted);font-size:14px">'+statusBadge(l.status)+'</span></div>').join('')
+    || '<p style="color:var(--text-muted)">No leads</p>';
+
+  const deals = (d.deals||[]).map(x =>
+    '<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;gap:10px">'
+    + '<span>'+esc((x.leads && x.leads.name) || 'Unknown')+'</span>'
+    + '<span style="color:var(--text-muted);font-size:14px">'+esc(x.stage||'')+' &middot; '+money(x.commission_total)+'</span></div>').join('')
+    || '<p style="color:var(--text-muted)">No deals</p>';
+
+  const tours = (d.bookings||[]).slice(0,20).map(b =>
+    '<div onclick="openLeadByPhone(\''+esc(b.phone||'')+'\')" style="cursor:pointer;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;gap:10px">'
+    + '<span>'+esc(b.full_name||'Guest')+'</span>'
+    + '<span style="color:var(--text-muted);font-size:14px">'
+    + (b.starts_at ? fmtStamp(b.starts_at) : 'no time') + (b.confirmed_at ? ' &middot; confirmed' : '') + '</span></div>').join('')
+    || '<p style="color:var(--text-muted)">No tours</p>';
+
+  box.innerHTML = '<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">'
+    + '<h1 style="margin:0">'+esc(name)+'</h1>'
+    + '<button class="btn btn-sm btn-outline" onclick="loadProperties()">All properties</button></div>'
+    + card('Leads ('+(d.leads||[]).length+')', leads)
+    + card('Deals ('+(d.deals||[]).length+')', deals)
+    + card('Tours ('+(d.bookings||[]).length+')', tours);
 }
 
 // ── MESSAGES PAGE ──
@@ -1706,8 +1798,9 @@ async function openLeadDetail(id) {
       + '<div style="font-size:13px;margin-top:3px">'+esc(lead.last_inbound_preview||'')+'</div></div>'
     : '<div style="margin-top:10px;font-size:14px;color:var(--text-muted)">No reply from this lead yet</div>';
   document.getElementById('ld-stage-wrap').innerHTML = altList + stageSel + lastIn
-    + '<div id="ld-appts"></div>';
+    + '<div id="ld-appts"></div><div id="ld-deals"></div>';
   loadLeadAppointments(lead.id);
+  loadLeadDeals(lead.id);
 
   document.getElementById('ld-contact').innerHTML = esc(lead.email||'') + (lead.phone ? ' &middot; ' + fmtPhone(lead.phone) : '') + (lead.phone ? ' &middot; <a href="tel:'+esc(lead.phone)+'">Call</a> &middot; <a href="#" onclick="event.preventDefault();showDetailTab(\'messages\');return false;">Text</a>' : '');
 
