@@ -30,7 +30,9 @@ exports.handler = async (event) => {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
         body: JSON.stringify({
-          status: 'survey_completed',
+          // 'survey_completed' was removed in the FUB ladder migration. Someone
+          // who completed a survey has engaged with us, which is 'contacted'.
+          status: 'contacted',
           notes: `Survey: ${reasonText}${comments ? ' | Comment: ' + comments : ''}`,
         }),
       });

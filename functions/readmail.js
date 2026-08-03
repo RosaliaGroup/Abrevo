@@ -2265,10 +2265,12 @@ exports.handler = async (event) => {
           const afNameMatch = body.match(/CONTACT INFO[\s\S]*?\n([A-Z][^\n]+)\n/i);
           if (afNameMatch) realName = afNameMatch[1].trim();
           const afPropMatch = body.match(/New Lead for ([^\n]+)/i) || subject.match(/interested in ([^\n]+)/i);
-          if (afPropMatch) leadClient = afPropMatch[1].trim();
+          // Was assigning the building to `client`, which broke routing —
+          // client identifies the TENANT. The building is captured in `property`.
+          if (afPropMatch && !leadClient) leadClient = 'rosalia';
           // Extract specific unit interest (e.g. "Interested in: 11 Thomas St - 2C")
           const afUnitMatch = body.match(/Interested in:\s*([^\n]+)/i);
-          if (afUnitMatch) leadClient = afUnitMatch[1].trim();
+
           const afPhone = extractPhone(body);
           if (afPhone) phone = afPhone;
           console.log('AppFolio lead parsed:', { realName, phone, property: leadClient });
@@ -2282,7 +2284,7 @@ exports.handler = async (event) => {
             realEmail = tourMatch[2].trim();
             phone = '+1' + tourMatch[3].replace(/\D/g, '');
           }
-          leadClient = 'Iron 65 - 65 McWhorter St, Newark NJ';
+          leadClient = 'iron65';   // tenant id, not the building — property holds the address
           console.log('Iron65 Brevo tour lead:', { realName, realEmail, phone });
         }
 
@@ -2301,7 +2303,7 @@ exports.handler = async (event) => {
             phone = p;
           }
           if ((body || '').toLowerCase().includes('iron65') || (body || '').toLowerCase().includes('iron 65') || (body || '').toLowerCase().includes('mcwhorter')) {
-            leadClient = 'Iron 65 - 65 McWhorter St, Newark NJ';
+            leadClient = 'iron65';   // tenant id, not the building — property holds the address
           }
           console.log('Apartments.com lead:', { realName, realEmail, phone, property: leadClient });
         }
