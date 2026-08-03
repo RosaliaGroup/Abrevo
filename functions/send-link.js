@@ -55,6 +55,16 @@ const CONTEXTS = {
     agent: 'Ana',
     label: 'tour',
   },
+  // 430 Market St, Newark. Shares a street frontage with 10 Prospect — always
+  // use the Market St address publicly. Points at the general booking form
+  // until it gets a dedicated page; swap the url here when that exists.
+  '430market': {
+    url: 'https://book.rosaliagroup.com/book',
+    from: process.env.TELNYX_FROM_ROSALIA,
+    team: 'Rosalia Group',
+    agent: 'Ana',
+    label: 'tour',
+  },
 };
 
 const DEFAULT_CONTEXT = 'rosalia';
