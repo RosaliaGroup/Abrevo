@@ -491,6 +491,33 @@ exports.handler = async (event) => {
     // bodies. Each channel is queried separately and the lead ids unioned —
     // PostgREST can't join messages -> conversations -> leads in one request.
     // Participants on a deal, with the money already worked out.
+    // Edit a deal. Without this the pipeline was read-only — a deal could be
+    // created and then never corrected.
+    if (route.startsWith("/deals/") && !route.includes("/participants") && method === "PATCH") {
+      if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
+      const id = route.slice("/deals/".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+      let body; try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { ok: false, error: "invalid_json" }); }
+
+      // Allow-list, same shape as the lead PATCH: an unnamed field is ignored
+      // rather than written, so a future UI field can't reach lead_id.
+      const patch = {};
+      try {
+        if (body.property !== undefined) patch.property = vStr(body.property, 500, "property", false);
+        if (body.monthly_rent !== undefined) patch.monthly_rent = vNum(body.monthly_rent, "monthly_rent");
+        if (body.commission_total !== undefined) patch.commission_total = vNum(body.commission_total, "commission_total");
+        if (body.stage !== undefined) patch.stage = vEnum(body.stage, DEAL_STAGES, "stage", true);
+        if (body.agent_id !== undefined) patch.assigned_to = body.agent_id ? vId(body.agent_id, "agent_id") : null;
+        if (body.notes !== undefined) patch.notes = vStr(body.notes, 5000, "notes", false);
+      } catch (e) {
+        return json(400, { ok: false, error: e.message || "validation_failed", field: e.field || null });
+      }
+      if (Object.keys(patch).length === 0) return json(400, { ok: false, error: "nothing_to_update" });
+
+      await sbPatch(`deals?id=eq.${encodeURIComponent(id)}`, patch);
+      return json(200, { ok: true, id, updated: Object.keys(patch) });
+    }
+
     if (route.startsWith("/deals/") && route.endsWith("/participants") && method === "GET") {
       const id = route.slice("/deals/".length, -"/participants".length);
       if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
