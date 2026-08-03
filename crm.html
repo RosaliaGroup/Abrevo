@@ -1522,6 +1522,33 @@ function clearCommSearch() {
   loadLeads();
 }
 
+// Show this lead's tours on their card. The booking existed and appeared on the
+// calendar, but opening the lead gave no hint they had one — so you could be
+// reading someone's messages with no idea they were booked for tomorrow.
+async function loadLeadAppointments(leadId) {
+  const el = document.getElementById('ld-appts');
+  if (!el) return;
+  const rows = await apiGet('/leads/' + encodeURIComponent(leadId) + '/appointments');
+  if (!rows || !rows.length) { el.innerHTML = ''; return; }
+
+  const now = Date.now();
+  el.innerHTML = rows.slice(0, 4).map(b => {
+    const when = b.starts_at ? new Date(b.starts_at) : null;
+    const upcoming = when && when.getTime() > now;
+    const label = when
+      ? when.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+        + ' at ' + when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+      : ((b.preferred_date || 'Date TBD') + (b.preferred_time ? ' at ' + b.preferred_time : ''));
+    return '<div style="margin-top:8px;padding:9px 11px;border-radius:6px;background:rgba(255,255,255,.04);'
+      + 'border-left:3px solid ' + (b.confirmed_at ? 'var(--green,#4caf50)' : 'var(--gold)') + '">'
+      + '<div style="font-size:12px;color:var(--text-muted)">'
+      + (upcoming ? 'Upcoming tour' : 'Past tour') + (b.confirmed_at ? ' &middot; confirmed' : ' &middot; not yet confirmed') + '</div>'
+      + '<div style="font-size:15px">' + esc(label) + '</div>'
+      + (b.type ? '<div style="font-size:13px;color:var(--text-muted)">' + esc(b.type) + '</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
 // ── EDIT LEAD ──
 // Contact details arrive from whatever parsed the source email, and they're often
 // incomplete — a Zillow lead with no phone, a name that came through as an email
@@ -1678,7 +1705,9 @@ async function openLeadDetail(id) {
       + '<div style="font-size:13px;color:var(--text-muted)">Last message from them &middot; '+fmtStamp(lead.last_inbound_at)+'</div>'
       + '<div style="font-size:13px;margin-top:3px">'+esc(lead.last_inbound_preview||'')+'</div></div>'
     : '<div style="margin-top:10px;font-size:14px;color:var(--text-muted)">No reply from this lead yet</div>';
-  document.getElementById('ld-stage-wrap').innerHTML = altList + stageSel + lastIn;
+  document.getElementById('ld-stage-wrap').innerHTML = altList + stageSel + lastIn
+    + '<div id="ld-appts"></div>';
+  loadLeadAppointments(lead.id);
 
   document.getElementById('ld-contact').innerHTML = esc(lead.email||'') + (lead.phone ? ' &middot; ' + fmtPhone(lead.phone) : '') + (lead.phone ? ' &middot; <a href="tel:'+esc(lead.phone)+'">Call</a> &middot; <a href="#" onclick="event.preventDefault();showDetailTab(\'messages\');return false;">Text</a>' : '');
 
@@ -2234,9 +2263,19 @@ async function saveDeal() {
     stage: document.getElementById('ad-stage').value,
     agent_id: document.getElementById('ad-agent').value || null,
     notes: document.getElementById('ad-notes').value.trim() || null,
-    created_at: new Date().toISOString(),
   };
+  // A lead must be chosen: the API rejects a deal without one, and the previous
+  // version showed nothing when it did.
+  if (!data.lead_id) { alert('Choose a lead for this deal.'); return; }
+  if (!data.property) { alert('Enter a property.'); return; }
+
   const r = await apiSend('POST', '/deals', data);
+  if (!r || r.ok === false) {
+    // Previously this failed silently — no error, no feedback, the modal just
+    // stayed open and nothing saved.
+    alert('Could not save the deal: ' + ((r && r.error) || 'unknown error'));
+    return;
+  }
   const dealId = r && (r.id || (r.data && r.data.id));
 
   // Participants are saved second: they need the deal id, and the server

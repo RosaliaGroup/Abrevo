@@ -597,6 +597,26 @@ exports.handler = async (event) => {
       const leads = await sbGet(`leads?id=in.(${[...ids].join(",")})&select=id,name,email,phone,property,status,created_at&limit=200`);
       return json(200, { ok: true, data: (leads || []).map((l) => ({ ...l, matched_in: channels[l.id] || "text" })) });
     }
+    // A lead's appointments. The booking exists and the calendar shows it, but
+    // the lead card never did — so opening a lead gave no hint they had a tour
+    // scheduled at all.
+    if (route.startsWith("/leads/") && route.endsWith("/appointments") && method === "GET") {
+      const id = route.slice("/leads/".length, -"/appointments".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+      const lead = await sbGet(`leads?id=eq.${encodeURIComponent(id)}&select=phone,email&limit=1`);
+      const l = Array.isArray(lead) && lead[0] ? lead[0] : null;
+      if (!l) return json(200, { ok: true, data: [] });
+      const digits = String(l.phone || "").replace(/\D/g, "").slice(-10);
+      // Match on phone last-10 or email — bookings predate the lead link, so
+      // there's no foreign key to follow.
+      const filters = [];
+      if (digits) filters.push(`phone.ilike.*${digits}*`);
+      if (l.email) filters.push(`email.eq.${encodeURIComponent(l.email)}`);
+      if (!filters.length) return json(200, { ok: true, data: [] });
+      const rows = await sbGet(`bookings?or=(${filters.join(",")})&select=id,full_name,type,starts_at,preferred_date,preferred_time,confirmed_at,short_code,created_at&order=created_at.desc&limit=20`);
+      return json(200, { ok: true, data: rows || [] });
+    }
+
     if (route.startsWith("/leads/") && route.endsWith("/emails") && method === "GET") {
       const id = route.slice("/leads/".length, -"/emails".length);
       if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
@@ -639,7 +659,9 @@ exports.handler = async (event) => {
         if (body.assigned_to !== undefined) patch.assigned_to = body.assigned_to === "" ? null : vId(body.assigned_to, "assigned_to");
         if (body.notes !== undefined) patch.notes = vStr(body.notes, 5000, "notes", false);
       } catch (e) {
-        return json(400, { ok: false, error: e.message || "validation_failed" });
+        // Name the field. A bare "validation_failed" gives the user nothing to
+        // act on and makes the form look broken rather than picky.
+        return json(400, { ok: false, error: e.message || "validation_failed", field: e.field || null });
       }
       if (Object.keys(patch).length === 0) return json(400, { ok: false, error: "nothing_to_update" });
 
