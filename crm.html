@@ -664,6 +664,19 @@ tr:hover td{background:rgba(201,168,76,0.03)}
   </div>
 </div>
 
+<div class="modal-overlay" id="deal-modal" onclick="if(event.target===this)closeModal(this.id)">
+  <div class="modal" style="max-width:600px">
+    <h2 id="dl-title" style="margin-bottom:2px">Deal</h2>
+    <div id="dl-sub" style="font-size:14px;color:var(--text-muted);margin-bottom:16px"></div>
+    <div id="dl-err" style="display:none;background:rgba(255,80,80,.12);border:1px solid rgba(255,80,80,.35);color:#ff9a9a;padding:9px 11px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
+    <div id="dl-body"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-outline" onclick="closeModal('deal-modal')">Close</button>
+      <button class="btn btn-gold" onclick="saveDealEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="thread-modal" onclick="if(event.target===this)closeModal(this.id)">
 <div class="modal" style="max-width:520px">
   <h2 id="th-title" style="margin-bottom:2px"></h2>
@@ -2121,10 +2134,82 @@ async function loadPipeline() {
   }).join('');
 }
 
-function openDealDetail(id) {
-  // For now, just log — can expand later
-  const deal = allDeals.find(d => d.id === id);
-  if (deal && deal.lead_id) openLeadDetail(deal.lead_id);
+// Open the DEAL, not the lead behind it. This used to redirect to the lead card,
+// which meant a deal could never be edited — you'd click a deal and end up
+// looking at a person, with the stage, rent and commission nowhere to be found.
+let __dlId = null;
+
+async function openDealDetail(id) {
+  const d = allDeals.find(x => x.id === id);
+  if (!d) return;
+  __dlId = id;
+  const lead = d.leads || allLeads.find(l => l.id === d.lead_id);
+
+  document.getElementById('dl-title').textContent = d.property || 'Deal';
+  document.getElementById('dl-sub').innerHTML = lead
+    ? '<a href="#" onclick="event.preventDefault();closeModal(\'deal-modal\');openLeadDetail(\''+d.lead_id+'\')" style="color:var(--gold)">'
+      + esc(lead.name || 'Unknown') + '</a>' + (lead.phone ? ' &middot; ' + esc(fmtPhone(lead.phone)) : '')
+    : 'No lead linked';
+  document.getElementById('dl-err').style.display = 'none';
+
+  const field = (id2, label, val, type) =>
+    '<div class="form-group"><label>'+label+'</label>'
+    + '<input id="'+id2+'" type="'+(type||'text')+'" value="'+esc(val==null?'':String(val))+'"></div>';
+
+  const stageOpts = ['inquiry','toured','applied','approved','lease_sent','signed','moved_in','lost']
+    .map(x => '<option value="'+x+'"'+(d.stage===x?' selected':'')+'>'+x.replace(/_/g,' ')+'</option>').join('');
+  const agentOpts = ['<option value="">Unassigned</option>'].concat(
+    allAgents.map(a => '<option value="'+a.id+'"'+(d.assigned_to===a.id?' selected':'')+'>'+esc(a.name)+'</option>')).join('');
+
+  document.getElementById('dl-body').innerHTML =
+      '<div class="form-row">' + field('dl-property','Property', d.property)
+    + field('dl-rent','Monthly rent', d.monthly_rent, 'number') + '</div>'
+    + '<div class="form-row">'
+    + '<div class="form-group"><label>Stage</label><select id="dl-stage">'+stageOpts+'</select></div>'
+    + field('dl-commission','Commission ($)', d.commission_total, 'number') + '</div>'
+    + '<div class="form-group"><label>Assigned agent</label><select id="dl-agent">'+agentOpts+'</select></div>'
+    + '<div class="form-group"><label>Notes</label><textarea id="dl-notes" rows="3">'+esc(d.notes||'')+'</textarea></div>'
+    + '<div id="dl-split" style="font-size:14px;color:var(--text-muted);margin-top:6px"></div>';
+
+  renderDealSplit(d.commission_total);
+  const ci = document.getElementById('dl-commission');
+  if (ci) ci.addEventListener('input', () => renderDealSplit(ci.value));
+  openModal('deal-modal');
+}
+
+// Show where the commission goes, using the same rule the server applies.
+function renderDealSplit(total) {
+  const el = document.getElementById('dl-split');
+  if (!el) return;
+  const t = Number(total) || 0;
+  if (!t) { el.textContent = ''; return; }
+  const money = n => '$' + n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  const listing = t * 0.10, net = t - listing, quarter = net * 0.25;
+  el.innerHTML = 'Listing ' + money(listing) + ' &middot; Showing ' + money(quarter)
+    + ' &middot; Lead gen ' + money(quarter) + ' &middot; House ' + money(t - listing - quarter * 2);
+}
+
+async function saveDealEdit() {
+  if (!__dlId) return;
+  const err = document.getElementById('dl-err');
+  const v = id => (document.getElementById(id).value || '').trim();
+  const payload = {
+    property: v('dl-property'),
+    monthly_rent: Number(v('dl-rent')) || null,
+    commission_total: Number(v('dl-commission')) || null,
+    stage: document.getElementById('dl-stage').value,
+    agent_id: document.getElementById('dl-agent').value || null,
+    notes: v('dl-notes'),
+  };
+  const r = await apiSend('PATCH', '/deals/' + __dlId, payload);
+  if (!r || r.ok === false) {
+    err.style.display = 'block';
+    err.textContent = 'Could not save: ' + ((r && r.error) || 'unknown error');
+    return;
+  }
+  closeModal('deal-modal');
+  allDeals = await apiGet('/deals') || [];
+  loadPipeline();
 }
 
 // ── TASKS ──
