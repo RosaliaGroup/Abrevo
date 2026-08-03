@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Last Saturdays — An HBCU &amp; Divine Nine Cultural Brunch Series</title>
-<meta name="description" content="Twelve events. Every last Saturday, 11 AM to 5 PM, at Life After in Edgewater, New Jersey. Launching Saturday, August 29, 2026. Presented by G.R.O.W Lifestyle.">
+<meta name="description" content="Twelve events. Every last Saturday, 11 AM to 5 PM, at Life After Restaurant &amp; Lounge in Edgewater, New Jersey. Launching Saturday, August 29, 2026. Presented by G.R.O.W Lifestyle.">
 <meta property="og:title" content="Last Saturdays — An HBCU & Divine Nine Cultural Brunch Series">
 <meta property="og:description" content="Twelve events. Edgewater, New Jersey. Launching August 29, 2026.">
 <meta name="theme-color" content="#0C0908">
@@ -73,7 +73,7 @@ section{padding:88px 0;border-top:1px solid rgba(242,235,221,.07)}
 }
 .hero .facts{
   margin:32px 0 0;padding-top:26px;border-top:1px solid var(--ghost);
-  font-size:15px;letter-spacing:.03em;color:var(--dim);max-width:70ch;
+  font-size:15px;letter-spacing:.03em;color:var(--dim);max-width:74ch;
 }
 .pillars{font-size:10px;letter-spacing:.42em;text-transform:uppercase;color:rgba(242,235,221,.22);margin:26px 0 0}
 
@@ -117,26 +117,36 @@ section{padding:88px 0;border-top:1px solid rgba(242,235,221,.07)}
 .stat .t{font-size:14px;color:var(--dim);margin:12px 0 0;line-height:1.5}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
 
+/* ── the day, two parts ── */
+.parts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:44px}
+.part{border:1px solid rgba(242,235,221,.1);background:var(--card);padding:34px 30px}
+.part .time{font-size:11px;font-weight:600;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin:0 0 14px}
+.part h3{font-family:var(--display);font-weight:600;font-size:28px}
+.part p{font-size:15px;color:var(--dim);margin:16px 0 0;line-height:1.65}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.chips span{border:1px solid rgba(242,235,221,.12);padding:7px 13px;font-size:12px;letter-spacing:.08em;color:var(--dim)}
+
 /* ── tickets ── */
 .tickets{background:linear-gradient(180deg,var(--char),var(--black))}
-.tier-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:44px}
+.tier-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px}
+.table-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:24px}
 .tier{
-  display:flex;flex-direction:column;padding:32px 28px 28px;
+  display:flex;flex-direction:column;padding:30px 26px 26px;
   border:1px solid rgba(242,235,221,.1);background:var(--card);
 }
 .tier--feature{border-color:var(--rule);background:linear-gradient(180deg,rgba(30,10,13,.7),var(--card))}
 .tier-flag{align-self:flex-start;font-size:9px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;
-  padding:5px 10px;margin-bottom:18px;border:1px solid var(--rule);color:var(--gold)}
-.tier h3{font-weight:600}
-.tier-price{display:flex;align-items:baseline;gap:8px;margin:18px 0 3px}
-.tier-price .amt{font-family:var(--display);font-weight:600;font-size:46px;line-height:1;color:var(--gold)}
+  padding:5px 10px;margin-bottom:16px;border:1px solid var(--rule);color:var(--gold)}
+.tier h3{font-weight:600;font-size:21px}
+.tier-price{display:flex;align-items:baseline;gap:8px;margin:16px 0 3px}
+.tier-price .amt{font-family:var(--display);font-weight:600;font-size:42px;line-height:1;color:var(--gold)}
 .tier-note{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0}
-.tier-desc{font-size:15px;color:var(--dim);margin:18px 0 0;line-height:1.65}
-.tier ul{list-style:none;padding:0;margin:16px 0 0;font-size:14px;color:var(--dim);flex:1}
-.tier ul li{padding:7px 0 7px 20px;position:relative}
-.tier ul li::before{content:"✓";position:absolute;left:0;color:var(--gold);font-size:12px}
-.tier .btn{margin-top:24px;padding:16px 18px;font-size:12px}
-.fine{font-size:13px;color:var(--faint);margin:30px 0 0;max-width:74ch;letter-spacing:.02em}
+.tier ul{list-style:none;padding:0;margin:18px 0 0;font-size:14px;color:var(--dim);flex:1}
+.tier ul li{padding:6px 0 6px 19px;position:relative;line-height:1.5}
+.tier ul li::before{content:"✓";position:absolute;left:0;top:6px;color:var(--gold);font-size:11px}
+.tier .btn{margin-top:22px;padding:15px 16px;font-size:11px}
+.sub-label{font-size:11px;font-weight:500;letter-spacing:.3em;text-transform:uppercase;color:var(--faint);margin:44px 0 0}
+.fine{font-size:13px;color:var(--faint);margin:30px 0 0;max-width:80ch;letter-spacing:.02em;line-height:1.7}
 
 /* ── designated driver ── */
 .dd{background:linear-gradient(120deg,var(--oxblood),var(--black) 62%)}
@@ -147,6 +157,20 @@ section{padding:88px 0;border-top:1px solid rgba(242,235,221,.07)}
 .dd-card{border:1px solid var(--rule);padding:40px 34px;text-align:center;background:rgba(12,9,8,.6)}
 .dd-card .big{font-family:var(--display);font-weight:600;font-size:clamp(28px,3.6vw,38px);line-height:1.15}
 .dd-card p{font-size:15px;color:var(--dim);margin:18px 0 26px}
+
+.dd-form{display:grid;gap:12px;text-align:left;margin-top:22px}
+.dd-form .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dd-form label{font-size:10px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:6px}
+.dd-form input,.dd-form select,.dd-form textarea{
+  width:100%;padding:12px 13px;background:rgba(12,9,8,.7);color:var(--cream);
+  border:1px solid rgba(242,235,221,.16);border-radius:1px;
+  font-family:var(--body);font-size:15px;font-weight:300;
+}
+.dd-form textarea{resize:vertical;min-height:72px}
+.dd-form input:focus,.dd-form select:focus,.dd-form textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:transparent}
+.dd-form .err{font-size:13px;color:var(--gold);margin:0;min-height:20px}
+.dd-alt{font-size:13px;color:var(--faint);margin:16px 0 0;text-align:center}
+.dd-alt a{color:var(--gold);text-decoration:none;border-bottom:1px solid var(--rule)}
 
 /* ── season ── */
 .season-table{margin-top:44px;border-top:1px solid var(--rule)}
@@ -162,7 +186,7 @@ section{padding:88px 0;border-top:1px solid rgba(242,235,221,.07)}
 .srow--past{opacity:.34}
 .srow .tag{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);border:1px solid var(--rule);padding:3px 8px;margin-left:10px;white-space:nowrap}
 
-/* ── partner tiers ── */
+/* ── partner ── */
 .partner{background:linear-gradient(180deg,var(--black),var(--char))}
 .ptable{margin-top:44px;border-top:1px solid var(--rule)}
 .prow{
@@ -216,17 +240,20 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
 .sticky .btn{padding:14px 18px;font-size:11px;white-space:nowrap}
 
 /* ── responsive ── */
+@media (max-width:1100px){
+  .tier-grid{grid-template-columns:repeat(2,1fr)}
+}
 @media (max-width:1020px){
   .prow{grid-template-columns:1fr 1fr;gap:14px 22px;padding:26px 0}
   .prow .ppos{grid-column:1 / -1}
   .prow .btn{grid-column:1 / -1;width:auto;justify-self:start;padding:13px 26px}
-  .tier-grid{grid-template-columns:1fr 1fr}
   .stats{grid-template-columns:repeat(2,1fr)}
 }
 @media (max-width:820px){
   .next{grid-template-columns:1fr;gap:26px}
   .countdown{justify-content:flex-start}
-  .two-col{grid-template-columns:1fr;gap:34px}
+  .two-col,.parts{grid-template-columns:1fr;gap:34px}
+  .parts{gap:16px}
   .pnote-grid{grid-template-columns:1fr}
   .srow{grid-template-columns:1fr;gap:5px;padding:18px 0}
   .srow--next{margin-left:0;padding-left:16px}
@@ -234,7 +261,7 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
 }
 @media (max-width:620px){
   section{padding:62px 0}
-  .tier-grid{grid-template-columns:1fr;gap:14px}
+  .tier-grid,.table-grid{grid-template-columns:1fr;gap:14px}
   .stats{grid-template-columns:1fr}
   .next{padding:26px 22px 24px}
   .sticky{display:flex}
@@ -251,27 +278,28 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
 
 <!-- ════════════════════════════════════════════════════════════
      EDIT EVERYTHING IN THE CONFIG BLOCK AT THE BOTTOM OF THIS FILE.
+     Ticket tiers match the nine Stripe products one-for-one.
      The page picks the next event off the season calendar by itself.
      ════════════════════════════════════════════════════════════ -->
 
 <header class="hero">
   <div class="wrap">
     <div class="brandbar">
-      <p class="presents">G.R.O.W Lifestyle presents <span class="dot">·</span> 2026–2027 Season</p>
-      <p class="mark">G.R.O.W Lifestyle</p>
+      <p class="presents">G.R.O.W Lifestyle × Life After Restaurant &amp; Lounge</p>
+      <p class="mark">2026–2027 Season</p>
     </div>
 
     <h1 class="title">Last Saturdays</h1>
     <p class="sub">An HBCU &amp; Divine Nine Cultural Brunch Series</p>
     <p class="facts">Twelve events <span class="dot">·</span> Edgewater, New Jersey <span class="dot">·</span> Launching Saturday, August 29, 2026<br>
-      In partnership with Life After Restaurant &amp; Lounge</p>
+      Hosted exclusively at Life After Restaurant &amp; Lounge <span class="dot">·</span> Every last Saturday, 11 AM – 5 PM</p>
 
     <div class="next">
       <div>
         <p class="k">Next event</p>
         <div class="theme" data-slot="nextTheme">The Kickoff Classic</div>
         <p class="when" data-slot="nextWhen">Saturday, August 29, 2026 · 11 AM – 5 PM</p>
-        <p class="desc" data-slot="nextDesc">Season-opener weekend — the first football Saturday of the year</p>
+        <p class="desc" data-slot="nextDesc">Season-opener weekend — tailgate energy, school colors, and the band-and-yard spirit that starts every fall</p>
       </div>
       <div class="countdown">
         <div class="cd-unit"><div class="cd-num" data-cd="d">—</div><div class="cd-lab">Days</div></div>
@@ -282,7 +310,7 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
 
     <div class="cta-row">
       <a class="btn" href="#tickets">Get your ticket</a>
-      <a class="btn btn-ghost" href="#designated-driver">Designated driver</a>
+      <a class="btn btn-ghost" href="#designated-driver">Get home safe</a>
       <a class="btn btn-ghost" href="#partner">Partner with us</a>
     </div>
 
@@ -299,7 +327,7 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
       </div>
       <div>
         <p class="lede">Last Saturdays takes the culture that HBCU alumni and Divine Nine members already organize their year around, and gives it a permanent monthly home in the New Jersey and New York corridor.</p>
-        <p class="lede">Every last Saturday of the month, 11 AM to 5 PM, at Life After Restaurant &amp; Lounge in Edgewater. Twelve themed events built on the real rhythm of the HBCU calendar — season openers, homecoming, the classics, founders' season, spring fest, commencement, conclave.</p>
+        <p class="lede">Twelve themed events built on the real rhythm of the HBCU calendar — season openers, homecoming, the classics, founders' season, spring fest, commencement, conclave.</p>
         <p class="lede">A daytime, seated, family-of-choice brunch with programming. Not a nightclub promotion. Not a one-off pop-up.</p>
       </div>
     </div>
@@ -312,15 +340,46 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
   </div>
 </section>
 
+<section id="format">
+  <div class="wrap">
+    <p class="label">The experience</p>
+    <h2>The day runs in <span class="gold">two parts</span></h2>
+    <div class="parts">
+      <div class="part">
+        <p class="time">11:00 AM – 12:00 PM</p>
+        <h3>Community Voices Live</h3>
+        <p>An interactive live podcast recorded in front of the room. Guests don't just watch the conversation — they become part of it. Audience participation encouraged, and clips go out across both brands' platforms.</p>
+        <div class="chips">
+          <span>Business</span><span>Education</span><span>Entrepreneurship</span><span>Family</span>
+          <span>Community Development</span><span>Health &amp; Wellness</span><span>Politics</span><span>Culture</span>
+        </div>
+      </div>
+      <div class="part">
+        <p class="time">12:00 PM – 5:00 PM</p>
+        <h3>The Brunch Experience</h3>
+        <p>Signature brunch and craft cocktails, a live DJ, and the programming that makes the room a room — recognitions, introductions, interviews and celebrations woven through the afternoon.</p>
+        <div class="chips">
+          <span>Signature brunch</span><span>Craft cocktails</span><span>Live DJ</span><span>Networking</span>
+          <span>Birthday recognitions</span><span>Vendor highlights</span><span>Special guest interviews</span>
+          <span>Member introductions</span><span>Giveaways</span><span>Photo activations</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="tickets" id="tickets">
   <div class="wrap">
     <p class="label">Reserve your seat <span class="dot">·</span> <span data-slot="nextShort">Aug 29</span></p>
     <h2>Tickets for <span class="gold" data-slot="nextTheme">The Kickoff Classic</span></h2>
-    <p class="lede">Tap a ticket and pay by card, Apple Pay or Google Pay. Twenty seconds on a phone — no account, no app. All tickets are sold in advance with names attached.</p>
+    <p class="lede">Every ticket is all-inclusive and bought in advance — your seat, the programming, and your brunch. Tax and a 20% gratuity are built into the price. Pay by card, Apple Pay or Google Pay.</p>
 
     <div class="tier-grid" id="tier-grid"></div>
 
-    <p class="fine">Every ticket supports G.R.O.W Athletes. Checkout is handled by Stripe, so card details never touch this page — your emailed receipt is your entry. Seats are released month by month; when a date sells out, the next one opens.</p>
+    <p class="sub-label">Reserved tables — celebrations, birthdays &amp; chapter groups</p>
+    <div class="table-grid" id="table-grid"></div>
+
+    <p class="fine">No hidden fees. Ticketing and processing costs are absorbed by G.R.O.W, and there is no venue charge added to your price. Checkout is handled by Stripe, so card details never touch this page — your emailed receipt is your entry. Tickets transfer to any future date in the season; refunds available up to 72 hours before an event.</p>
   </div>
 </section>
 
@@ -328,22 +387,65 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
   <div class="wrap">
     <div class="two-col">
       <div>
-        <p class="label">Designated driver program</p>
-        <h2>Somebody's got<br>the <span class="gold">keys</span>.</h2>
-        <p class="lede">Six hours of brunch service, and then a drive home over the bridge. Pick the Designated Driver ticket for whoever's driving and we'll take care of them all afternoon.</p>
+        <p class="label">Designated driver service</p>
+        <h2>Let somebody else<br>take the <span class="gold">wheel</span>.</h2>
+        <p class="lede">Six hours of brunch and cocktails, and then the drive home. Book one of our designated drivers and you don't have to think about it — tell us what you need and we'll come back with a price.</p>
         <ul class="dd-list">
-          <li><b>Free all day:</b> mocktails, soft drinks, coffee and water, from doors to last call.</li>
-          <li><b>A gold DD wristband</b> at check-in, so the bar and your table always know who's driving.</li>
-          <li><b>Priority parking</b> closest to the entrance at The Metropolitan.</li>
-          <li><b>Everything else included:</b> the full brunch, the programming, the marketplace, the music.</li>
-          <li><b>Already bought a ticket?</b> Choose <em>Designated driver: Yes</em> at checkout and a wristband will be waiting under your name.</li>
+          <li><b>Quoted per request.</b> Every booking is priced individually — the vehicle, how many people are riding, where you're headed and how long you need a driver all change the number.</li>
+          <li><b>Book ahead or on the day.</b> Reserve when you buy your ticket, or ask the host at the door if plans change over the course of the afternoon.</li>
+          <li><b>One driver, one table.</b> If your whole party came together, one booking usually covers the group — say so in the request and we'll price it that way.</li>
+          <li><b>Tell us early if you can.</b> Drivers are limited each month, and the last hour of the event is when everyone asks at once.</li>
         </ul>
       </div>
       <div class="dd-card">
-        <p class="label">Designated driver</p>
-        <div class="big">You drive.<br>We'll pour<br>the rest.</div>
-        <p>Everything a general admission ticket includes, minus the alcohol — at a lower price, because you're the reason everyone gets home.</p>
-        <a class="btn btn-block" data-stripe="dd" href="#tickets">Get a DD ticket</a>
+        <p class="label">Request a driver</p>
+        <div class="big">You enjoy it.<br>We'll get you<br>home.</div>
+        <p>Send us the details and we'll reply with a price. No payment now — nothing is booked until you confirm.</p>
+
+        <div class="dd-form">
+          <div>
+            <label for="dd-name">Your name</label>
+            <input id="dd-name" type="text" autocomplete="name" placeholder="First and last">
+          </div>
+          <div class="row">
+            <div>
+              <label for="dd-phone">Mobile</label>
+              <input id="dd-phone" type="tel" autocomplete="tel" placeholder="(555) 555-5555">
+            </div>
+            <div>
+              <label for="dd-people">Passengers</label>
+              <select id="dd-people">
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option>5</option><option>6</option><option>7+</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="dd-date">Event date</label>
+              <input id="dd-date" type="text" data-slot="nextShortYear" value="">
+            </div>
+            <div>
+              <label for="dd-vehicle">Vehicle</label>
+              <select id="dd-vehicle">
+                <option>My own car</option>
+                <option>Provide a vehicle</option>
+                <option>Not sure yet</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label for="dd-dest">Where are you headed?</label>
+            <input id="dd-dest" type="text" placeholder="Town or neighborhood">
+          </div>
+          <div>
+            <label for="dd-notes">Anything else</label>
+            <textarea id="dd-notes" placeholder="Timing, car seats, multiple stops, anything we should know"></textarea>
+          </div>
+          <p class="err" id="dd-err"></p>
+          <button class="btn btn-block" type="button" id="dd-submit">Send my request</button>
+        </div>
+        <p class="dd-alt">Prefer to text? <a data-slot-href="ddPhoneLink" href="#"><span data-slot="ddPhone">(551) 249-9795</span></a></p>
       </div>
     </div>
   </div>
@@ -351,9 +453,9 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
 
 <section id="season">
   <div class="wrap">
-    <p class="label">The season</p>
+    <p class="label">A year on the yard</p>
     <h2>Twelve cultural <span class="gold">moments</span></h2>
-    <p class="lede">Every last Saturday, 11 AM to 5 PM, at Life After in Edgewater. Themed to the calendar this community already keeps.</p>
+    <p class="lede">Every last Saturday follows the HBCU and Divine Nine calendar — homecoming season, founders' season, classic season, graduation season. A built-in reason to return every month.</p>
     <div class="season-table" id="season-table"></div>
   </div>
 </section>
@@ -371,8 +473,8 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
         <a class="link-out" data-slot-href="mapUrl" href="https://maps.google.com" target="_blank" rel="noopener">Open in Maps →</a>
       </div>
       <div>
-        <p class="lede">On the second floor of The Metropolitan, on the Hudson waterfront across from Manhattan — ten minutes from the George Washington Bridge, with direct access from Essex County, Bergen County and New York City.</p>
-        <p class="lede">A waterfront dining room and lounge with skyline views. Saturday daytime is an open daypart at the venue, which means Last Saturdays is the only thing happening in the room.</p>
+        <p class="lede">On the Hudson waterfront across from Manhattan — ten minutes from the George Washington Bridge, with direct access from Essex County, Bergen County and New York City.</p>
+        <p class="lede">Southern, Caribbean and Spanish-inspired cuisine in a waterfront dining room with skyline views. Saturday daytime is an open daypart here, which means Last Saturdays is the only thing happening in the room.</p>
       </div>
     </div>
   </div>
@@ -393,15 +495,15 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
       </div>
       <div class="pnote">
         <p class="k">Nothing is rented</p>
-        <p>Sponsorship funds the culture, not a room. G.R.O.W invests $2,950 per event in DJ, photography, videography, podcast, host and paid media before a single sponsor dollar is spent.</p>
+        <p>Sponsorship funds the culture, not a room. G.R.O.W invests $2,950 per event — DJ, photography, videography, podcast, host and paid media — before a single sponsor dollar is spent.</p>
       </div>
       <div class="pnote">
-        <p class="k">Category exclusivity</p>
-        <p>Presenting and Signature Partners hold exclusivity in their category for the full season. No competitor appears in the room or in the marketing.</p>
+        <p class="k">Target categories</p>
+        <p>Spirits &amp; champagne, financial institutions &amp; credit unions, luxury fashion &amp; retail, wellness &amp; healthcare, automotive, universities &amp; HBCU alumni associations.</p>
       </div>
     </div>
 
-    <p class="fine">Founding partner inventory for the 2026–2027 season: one Presenting Partner position and four Signature Partner positions. Tell us the objective and the budget and we'll come back with a built activation rather than a rate card.</p>
+    <p class="fine">Tell us the objective and the budget and we'll come back with a built activation rather than a rate card.</p>
   </div>
 </section>
 
@@ -412,31 +514,35 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
     <div class="faq">
       <details>
         <summary>Do I have to be Greek or an HBCU alum?</summary>
-        <p>No. Divine Nine chapters and HBCU alumni are who the series is built around, but the room is open to anyone who wants to be in it.</p>
+        <p>No. Divine Nine chapters and HBCU alumni are who the series is built around, but the room is open to professionals, entrepreneurs, creatives, educators, athletes and community builders alike.</p>
       </details>
       <details>
-        <summary>What does a ticket include?</summary>
-        <p>Seated brunch service, the full six hours of programming, the marketplace, and the day's stage moments. Bar service is separate unless your tier says otherwise.</p>
+        <summary>What exactly does my ticket cover?</summary>
+        <p>General Admission includes a reserved seat, the live podcast hour, a brunch entrée from a curated menu, and one signature cocktail or mimosa — with tax and a 20% gratuity already built into the price. VIP Front Row adds priority entry, a reserved front section, a premium entrée, two signature cocktails, mimosa carafe service, a shared starter and a gift bag.</p>
       </details>
       <details>
-        <summary>What does the Designated Driver ticket include?</summary>
-        <p>Everything general admission includes, minus alcohol — plus free mocktails, soft drinks and coffee all day, a gold DD wristband, and priority parking.</p>
+        <summary>What's the Early Bird ticket?</summary>
+        <p>The first thirty tickets released each month go at the Early Bird price. When they're gone, general admission opens.</p>
       </details>
       <details>
-        <summary>Can I reserve a table for my chapter?</summary>
-        <p>Yes. Email us with your chapter and how many seats you need and we'll hold a section together.</p>
+        <summary>How does the designated driver service work?</summary>
+        <p>It's booked separately from your ticket and quoted per request, because the price depends on the vehicle, how many people are riding, where you're going and how long you need a driver. Send the request form above and we'll come back with a price — nothing is booked until you confirm.</p>
+      </details>
+      <details>
+        <summary>How do I book a table for my chapter or a birthday?</summary>
+        <p>Reserved tables seat six or eight and come with a bottle-service tier. Book one directly above, or email us if your group is larger.</p>
       </details>
       <details>
         <summary>Can I sell at the event?</summary>
-        <p>Marketplace Partner tables are reserved for Black-owned retail, beauty, apparel, food and wellness brands — three to five per event. It includes a table during service, a mention in the printed program, one social feature, and two general admission tickets.</p>
+        <p>Marketplace Partner tables are reserved for Black-owned retail, beauty, apparel, food and wellness brands — a handful per event. It includes a table during service, a mention in the printed program, one social feature, and two general admission tickets.</p>
+      </details>
+      <details>
+        <summary>Is there a dress code?</summary>
+        <p>Themed to the month. For The Kickoff Classic: classic HBCU style, school colors and letters, Greek paraphernalia, luxury tailgate.</p>
       </details>
       <details>
         <summary>Can I get a refund?</summary>
         <p>Tickets transfer to any future date in the season. For a refund, email us at least 72 hours before the event.</p>
-      </details>
-      <details>
-        <summary>Is there a dress code?</summary>
-        <p>Grown and together. Rep your letters and your school colors — that's the point.</p>
       </details>
     </div>
   </div>
@@ -445,7 +551,7 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
 <footer>
   <div class="wrap">
     <div class="foot-title">Last Saturdays</div>
-    <p class="foot-it">Let's build the tradition</p>
+    <p class="foot-it">Let's build something the culture will remember</p>
     <p class="foot-block">
       <a data-slot-href="siteUrl" href="https://growclub.us" target="_blank" rel="noopener"><span data-slot="site">growclub.us</span></a><br>
       <a data-slot-href="mailtoGeneral" href="#">Email us about tickets</a><br>
@@ -455,7 +561,7 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
       <span style="color:var(--cream)">Seneca Hart</span> · Founder &amp; Chief Executive Officer<br>
       VIP Fitness NYC LLC, d/b/a G.R.O.W Lifestyle<br>
       1 Gateway Center, Suite 2600, Newark, NJ 07102<br><br>
-      In partnership with Rosalia Group · Every ticket supports G.R.O.W Athletes<br>
+      In partnership with Life After Restaurant &amp; Lounge and Rosalia Group<br>
       Greek letters and school marks referenced in cultural tribute. Not affiliated with or endorsed by any NPHC organization or institution.
     </p>
   </div>
@@ -472,72 +578,100 @@ footer{padding:70px 0 132px;text-align:center;border-top:1px solid rgba(242,235,
 <script>
 /* ═══════════════════════════════════════════════════════════════
    LAST SATURDAYS — EDIT THIS BLOCK ONLY
+   Tiers below match the Stripe products one-for-one.
+   Paste the PAYMENT LINK for each (https://buy.stripe.com/...).
    ═══════════════════════════════════════════════════════════════ */
 const CONFIG = {
 
-  /* ── 1. GUEST TICKETS ──────────────────────────────────────
-     Paste one Stripe Payment Link per tier (https://buy.stripe.com/...) */
+  /* ── 1. INDIVIDUAL TICKETS ───────────────────────────────── */
   tiers: [
+    {
+      name: "Early Bird",
+      price: "85",
+      note: "First 30 each month",
+      flag: "Limited",
+      includes: ["Reserved seat", "Live podcast hour", "Brunch entrée from the curated menu",
+                 "One signature cocktail or mimosa", "Tax and 20% gratuity included"],
+      link: "https://buy.stripe.com/5kQ6oJdtxcbR9TcdjKbZe00"
+    },
     {
       name: "General Admission",
       price: "95",
       note: "Per person",
-      desc: "A seat at the brunch and the full six hours.",
-      includes: ["Seated brunch service", "All programming and stage moments", "The marketplace", "Live DJ all six hours"],
-      link: "PASTE_GENERAL_ADMISSION_LINK"
+      includes: ["Reserved seat", "Live podcast hour", "Brunch entrée from the curated menu",
+                 "One signature cocktail or mimosa", "Tax and 20% gratuity included"],
+      link: "https://buy.stripe.com/cNi7sN4X1a3J2qK5RibZe04"
     },
     {
-      name: "VIP",
+      name: "VIP Front Row",
       price: "155",
       note: "Per person",
       flag: "Best seats",
       feature: true,
-      desc: "The reserved sections closest to the floor, with bottle service.",
-      includes: ["Everything in General Admission", "Reserved VIP section seating", "Bottle service available", "Priority entry at the door"],
-      link: "PASTE_VIP_LINK"
+      includes: ["Priority entry", "Reserved front section", "Premium entrée",
+                 "Two signature cocktails", "Mimosa carafe service", "Shared starter", "Gift bag"],
+      link: "https://buy.stripe.com/00w3cxexBb7N9Tc2F6bZe03"
+    },
+  ],
+
+  /* ── 2. RESERVED TABLES ──────────────────────────────────── */
+  tables: [
+    {
+      name: "VIP Table of 6",
+      price: "900",
+      note: "Seats six",
+      includes: ["Reserved VIP table for six", "Bottle-service tier", "Priority entry for the whole party",
+                 "The celebration, birthday and chapter package"],
+      link: "https://buy.stripe.com/aFa00lfBFgs78P8djKbZe02"
     },
     {
-      name: "Designated Driver",
-      price: "65",
-      note: "Per person",
-      flag: "Gets everyone home",
-      dd: true,
-      desc: "The full day, minus the alcohol.",
-      includes: ["Seated brunch and all programming", "Free mocktails, soft drinks and coffee", "Gold DD wristband", "Priority parking"],
-      link: "PASTE_DESIGNATED_DRIVER_LINK"
+      name: "VIP Table of 8",
+      price: "1,400",
+      note: "Seats eight",
+      includes: ["Reserved VIP table for eight", "Bottle-service tier", "Priority entry for the whole party",
+                 "The celebration, birthday and chapter package"],
+      link: "https://buy.stripe.com/fZudRbfBF6Rx2qK7ZqbZe01"
     }
   ],
 
-  /* ── 2. PARTNER TIERS ──────────────────────────────────────
-     link: "" shows an email button instead of a Stripe button.  */
+  /* ── 3. PARTNER TIERS ────────────────────────────────────── */
   partners: [
-    { name: "Presenting Partner",  inv: "$15,000", per: "per year",  avail: "One",
-      pos: "Name in the series lockup, category exclusivity, all twelve events", link: "" },
-    { name: "Signature Partner",   inv: "$6,000",  per: "per year",  avail: "Four",
-      pos: "Season-long presence across all twelve events, one owned theme", link: "" },
+    { name: "Presenting Partner",  inv: "$15,000", per: "per year",  avail: "One per year",
+      pos: "Category exclusivity · name in the event lockup · every channel, every month",
+      link: "https://buy.stripe.com/eVqfZjcpt7VB8P83JabZe07" },
+    { name: "Signature Partner",   inv: "$6,000",  per: "per year",  avail: "Limited",
+      pos: "On-site activation · podcast segment · logo on all assets · one owned theme",
+      link: "https://buy.stripe.com/eVqeVf9dhcbR1mGcfGbZe08" },
     { name: "Monthly Feature",     inv: "$1,500",  per: "per event", avail: "One per event",
-      pos: "Headline brand of a single themed event, on-site activation", link: "" },
-    { name: "Marketplace Partner", inv: "$200",    per: "per event", avail: "Three to five per event",
-      pos: "Vendor table for Black-owned brands, retail on site", link: "PASTE_MARKETPLACE_LINK" }
+      pos: "Theme takeover · tasting or product moment · stage recognition · content package",
+      link: "https://buy.stripe.com/cNi8wRcptb7N5CW7ZqbZe06" },
+    { name: "Marketplace Partner", inv: "$200",    per: "per event", avail: "A few per event",
+      pos: "Vendor table for Black-owned brands · direct-to-guest sales · named in the program", link: "https://buy.stripe.com/cNi8wR7596Rxd5o1B2bZe05" }
   ],
 
-  /* ── 3. THE SEASON ───────────────────────────────────────── */
+  /* ── 4. THE SEASON ───────────────────────────────────────── */
   season: [
-    { date: "2026-08-29", theme: "The Kickoff Classic",        note: "Season-opener weekend — the first football Saturday of the year" },
-    { date: "2026-09-26", theme: "The Fifth Quarter",          note: "Marching band and drumline tradition — the show after the game" },
-    { date: "2026-10-31", theme: "Homecoming Without Borders", note: "Peak homecoming season, for everyone who could not travel south" },
+    { date: "2026-08-29", theme: "The Kickoff Classic",        note: "Season-opener weekend — tailgate energy, school colors, band-and-yard spirit" },
+    { date: "2026-09-26", theme: "The Fifth Quarter",          note: "The game ends and the real show begins — drumlines, dance lines, band alumni" },
+    { date: "2026-10-31", theme: "Homecoming Without Borders", note: "Peak homecoming season — one regional homecoming, right here on the Hudson" },
     { date: "2026-11-28", theme: "Classic Weekend",            note: "Bayou Classic watch party — the biggest HBCU game of the year" },
-    { date: "2026-12-26", theme: "Back on the Yard",           note: "Holiday reunion weekend, when everyone is home" },
+    { date: "2026-12-26", theme: "Back on the Yard",           note: "Winter break alumni reunion, when everyone is home" },
     { date: "2027-01-30", theme: "Founders' Season",           note: "Five of the Divine Nine were founded in January" },
-    { date: "2027-02-27", theme: "Our History, Our Schools",   note: "Black History Month, focused on the institutions" },
-    { date: "2027-03-27", theme: "The Yard Show",              note: "Step and stroll culture, live" },
-    { date: "2027-04-24", theme: "Spring Fest",                note: "Spring weekend on campus, recreated" },
-    { date: "2027-05-29", theme: "Commencement",               note: "Graduation season — new alumni, new members" },
-    { date: "2027-06-26", theme: "Juneteenth Freedom Brunch",  note: "Freedom, legacy and celebration" },
-    { date: "2027-07-31", theme: "Conclave & Boulé Season",    note: "National convention season for the Divine Nine" }
+    { date: "2027-02-27", theme: "Our History, Our Schools",   note: "Black History Month and HBCU firsts" },
+    { date: "2027-03-27", theme: "The Yard Show",              note: "Stroll and step showcase, live" },
+    { date: "2027-04-24", theme: "Spring Fest",                note: "Campus spring weekend energy, recreated" },
+    { date: "2027-05-29", theme: "Commencement",               note: "New grads and scholarship awards" },
+    { date: "2027-06-26", theme: "Juneteenth Freedom Brunch",  note: "Freedom, food and legacy" },
+    { date: "2027-07-31", theme: "Conclave & Boulé Season",    note: "D9 national convention season" }
   ],
 
-  /* ── 4. VENUE & CONTACT ──────────────────────────────────── */
+  /* ── 5. DESIGNATED DRIVER REQUESTS ───────────────────────
+     Where driver requests are sent, and the number for texts.  */
+  ddEmail:       "inquiries@rosaliagroup.com",
+  ddPhone:       "(551) 249-9795",
+  ddPhoneDigits: "+15512499795",
+
+  /* ── 6. VENUE & CONTACT ──────────────────────────────────── */
   addressFull:   "190 River Road, 2nd Floor<br>Edgewater, NJ 07020",
   mapUrl:        "https://maps.google.com/?q=190+River+Road+Edgewater+NJ+07020",
   site:          "growclub.us",
@@ -553,12 +687,10 @@ const CONFIG = {
   function parse(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2], 11, 0, 0); }
   function isLive(u) { return u && u.indexOf("stripe.com") > -1; }
 
-  /* ---- find the next event ---- */
-  var now = new Date();
-  var next = null, nextIdx = -1;
+  /* ---- next event ---- */
+  var now = new Date(), next = null, nextIdx = -1;
   CONFIG.season.forEach(function (e, i) {
-    var d = parse(e.date);
-    var close = new Date(d); close.setHours(17, 0, 0, 0);
+    var close = parse(e.date); close.setHours(17, 0, 0, 0);
     if (nextIdx === -1 && now <= close) { next = e; nextIdx = i; }
   });
   if (!next) { nextIdx = CONFIG.season.length - 1; next = CONFIG.season[nextIdx]; }
@@ -569,20 +701,22 @@ const CONFIG = {
   CONFIG.nextWhen = DAYS[nd.getDay()] + ", " + MONTHS[nd.getMonth()] + " " + nd.getDate() + ", " + nd.getFullYear() + " · 11 AM – 5 PM";
   CONFIG.nextShort = MONTHS[nd.getMonth()].slice(0, 3) + " " + nd.getDate();
   CONFIG.nextShortFull = CONFIG.nextShort + " · 11 AM – 5 PM";
+  CONFIG.nextShortYear = CONFIG.nextShort + ", " + nd.getFullYear();
+  CONFIG.ddPhoneLink = "sms:" + CONFIG.ddPhoneDigits;
 
-  /* ---- fill slots ---- */
   document.querySelectorAll("[data-slot]").forEach(function (el) {
     var k = el.getAttribute("data-slot");
-    if (CONFIG[k]) el.innerHTML = CONFIG[k];
+    if (!CONFIG[k]) return;
+    if (el.tagName === "INPUT") el.value = CONFIG[k];
+    else el.innerHTML = CONFIG[k];
   });
   document.querySelectorAll("[data-slot-href]").forEach(function (el) {
     var k = el.getAttribute("data-slot-href");
     if (CONFIG[k]) el.setAttribute("href", CONFIG[k]);
   });
 
-  /* ---- ticket tiers ---- */
-  var grid = document.getElementById("tier-grid");
-  CONFIG.tiers.forEach(function (t) {
+  /* ---- card builder ---- */
+  function buildCard(t) {
     var card = document.createElement("div");
     card.className = "tier" + (t.feature ? " tier--feature" : "");
     var live = isLive(t.link);
@@ -591,29 +725,56 @@ const CONFIG = {
       "<h3>" + t.name + "</h3>" +
       '<div class="tier-price"><span class="amt">$' + t.price + "</span></div>" +
       '<p class="tier-note">' + (t.note || "") + "</p>" +
-      '<p class="tier-desc">' + t.desc + "</p>" +
       "<ul>" + (t.includes || []).map(function (i) { return "<li>" + i + "</li>"; }).join("") + "</ul>" +
       (live
         ? '<a class="btn btn-block" href="' + t.link + '" target="_blank" rel="noopener">Buy — $' + t.price + "</a>"
         : '<a class="btn btn-block" data-unset href="#tickets">Add Stripe link</a>');
-    grid.appendChild(card);
-  });
+    return card;
+  }
 
-  /* ---- DD button in its own section ---- */
-  var ddTier = CONFIG.tiers.filter(function (t) { return t.dd; })[0];
-  document.querySelectorAll('[data-stripe="dd"]').forEach(function (b) {
-    if (ddTier && isLive(ddTier.link)) {
-      b.setAttribute("href", ddTier.link);
-      b.setAttribute("target", "_blank");
-      b.setAttribute("rel", "noopener");
-      b.textContent = "Get a DD ticket — $" + ddTier.price;
-    } else {
-      b.setAttribute("data-unset", "");
-      b.textContent = "Add Stripe link";
-    }
-  });
+  var grid = document.getElementById("tier-grid");
+  CONFIG.tiers.forEach(function (t) { grid.appendChild(buildCard(t)); });
 
-  /* ---- season table ---- */
+  var tgrid = document.getElementById("table-grid");
+  CONFIG.tables.forEach(function (t) { tgrid.appendChild(buildCard(t)); });
+
+  /* ---- designated driver request form ---- */
+  var ddBtn = document.getElementById("dd-submit");
+  if (ddBtn) {
+    var val = function (id) { var el = document.getElementById(id); return el ? el.value.trim() : ""; };
+    ddBtn.addEventListener("click", function () {
+      var err = document.getElementById("dd-err");
+      var name = val("dd-name"), phone = val("dd-phone");
+      if (!name || !phone) {
+        err.textContent = !name
+          ? "We need your name to get back to you."
+          : "We need a mobile number to send your quote to.";
+        document.getElementById(!name ? "dd-name" : "dd-phone").focus();
+        return;
+      }
+      err.textContent = "";
+      var body = [
+        "Designated driver request — Last Saturdays",
+        "",
+        "Name: " + name,
+        "Mobile: " + phone,
+        "Event date: " + val("dd-date"),
+        "Passengers: " + val("dd-people"),
+        "Vehicle: " + val("dd-vehicle"),
+        "Headed to: " + (val("dd-dest") || "not specified"),
+        "",
+        "Notes:",
+        (val("dd-notes") || "none")
+      ].join("\n");
+      window.location.href = "mailto:" + CONFIG.ddEmail +
+        "?subject=" + encodeURIComponent("Designated driver request — " + name) +
+        "&body=" + encodeURIComponent(body);
+      ddBtn.textContent = "Opening your email…";
+      setTimeout(function () { ddBtn.textContent = "Send my request"; }, 4000);
+    });
+  }
+
+  /* ---- season ---- */
   var st = document.getElementById("season-table");
   CONFIG.season.forEach(function (e, i) {
     var d = parse(e.date);
@@ -627,7 +788,7 @@ const CONFIG = {
     st.appendChild(row);
   });
 
-  /* ---- partner table ---- */
+  /* ---- partners ---- */
   var pt = document.getElementById("partner-table");
   CONFIG.partners.forEach(function (p) {
     var row = document.createElement("div");
@@ -636,7 +797,7 @@ const CONFIG = {
     row.innerHTML =
       '<div class="pname">' + p.name + "</div>" +
       '<div class="pinv">' + p.inv + ' <span class="pav">' + p.per + "</span></div>" +
-      '<div class="pav">' + p.avail + " available</div>" +
+      '<div class="pav">' + p.avail + "</div>" +
       '<div class="ppos">' + p.pos + "</div>" +
       (live
         ? '<a class="btn" href="' + p.link + '" target="_blank" rel="noopener">Book — ' + p.inv + "</a>"
