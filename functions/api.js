@@ -600,6 +600,60 @@ exports.handler = async (event) => {
     // A lead's appointments. The booking exists and the calendar shows it, but
     // the lead card never did — so opening a lead gave no hint they had a tour
     // scheduled at all.
+    // Properties, derived from the leads/deals/bookings that reference them.
+    // There is no properties table — the building name lives as text on each
+    // record — so this aggregates rather than reading a list.
+    if (route === "/properties" && method === "GET") {
+      const [leadRows, dealRows, bookingRows] = await Promise.all([
+        sbGet(`leads?select=property,status&property=not.is.null&limit=5000`),
+        sbGet(`deals?select=property,stage,commission_total&property=not.is.null&limit=500`),
+        sbGet(`bookings?select=type,starts_at&type=not.is.null&limit=1000`),
+      ]);
+      const norm = (v) => String(v || "").trim();
+      const map = {};
+      const get = (name) => (map[name] = map[name] || { property: name, leads: 0, active: 0, deals: 0, commission: 0, tours: 0, upcoming: 0 });
+
+      (leadRows || []).forEach((l) => {
+        const n = norm(l.property); if (!n) return;
+        const p = get(n); p.leads++;
+        if (["contacted", "appt_set", "applied"].includes(l.status)) p.active++;
+      });
+      (dealRows || []).forEach((d) => {
+        const n = norm(d.property); if (!n) return;
+        const p = get(n); p.deals++; p.commission += Number(d.commission_total) || 0;
+      });
+      const now = Date.now();
+      (bookingRows || []).forEach((b) => {
+        const n = norm(b.type); if (!n) return;
+        const p = get(n); p.tours++;
+        if (b.starts_at && new Date(b.starts_at).getTime() > now) p.upcoming++;
+      });
+
+      const data = Object.values(map).sort((a, b) => b.leads - a.leads).slice(0, 100);
+      return json(200, { ok: true, data });
+    }
+
+    // Everything tied to one property: its leads, deals and tours.
+    if (route === "/properties/detail" && method === "GET") {
+      const name = vStr(qs.name, 200, "name", true);
+      const like = `*${encodeURIComponent(name)}*`;
+      const [leadRows, dealRows, bookingRows] = await Promise.all([
+        sbGet(`leads?property=ilike.${like}&select=id,name,email,phone,status,created_at,last_inbound_at&order=created_at.desc&limit=200`),
+        sbGet(`deals?property=ilike.${like}&select=id,lead_id,stage,monthly_rent,commission_total,assigned_to,created_at,leads(name)&limit=100`),
+        sbGet(`bookings?type=ilike.${like}&select=id,full_name,phone,starts_at,confirmed_at&order=starts_at.desc&limit=100`),
+      ]);
+      return json(200, { ok: true, data: { leads: leadRows || [], deals: dealRows || [], bookings: bookingRows || [] } });
+    }
+
+    // A lead's deals — the lead card never showed them, so a deal existed in the
+    // pipeline with no trace on the person it belongs to.
+    if (route.startsWith("/leads/") && route.endsWith("/deals") && method === "GET") {
+      const id = route.slice("/leads/".length, -"/deals".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+      const rows = await sbGet(`deals?lead_id=eq.${encodeURIComponent(id)}&select=id,property,stage,monthly_rent,commission_total,assigned_to,created_at&order=created_at.desc&limit=20`);
+      return json(200, { ok: true, data: rows || [] });
+    }
+
     if (route.startsWith("/leads/") && route.endsWith("/appointments") && method === "GET") {
       const id = route.slice("/leads/".length, -"/appointments".length);
       if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
