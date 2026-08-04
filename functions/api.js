@@ -118,8 +118,8 @@ const DEAL_STAGES = new Set(["inquiry", "toured", "applied", "approved", "lease_
 const DEAL_TYPES = new Set(["rental", "sale", "referral"]);
 const CLIENT_ROLES = new Set(["tenant", "landlord", "buyer", "seller", "referral_partner"]);
 const COMMISSION_PAYERS = new Set(["landlord", "tenant", "seller", "buyer", "split"]);
-const CONTACT_ROLES = new Set(["client", "landlord", "seller", "buyer", "co_broke_agent",
-                               "referral_partner", "attorney", "other"]);
+const CONTACT_ROLES = new Set(["tenant", "landlord", "buyer", "seller", "co_broke_agent",
+                               "co_broke_firm", "referral_partner", "attorney", "client", "other"]);
 const TASK_PRIORITIES = new Set(["normal", "high", "low"]);
 // Commission split. Listing takes 10% of the TOTAL; showing and lead generation
 // each take 25% of the NET remaining after the listing cut. Anything left stays

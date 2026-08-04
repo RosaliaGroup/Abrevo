@@ -2190,7 +2190,8 @@ async function openDealDetail(id) {
     + '<div class="form-group"><label>Assigned agent</label><select id="dl-agent">'+agentOpts+'</select></div></div>'
     + '<div class="form-group"><label>Notes</label><textarea id="dl-notes" rows="2">'+esc(d.notes||'')+'</textarea></div>'
     + '<div id="dl-split" style="font-size:14px;color:var(--text-muted);margin:6px 0 14px"></div>'
-    + '<h3 style="margin:16px 0 8px;font-size:16px">People on this deal</h3><div id="dl-contacts"></div>'
+    + '<h3 style="margin:16px 0 8px;font-size:16px">Commission structure</h3><div id="dl-split-roles"></div>'
+    + '<h3 style="margin:16px 0 8px;font-size:16px">People on this deal</h3><div id="dl-contacts"></div><div id="dl-contact-form"></div>'
     + '<h3 style="margin:16px 0 8px;font-size:16px">Documents</h3><div id="dl-docs"></div>';
 
   // Re-render when the type changes so the right fields appear immediately.
@@ -2201,6 +2202,7 @@ async function openDealDetail(id) {
     openDealDetail(id);
   });
 
+  loadDealSplit(id, locked, d);
   loadDealContacts(id, locked, d);
 
   // Everything read-only once submitted; the record is the record.
@@ -2267,6 +2269,67 @@ async function saveDealEdit() {
   loadPipeline();
 }
 
+// ── COMMISSION STRUCTURE ──
+// Who actually receives each share. The split shows the amounts; this says whose
+// they are — without it the numbers are arithmetic with nobody attached.
+//
+// Percentages are fixed and enforced server-side: listing 10% of total, showing
+// and lead gen 25% of the net after the listing cut.
+const SPLIT_ROLES = [
+  ['listing', 'Listing agent', '10% of total'],
+  ['showing', 'Showing agent', '25% of net'],
+  ['lead_gen', 'Lead generation', '25% of net'],
+];
+
+async function loadDealSplit(dealId, locked, deal) {
+  const el = document.getElementById('dl-split-roles');
+  if (!el) return;
+  const rows = await apiGet('/deals/' + encodeURIComponent(dealId) + '/participants') || [];
+  const byRole = {};
+  rows.forEach(r => { byRole[r.role] = r; });
+
+  const total = Number(deal.commission_total) || 0;
+  const money = n => n ? '$' + Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+  const amountFor = (role) => {
+    if (!total) return '—';
+    const listing = total * 0.10;
+    return money(role === 'listing' ? listing : (total - listing) * 0.25);
+  };
+
+  const opts = (sel) => ['<option value="">Not involved</option>'].concat(
+    allAgents.map(a => '<option value="'+a.id+'"'+(sel===a.id?' selected':'')+'>'+esc(a.name)+'</option>')).join('');
+
+  el.innerHTML = SPLIT_ROLES.map(([key, label, pct]) =>
+      '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">'
+    + '<div style="width:130px;font-size:14px">'+label+'</div>'
+    + (locked
+        ? '<div style="flex:1;font-size:14px">' + esc((byRole[key] && agentName(byRole[key].agent_id)) || 'Not involved') + '</div>'
+        : '<select id="sr-'+key+'" style="flex:1" onchange="saveDealSplit(\''+dealId+'\')">'
+          + opts(byRole[key] && byRole[key].agent_id) + '</select>')
+    + '<div style="width:92px;font-size:13px;color:var(--text-muted)">'+pct+'</div>'
+    + '<div style="width:96px;text-align:right;font-size:14px">'
+    + (byRole[key] && byRole[key].agent_id ? amountFor(key) : '—') + '</div></div>').join('')
+    + (total
+        ? '<div style="font-size:13px;color:var(--text-muted);margin-top:8px">House keeps '
+          + money(total - SPLIT_ROLES.reduce((a,[k]) => a + (byRole[k] && byRole[k].agent_id
+              ? (k === 'listing' ? total*0.10 : (total - total*0.10)*0.25) : 0), 0)) + '</div>'
+        : '<div style="font-size:13px;color:var(--text-muted);margin-top:8px">Enter a commission to see the amounts.</div>');
+}
+
+// Saved on change rather than behind a button: a dropdown that silently needs a
+// separate save is how the wrong person ends up on a commission.
+async function saveDealSplit(dealId) {
+  const participants = [];
+  SPLIT_ROLES.forEach(([key]) => {
+    const sel = document.getElementById('sr-' + key);
+    if (sel && sel.value) participants.push({ role: key, agent_id: sel.value });
+  });
+  const r = await apiSend('POST', '/deals/' + dealId + '/participants', { participants });
+  if (!r || r.ok === false) { alert('Could not save the split: ' + ((r && r.error) || 'unknown')); return; }
+  const d = allDeals.find(x => x.id === dealId) || {};
+  loadDealSplit(dealId, false, d);
+}
+
 // ── DEAL CONTACTS ──
 // Landlord, seller, buyer and the other agency are structured records, not
 // typed names. A name you can't call is not a contact, and in a dispute it is
@@ -2276,18 +2339,22 @@ async function saveDealEdit() {
 // sale has whichever side we don't represent, a referral has the partner.
 function requiredContactRoles(d) {
   const t = d.deal_type, r = d.client_role;
-  const out = ['client'];
-  if (t === 'rental') out.push(r === 'tenant' ? 'landlord' : 'client');
-  if (t === 'sale') out.push(r === 'buyer' ? 'seller' : 'buyer');
+  const out = [];
+  // Both sides of a rental: the tenant and the landlord are separate people and
+  // a deal record with only one of them is half a record.
+  if (t === 'rental') out.push('tenant', 'landlord');
+  else if (t === 'sale') out.push('buyer', 'seller');
+  else out.push('client');
   if (t === 'referral') out.push('referral_partner');
   if (d.co_broke_firm || d.co_broke_agent) out.push('co_broke_agent');
   return [...new Set(out)];
 }
 
 const CONTACT_LABELS = {
-  client: 'Client', landlord: 'Landlord', seller: 'Seller', buyer: 'Buyer',
-  co_broke_agent: 'Co-broke agent', referral_partner: 'Referral partner',
-  attorney: 'Attorney', other: 'Other',
+  tenant: 'Tenant', landlord: 'Landlord', buyer: 'Buyer', seller: 'Seller',
+  co_broke_agent: 'Other agent', co_broke_firm: 'Other brokerage',
+  referral_partner: 'Referral partner', attorney: 'Attorney',
+  client: 'Client', other: 'Other',
 };
 
 async function loadDealContacts(dealId, locked, deal) {
@@ -2313,22 +2380,52 @@ async function loadDealContacts(dealId, locked, deal) {
     + (locked ? '' : '<button class="btn btn-sm btn-outline" style="margin-top:10px" onclick="addContact(\''+dealId+'\')">+ Add person</button>');
 }
 
-async function addContact(dealId) {
-  const role = prompt('Role? (client, landlord, seller, buyer, co_broke_agent, referral_partner, attorney, other)');
-  if (!role) return;
-  const name = prompt('Full name');
-  if (!name) return;
-  const phone = prompt('Phone (leave blank if none)') || '';
-  const email = prompt('Email (leave blank if none)') || '';
-  if (!phone && !email) { alert('A contact needs a phone or an email — otherwise there is no way to reach them.'); return; }
-  const company = prompt('Company / brokerage (optional)') || '';
+// An inline form, not a chain of prompts. Five prompts in a row is unusable for
+// four people on one deal, and you can't correct an earlier answer.
+function addContact(dealId) {
+  const box = document.getElementById('dl-contact-form');
+  if (!box) return;
+  const roles = [
+    ['tenant','Tenant'], ['landlord','Landlord'], ['buyer','Buyer'], ['seller','Seller'],
+    ['co_broke_agent','Other agent'], ['co_broke_firm','Other brokerage'],
+    ['referral_partner','Referral partner'], ['attorney','Attorney'], ['other','Other'],
+  ];
+  box.innerHTML =
+      '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-top:10px">'
+    + '<div class="form-row">'
+    + '<div class="form-group"><label>Role</label><select id="nc-role">'
+    + roles.map(([v,l]) => '<option value="'+v+'">'+l+'</option>').join('') + '</select></div>'
+    + '<div class="form-group"><label>Full name</label><input id="nc-name" placeholder="Jane Smith"></div></div>'
+    + '<div class="form-row">'
+    + '<div class="form-group"><label>Phone</label><input id="nc-phone" placeholder="(201) 555-0123"></div>'
+    + '<div class="form-group"><label>Email</label><input id="nc-email" type="email" placeholder="jane@example.com"></div></div>'
+    + '<div class="form-group"><label>Company / brokerage</label><input id="nc-company" placeholder="Optional"></div>'
+    + '<div id="nc-err" style="display:none;color:#ff9a9a;font-size:13px;margin-bottom:8px"></div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button class="btn btn-sm btn-gold" onclick="saveContact(\''+dealId+'\')">Add</button>'
+    + '<button class="btn btn-sm btn-outline" onclick="document.getElementById(\'dl-contact-form\').innerHTML=\'\'">Cancel</button>'
+    + '</div></div>';
+}
 
-  const r = await apiSend('POST', '/deals/' + dealId + '/contacts',
-    { role: role.trim(), name: name.trim(), phone, email, company });
-  if (!r || r.ok === false) {
-    alert('Could not add: ' + ((r && r.error) || 'unknown error'));
-    return;
-  }
+async function saveContact(dealId) {
+  const v = id => (document.getElementById(id).value || '').trim();
+  const err = document.getElementById('nc-err');
+  const show = m => { err.style.display = 'block'; err.textContent = m; };
+  err.style.display = 'none';
+
+  const name = v('nc-name');
+  if (!name) { show('Enter a name.'); return; }
+  const phone = v('nc-phone'), email = v('nc-email');
+  // A contact with no way to reach them is a name, not a contact.
+  if (!phone && !email) { show('Add a phone or an email — otherwise there is no way to reach them.'); return; }
+
+  const r = await apiSend('POST', '/deals/' + dealId + '/contacts', {
+    role: document.getElementById('nc-role').value,
+    name, phone, email, company: v('nc-company'),
+  });
+  if (!r || r.ok === false) { show('Could not add: ' + ((r && r.error) || 'unknown error')); return; }
+
+  document.getElementById('dl-contact-form').innerHTML = '';
   const d = allDeals.find(x => x.id === dealId) || {};
   loadDealContacts(dealId, false, d);
 }
