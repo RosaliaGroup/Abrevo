@@ -2168,6 +2168,23 @@ async function openDealDetail(id) {
         '<option value="'+o+'"'+(val===o?' selected':'')+'>'+o.replace(/_/g,' ')+'</option>')).join('')
     + '</select></div>';
 
+  // Fields that don't apply to this deal type are hidden rather than shown
+  // blank — a sale price on a rental is noise you have to mentally skip.
+  const isRental = d.deal_type === 'rental';
+  const isSale = d.deal_type === 'sale';
+  const isReferral = d.deal_type === 'referral';
+  const na = Array.isArray(d.na_fields) ? d.na_fields : [];
+
+  // Mandatory unless explicitly marked N/A. A tick box makes "doesn't apply"
+  // a deliberate statement instead of a blank that might be an oversight.
+  const naBox = (f) =>
+    '<label style="font-size:12px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px;margin-left:8px">'
+    + '<input type="checkbox" class="dl-na" data-field="'+f+'"'+(na.includes(f)?' checked':'')+'> N/A</label>';
+
+  const req = (id2, label, val, type, naField) =>
+    '<div class="form-group"><label>'+label+(naField?naBox(naField):'')+'</label>'
+    + '<input id="'+id2+'" type="'+(type||'text')+'" value="'+esc(val==null?'':String(val))+'"></div>';
+
   document.getElementById('dl-body').innerHTML =
       (locked ? '<div style="background:rgba(201,168,76,.12);border:1px solid var(--gold);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:14px">'
         + 'Submitted ' + fmtStamp(d.submitted_at) + ' by ' + esc(d.submitted_by || 'operator')
@@ -2176,25 +2193,39 @@ async function openDealDetail(id) {
     + '<div class="form-row">'
     + sel('dl-type','Deal type',['rental','sale','referral'], d.deal_type)
     + sel('dl-role','Client is our',['tenant','landlord','buyer','seller','referral_partner'], d.client_role) + '</div>'
-    + '<div class="form-row">' + field('dl-client','Client name', d.client_name)
-    + field('dl-property','Property', d.property) + '</div>'
-    + '<div class="form-row">' + field('dl-rent','Monthly rent', d.monthly_rent, 'number')
-    + field('dl-saleprice','Sale price', d.sale_price, 'number') + '</div>'
-    + '<div class="form-row">' + field('dl-closing','Closing date', d.closing_date, 'date')
-    + field('dl-movein','Move-in date', d.move_in_date, 'date') + '</div>'
-    + '<div class="form-row">' + field('dl-term','Lease term (months)', d.lease_term_months, 'number')
-    + field('dl-deposit','Security deposit', d.security_deposit, 'number') + '</div>'
+    + '<div class="form-row">' + req('dl-client','Client name', d.client_name || (lead && lead.name) || '')
+    + req('dl-property','Property', d.property, 'text', isReferral ? 'property' : null) + '</div>'
+    // Rentals price monthly; sales have a sale price. Showing both invites the
+    // wrong one being filled in.
+    + (isSale
+        ? '<div class="form-row">' + req('dl-saleprice','Sale price', d.sale_price, 'number')
+          + req('dl-closing','Closing date', d.closing_date, 'date') + '</div>'
+        : '<div class="form-row">' + req('dl-rent','Rental price (monthly)', d.monthly_rent, 'number')
+          + req('dl-movein','Move-in date', d.move_in_date, 'date') + '</div>')
+    + (isRental
+        ? '<div class="form-row">' + req('dl-term','Lease term (months)', d.lease_term_months, 'number')
+          + req('dl-deposit','Security deposit', d.security_deposit, 'number', 'security_deposit') + '</div>'
+        : '')
     + '<div class="form-row">'
     + '<div class="form-group"><label>Stage</label><select id="dl-stage">'+stageOpts+'</select></div>'
-    + field('dl-commission','Commission ($)', d.commission_total, 'number') + '</div>'
+    + req('dl-commission','Commission ($)', d.commission_total, 'number') + '</div>'
     + '<div class="form-row">'
     + sel('dl-payer','Commission paid by',['landlord','tenant','seller','buyer','split'], d.commission_payer)
     + '<div class="form-group"><label>Assigned agent</label><select id="dl-agent">'+agentOpts+'</select></div></div>'
-    + '<div class="form-row">' + field('dl-cofirm','Co-broke firm', d.co_broke_firm)
-    + field('dl-coagent','Co-broke agent', d.co_broke_agent) + '</div>'
     + '<div class="form-group"><label>Notes</label><textarea id="dl-notes" rows="2">'+esc(d.notes||'')+'</textarea></div>'
     + '<div id="dl-split" style="font-size:14px;color:var(--text-muted);margin:6px 0 14px"></div>'
+    + '<h3 style="margin:16px 0 8px;font-size:16px">People on this deal</h3><div id="dl-contacts"></div>'
     + '<h3 style="margin:16px 0 8px;font-size:16px">Documents</h3><div id="dl-docs"></div>';
+
+  // Re-render when the type changes so the right fields appear immediately.
+  const typeSel = document.getElementById('dl-type');
+  if (typeSel && !locked) typeSel.addEventListener('change', async () => {
+    await apiSend('PATCH', '/deals/' + id, { deal_type: typeSel.value });
+    allDeals = await apiGet('/deals') || [];
+    openDealDetail(id);
+  });
+
+  loadDealContacts(id, locked, d);
 
   // Everything read-only once submitted; the record is the record.
   if (locked) setTimeout(() => {
@@ -2241,6 +2272,10 @@ async function saveDealEdit() {
     lease_term_months: Number(v('dl-term')) || null,
     security_deposit: Number(v('dl-deposit')) || null,
     sale_price: Number(v('dl-saleprice')) || null,
+    // Only the fields present for this deal type exist in the DOM, so read
+    // defensively rather than assuming every input is there.
+    na_fields: Array.from(document.querySelectorAll('.dl-na'))
+      .filter(c => c.checked).map(c => c.getAttribute('data-field')),
     commission_payer: g('dl-payer') || null,
     co_broke_firm: v('dl-cofirm'),
     co_broke_agent: v('dl-coagent'),
@@ -2254,6 +2289,80 @@ async function saveDealEdit() {
   closeModal('deal-modal');
   allDeals = await apiGet('/deals') || [];
   loadPipeline();
+}
+
+// ── DEAL CONTACTS ──
+// Landlord, seller, buyer and the other agency are structured records, not
+// typed names. A name you can't call is not a contact, and in a dispute it is
+// not a record of anyone.
+//
+// Which parties a deal needs depends on its shape: a rental has a landlord, a
+// sale has whichever side we don't represent, a referral has the partner.
+function requiredContactRoles(d) {
+  const t = d.deal_type, r = d.client_role;
+  const out = ['client'];
+  if (t === 'rental') out.push(r === 'tenant' ? 'landlord' : 'client');
+  if (t === 'sale') out.push(r === 'buyer' ? 'seller' : 'buyer');
+  if (t === 'referral') out.push('referral_partner');
+  if (d.co_broke_firm || d.co_broke_agent) out.push('co_broke_agent');
+  return [...new Set(out)];
+}
+
+const CONTACT_LABELS = {
+  client: 'Client', landlord: 'Landlord', seller: 'Seller', buyer: 'Buyer',
+  co_broke_agent: 'Co-broke agent', referral_partner: 'Referral partner',
+  attorney: 'Attorney', other: 'Other',
+};
+
+async function loadDealContacts(dealId, locked, deal) {
+  const el = document.getElementById('dl-contacts');
+  if (!el) return;
+  const rows = await apiGet('/deals/' + encodeURIComponent(dealId) + '/contacts') || [];
+  const need = requiredContactRoles(deal || {});
+  const have = new Set(rows.map(r => r.role));
+
+  el.innerHTML = rows.map(c =>
+      '<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;gap:10px">'
+    + '<div><div style="font-size:14px">' + esc(c.name)
+    + ' <span style="color:var(--text-muted);font-size:12px">' + (CONTACT_LABELS[c.role] || c.role) + '</span></div>'
+    + '<div style="font-size:13px;color:var(--text-muted)">'
+    + (c.phone ? esc(fmtPhone(c.phone)) : '') + (c.phone && c.email ? ' &middot; ' : '') + esc(c.email || '')
+    + (c.company ? ' &middot; ' + esc(c.company) : '') + '</div></div>'
+    + (locked ? '' : '<button class="btn btn-sm btn-outline" onclick="removeContact(\''+c.id+'\',\''+dealId+'\')">Remove</button>')
+    + '</div>').join('')
+    + (need.filter(r => !have.has(r)).length
+        ? '<div style="font-size:13px;color:#ff9a9a;margin-top:8px">Still needed: '
+          + need.filter(r => !have.has(r)).map(r => CONTACT_LABELS[r] || r).join(', ') + '</div>'
+        : '')
+    + (locked ? '' : '<button class="btn btn-sm btn-outline" style="margin-top:10px" onclick="addContact(\''+dealId+'\')">+ Add person</button>');
+}
+
+async function addContact(dealId) {
+  const role = prompt('Role? (client, landlord, seller, buyer, co_broke_agent, referral_partner, attorney, other)');
+  if (!role) return;
+  const name = prompt('Full name');
+  if (!name) return;
+  const phone = prompt('Phone (leave blank if none)') || '';
+  const email = prompt('Email (leave blank if none)') || '';
+  if (!phone && !email) { alert('A contact needs a phone or an email — otherwise there is no way to reach them.'); return; }
+  const company = prompt('Company / brokerage (optional)') || '';
+
+  const r = await apiSend('POST', '/deals/' + dealId + '/contacts',
+    { role: role.trim(), name: name.trim(), phone, email, company });
+  if (!r || r.ok === false) {
+    alert('Could not add: ' + ((r && r.error) || 'unknown error'));
+    return;
+  }
+  const d = allDeals.find(x => x.id === dealId) || {};
+  loadDealContacts(dealId, false, d);
+}
+
+async function removeContact(contactId, dealId) {
+  if (!confirm('Remove this person from the deal?')) return;
+  const r = await apiSend('DELETE', '/deal-contacts/' + contactId, {});
+  if (!r || r.ok === false) { alert('Could not remove: ' + ((r && r.error) || 'unknown')); return; }
+  const d = allDeals.find(x => x.id === dealId) || {};
+  loadDealContacts(dealId, false, d);
 }
 
 // ── DEAL DOCUMENTS ──

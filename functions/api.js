@@ -118,6 +118,8 @@ const DEAL_STAGES = new Set(["inquiry", "toured", "applied", "approved", "lease_
 const DEAL_TYPES = new Set(["rental", "sale", "referral"]);
 const CLIENT_ROLES = new Set(["tenant", "landlord", "buyer", "seller", "referral_partner"]);
 const COMMISSION_PAYERS = new Set(["landlord", "tenant", "seller", "buyer", "split"]);
+const CONTACT_ROLES = new Set(["client", "landlord", "seller", "buyer", "co_broke_agent",
+                               "referral_partner", "attorney", "other"]);
 const TASK_PRIORITIES = new Set(["normal", "high", "low"]);
 // Commission split. Listing takes 10% of the TOTAL; showing and lead generation
 // each take 25% of the NET remaining after the listing cut. Anything left stays
@@ -523,6 +525,9 @@ exports.handler = async (event) => {
         if (body.commission_payer !== undefined) patch.commission_payer = vEnum(body.commission_payer, COMMISSION_PAYERS, "commission_payer", false);
         if (body.co_broke_firm !== undefined) patch.co_broke_firm = vStr(body.co_broke_firm, 200, "co_broke_firm", false);
         if (body.co_broke_agent !== undefined) patch.co_broke_agent = vStr(body.co_broke_agent, 200, "co_broke_agent", false);
+        // Explicit "not applicable" per field. Without this, mandatory fields
+        // get filled with a dash or a zero and a blank means nothing.
+        if (Array.isArray(body.na_fields)) patch.na_fields = body.na_fields.slice(0, 20).map(String);
       } catch (e) {
         return json(400, { ok: false, error: e.message || "validation_failed", field: e.field || null });
       }
@@ -567,8 +572,39 @@ exports.handler = async (event) => {
         submitted_at: new Date().toISOString(),
         submitted_by: s.user || "operator",
       });
-      console.log(`[deals] ${id} submitted and locked by ${s.user || "operator"}`);
-      return json(200, { ok: true, locked: true });
+
+      // Rentals get 3/6/9-month check-ins. A tenant placed today is a renewal
+      // conversation next year and a referral source in between — but only if
+      // someone remembers, which is what these are for.
+      let followUps = 0;
+      if (d.deal_type === "rental") {
+        const full = await sbGet(`deals?id=eq.${encodeURIComponent(id)}&select=lead_id,property,move_in_date,closing_date,client_name&limit=1`);
+        const dd = Array.isArray(full) && full[0] ? full[0] : {};
+        // Count from move-in where we have it, since that's when the clock
+        // actually starts for the tenant.
+        const base = dd.move_in_date || dd.closing_date || new Date().toISOString().slice(0, 10);
+        for (const months of [3, 6, 9]) {
+          const due = new Date(base + "T12:00:00Z");
+          due.setMonth(due.getMonth() + months);
+          try {
+            await sbPost("tasks", {
+              title: `${months}-month check-in — ${dd.client_name || dd.property || "tenant"}`,
+              notes: `Automatic follow-up for deal ${id}. How is the property working out? Any maintenance issues? Renewal intentions?`,
+              due_at: due.toISOString(),
+              lead_id: dd.lead_id || null,
+              deal_id: id,
+              type: "follow_up",
+              completed: false,
+            });
+            followUps++;
+          } catch (e) {
+            console.warn(`[deals] follow-up ${months}m failed:`, e.message);
+          }
+        }
+      }
+
+      console.log(`[deals] ${id} submitted and locked by ${s.user || "operator"} | follow-ups: ${followUps}`);
+      return json(200, { ok: true, locked: true, followUps });
     }
 
     // Amend a locked deal. Appends a reason and an author; the correction is
@@ -606,6 +642,65 @@ exports.handler = async (event) => {
       if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
       const rows = await sbGet(`deal_amendments?deal_id=eq.${encodeURIComponent(id)}&select=*&order=created_at.desc&limit=50`);
       return json(200, { ok: true, data: rows || [] });
+    }
+
+    // Contacts on a deal. Structured rows, not typed names: a landlord you
+    // can't call is not a record of a landlord.
+    if (route.startsWith("/deals/") && route.endsWith("/contacts") && method === "GET") {
+      const id = route.slice("/deals/".length, -"/contacts".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+      const rows = await sbGet(`deal_contacts?deal_id=eq.${encodeURIComponent(id)}&select=*&order=created_at.asc`);
+      return json(200, { ok: true, data: rows || [] });
+    }
+
+    if (route.startsWith("/deals/") && route.endsWith("/contacts") && method === "POST") {
+      if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
+      const id = route.slice("/deals/".length, -"/contacts".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+
+      const locked = await sbGet(`deals?id=eq.${encodeURIComponent(id)}&select=submitted_at&limit=1`);
+      if (Array.isArray(locked) && locked[0] && locked[0].submitted_at) {
+        return json(403, { ok: false, error: "deal_locked" });
+      }
+
+      let body; try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { ok: false, error: "invalid_json" }); }
+      if (!CONTACT_ROLES.has(body.role)) return json(400, { ok: false, error: "bad_role" });
+
+      let row;
+      try {
+        row = {
+          deal_id: id,
+          role: body.role,
+          name: vStr(body.name, 200, "name", true),
+          phone: body.phone ? normalizePhone(body.phone) : null,
+          email: body.email ? vEmail(body.email, "email") : null,
+          company: vStr(body.company, 200, "company", false),
+          lead_id: body.lead_id ? vId(body.lead_id, "lead_id") : null,
+          notes: vStr(body.notes, 1000, "notes", false),
+        };
+      } catch (e) {
+        return json(400, { ok: false, error: e.message || "validation_failed", field: e.field || null });
+      }
+      // A contact with no way to reach them is a name, not a contact.
+      if (!row.phone && !row.email) return json(400, { ok: false, error: "phone_or_email_required" });
+
+      const newId = await sbPost("deal_contacts", row);
+      return json(200, { ok: true, id: newId });
+    }
+
+    if (route.startsWith("/deal-contacts/") && method === "DELETE") {
+      if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
+      const id = route.slice("/deal-contacts/".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+      const rows = await sbGet(`deal_contacts?id=eq.${encodeURIComponent(id)}&select=deal_id&limit=1`);
+      const c = Array.isArray(rows) ? rows[0] : null;
+      if (!c) return json(404, { ok: false, error: "not_found" });
+      const locked = await sbGet(`deals?id=eq.${encodeURIComponent(c.deal_id)}&select=submitted_at&limit=1`);
+      if (Array.isArray(locked) && locked[0] && locked[0].submitted_at) {
+        return json(403, { ok: false, error: "deal_locked" });
+      }
+      await sbDelete(`deal_contacts?id=eq.${encodeURIComponent(id)}`);
+      return json(200, { ok: true });
     }
 
     if (route.startsWith("/deals/") && route.endsWith("/participants") && method === "GET") {
