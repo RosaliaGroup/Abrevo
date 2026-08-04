@@ -351,6 +351,38 @@ function safeHtml(str) { var d = document.createElement('div'); d.textContent = 
   var phoneParam = params.get('phone');
   if (phoneParam) document.getElementById('phone').value = phoneParam;
 
+  // --- Marketplace / listing links -------------------------------
+  // ?listing=<uuid>&type=tour|consult
+  var listingParam = params.get('listing');
+  var typeParam = (params.get('type') || 'tour').toLowerCase();
+
+  if (listingParam) {
+    var _lf = document.createElement('input');
+    _lf.type = 'hidden';
+    _lf.id = 'listing_id';
+    _lf.name = 'listing_id';
+    _lf.value = listingParam;
+    document.body.appendChild(_lf);
+  }
+
+  document.body.setAttribute('data-booking-type', typeParam);
+
+  // Rental tours never ask about income or credit. NJ LAD protects source
+  // of lawful income, and the Jan 2026 amendment bars income standards not
+  // based on the tenant's own share of the rent. Handled by a human on a
+  // uniform written application instead.
+  if (typeParam !== 'consult') {
+    ['sp_income', 'sp_credit', 'income_qualifies', 'credit_qualifies'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var box = (el.closest && (el.closest('.field') || el.closest('.form-row'))) || el.parentElement;
+      if (box) box.style.display = 'none';
+      el.value = '';
+      el.removeAttribute('required');
+    });
+  }
+  // ---------------------------------------------------------------
+
   var today = new Date().toISOString().split('T')[0];
   var tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
   document.getElementById('preferred_date').min = tomorrow;
