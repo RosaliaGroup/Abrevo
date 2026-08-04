@@ -2161,15 +2161,47 @@ async function openDealDetail(id) {
   const agentOpts = ['<option value="">Unassigned</option>'].concat(
     allAgents.map(a => '<option value="'+a.id+'"'+(d.assigned_to===a.id?' selected':'')+'>'+esc(a.name)+'</option>')).join('');
 
+  const locked = Boolean(d.submitted_at);
+  const sel = (id2, label, opts, val) =>
+    '<div class="form-group"><label>'+label+'</label><select id="'+id2+'">'
+    + ['<option value="">—</option>'].concat(opts.map(o =>
+        '<option value="'+o+'"'+(val===o?' selected':'')+'>'+o.replace(/_/g,' ')+'</option>')).join('')
+    + '</select></div>';
+
   document.getElementById('dl-body').innerHTML =
-      '<div class="form-row">' + field('dl-property','Property', d.property)
-    + field('dl-rent','Monthly rent', d.monthly_rent, 'number') + '</div>'
+      (locked ? '<div style="background:rgba(201,168,76,.12);border:1px solid var(--gold);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:14px">'
+        + 'Submitted ' + fmtStamp(d.submitted_at) + ' by ' + esc(d.submitted_by || 'operator')
+        + '. This deal is locked — use <b>Amend</b> to record a correction.</div>' : '')
+    + (d.deal_number ? '<div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Deal '+esc(d.deal_number)+'</div>' : '')
+    + '<div class="form-row">'
+    + sel('dl-type','Deal type',['rental','sale','referral'], d.deal_type)
+    + sel('dl-role','Client is our',['tenant','landlord','buyer','seller','referral_partner'], d.client_role) + '</div>'
+    + '<div class="form-row">' + field('dl-client','Client name', d.client_name)
+    + field('dl-property','Property', d.property) + '</div>'
+    + '<div class="form-row">' + field('dl-rent','Monthly rent', d.monthly_rent, 'number')
+    + field('dl-saleprice','Sale price', d.sale_price, 'number') + '</div>'
+    + '<div class="form-row">' + field('dl-closing','Closing date', d.closing_date, 'date')
+    + field('dl-movein','Move-in date', d.move_in_date, 'date') + '</div>'
+    + '<div class="form-row">' + field('dl-term','Lease term (months)', d.lease_term_months, 'number')
+    + field('dl-deposit','Security deposit', d.security_deposit, 'number') + '</div>'
     + '<div class="form-row">'
     + '<div class="form-group"><label>Stage</label><select id="dl-stage">'+stageOpts+'</select></div>'
     + field('dl-commission','Commission ($)', d.commission_total, 'number') + '</div>'
-    + '<div class="form-group"><label>Assigned agent</label><select id="dl-agent">'+agentOpts+'</select></div>'
-    + '<div class="form-group"><label>Notes</label><textarea id="dl-notes" rows="3">'+esc(d.notes||'')+'</textarea></div>'
-    + '<div id="dl-split" style="font-size:14px;color:var(--text-muted);margin-top:6px"></div>';
+    + '<div class="form-row">'
+    + sel('dl-payer','Commission paid by',['landlord','tenant','seller','buyer','split'], d.commission_payer)
+    + '<div class="form-group"><label>Assigned agent</label><select id="dl-agent">'+agentOpts+'</select></div></div>'
+    + '<div class="form-row">' + field('dl-cofirm','Co-broke firm', d.co_broke_firm)
+    + field('dl-coagent','Co-broke agent', d.co_broke_agent) + '</div>'
+    + '<div class="form-group"><label>Notes</label><textarea id="dl-notes" rows="2">'+esc(d.notes||'')+'</textarea></div>'
+    + '<div id="dl-split" style="font-size:14px;color:var(--text-muted);margin:6px 0 14px"></div>'
+    + '<h3 style="margin:16px 0 8px;font-size:16px">Documents</h3><div id="dl-docs"></div>';
+
+  // Everything read-only once submitted; the record is the record.
+  if (locked) setTimeout(() => {
+    document.querySelectorAll('#dl-body input,#dl-body select,#dl-body textarea')
+      .forEach(el => { el.disabled = true; el.style.opacity = '.7'; });
+  }, 0);
+  loadDealDocs(id, locked);
 
   renderDealSplit(d.commission_total);
   const ci = document.getElementById('dl-commission');
@@ -2193,13 +2225,25 @@ async function saveDealEdit() {
   if (!__dlId) return;
   const err = document.getElementById('dl-err');
   const v = id => (document.getElementById(id).value || '').trim();
+  const g = id => { const e = document.getElementById(id); return e ? e.value : ''; };
   const payload = {
     property: v('dl-property'),
     monthly_rent: Number(v('dl-rent')) || null,
     commission_total: Number(v('dl-commission')) || null,
-    stage: document.getElementById('dl-stage').value,
-    agent_id: document.getElementById('dl-agent').value || null,
+    stage: g('dl-stage'),
+    agent_id: g('dl-agent') || null,
     notes: v('dl-notes'),
+    deal_type: g('dl-type') || null,
+    client_role: g('dl-role') || null,
+    client_name: v('dl-client'),
+    closing_date: g('dl-closing') || null,
+    move_in_date: g('dl-movein') || null,
+    lease_term_months: Number(v('dl-term')) || null,
+    security_deposit: Number(v('dl-deposit')) || null,
+    sale_price: Number(v('dl-saleprice')) || null,
+    commission_payer: g('dl-payer') || null,
+    co_broke_firm: v('dl-cofirm'),
+    co_broke_agent: v('dl-coagent'),
   };
   const r = await apiSend('PATCH', '/deals/' + __dlId, payload);
   if (!r || r.ok === false) {
@@ -2210,6 +2254,117 @@ async function saveDealEdit() {
   closeModal('deal-modal');
   allDeals = await apiGet('/deals') || [];
   loadPipeline();
+}
+
+// ── DEAL DOCUMENTS ──
+// Files live in a private bucket; what's shown here are 5-minute signed links,
+// regenerated per view. A long-lived URL ends up pasted into an email and
+// outlives the reason it was created.
+const DOC_KINDS = [
+  ['disclosure', 'Disclosures'],
+  ['listing_agreement', 'Listing agreement'],
+  ['sale_agreement', 'Sale agreement'],
+  ['referral_agreement', 'Referral agreement'],
+  ['lease', 'Lease'],
+  ['application', 'Application'],
+  ['id', 'ID'],
+  ['other', 'Other'],
+];
+
+async function loadDealDocs(dealId, locked) {
+  const el = document.getElementById('dl-docs');
+  if (!el) return;
+  const res = await fetch('/.netlify/functions/deal-documents?deal=' + encodeURIComponent(dealId), { credentials: 'same-origin' });
+  const j = await res.json().catch(() => ({}));
+  const docs = (j && j.data) || [];
+  const required = (j && j.required) || [];
+  const missing = (j && j.missing) || [];
+
+  const byKind = {};
+  docs.forEach(d => { (byKind[d.kind] = byKind[d.kind] || []).push(d); });
+
+  el.innerHTML = DOC_KINDS.map(([kind, label]) => {
+    const items = byKind[kind] || [];
+    const need = required.includes(kind);
+    const ok = items.some(x => x.storage_path || x.acknowledged);
+    return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">'
+      + '<span style="font-size:14px">' + label
+      + (need ? '<span style="color:' + (ok ? 'var(--green,#4caf50)' : '#ff9a9a') + ';font-size:12px"> &middot; required</span>' : '')
+      + '</span>'
+      + (locked ? '' :
+          '<span style="display:flex;gap:6px">'
+          + '<button class="btn btn-sm btn-outline" onclick="pickDealFile(\''+dealId+'\',\''+kind+'\')">Upload</button>'
+          + (kind === 'disclosure' ? '<button class="btn btn-sm btn-outline" onclick="ackDoc(\''+dealId+'\',\''+kind+'\')">Given</button>' : '')
+          + '</span>')
+      + '</div>'
+      + items.map(x =>
+          '<div style="font-size:13px;color:var(--text-muted);margin-top:4px">'
+          + (x.url ? '<a href="'+x.url+'" target="_blank" style="color:var(--gold)">'+esc(x.file_name||'file')+'</a>'
+                   : x.acknowledged ? 'Acknowledged by '+esc(x.acknowledged_by||'')+' on '+fmtStamp(x.acknowledged_at)
+                   : esc(x.file_name||''))
+          + '</div>').join('')
+      + '</div>';
+  }).join('')
+  + (locked ? '' :
+      '<div style="margin-top:14px">'
+      + (missing.length
+          ? '<div style="font-size:13px;color:#ff9a9a;margin-bottom:8px">Still needed: ' + missing.map(m=>m.replace(/_/g,' ')).join(', ') + '</div>'
+          : '')
+      + '<button class="btn btn-gold" onclick="submitDeal(\''+dealId+'\')">Submit &amp; lock deal</button>'
+      + '<div style="font-size:12px;color:var(--text-muted);margin-top:6px">Once submitted this deal cannot be edited. Corrections are recorded as amendments.</div>'
+      + '</div>');
+}
+
+function pickDealFile(dealId, kind) {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.pdf,.jpg,.jpeg,.png,.heic,.docx';
+  inp.onchange = async () => {
+    const f = inp.files && inp.files[0];
+    if (!f) return;
+    if (f.size > 25 * 1024 * 1024) { alert('That file is larger than 25MB.'); return; }
+    const data = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = rej;
+      r.readAsDataURL(f);
+    });
+    const resp = await fetch('/.netlify/functions/deal-documents', {
+      method: 'POST', credentials: 'same-origin',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, __csrf ? { 'X-CSRF-Token': __csrf } : {}),
+      body: JSON.stringify({ dealId, kind, fileName: f.name, contentType: f.type, data }),
+    });
+    const j = await resp.json().catch(() => ({}));
+    if (!j.ok) { alert('Upload failed: ' + (j.error || resp.status)); return; }
+    loadDealDocs(dealId, false);
+  };
+  inp.click();
+}
+
+async function ackDoc(dealId, kind) {
+  if (!confirm('Record that disclosures were provided to the client?')) return;
+  const resp = await fetch('/.netlify/functions/deal-documents?action=ack', {
+    method: 'POST', credentials: 'same-origin',
+    headers: Object.assign({ 'Content-Type': 'application/json' }, __csrf ? { 'X-CSRF-Token': __csrf } : {}),
+    body: JSON.stringify({ dealId, kind }),
+  });
+  const j = await resp.json().catch(() => ({}));
+  if (!j.ok) { alert('Could not record: ' + (j.error || resp.status)); return; }
+  loadDealDocs(dealId, false);
+}
+
+async function submitDeal(dealId) {
+  if (!confirm('Submit and lock this deal?\n\nOnce submitted it cannot be edited. Corrections will be recorded as amendments with a reason.')) return;
+  const r = await apiSend('POST', '/deals/' + dealId + '/submit', {});
+  if (!r || r.ok === false) {
+    alert(r && r.error === 'missing_documents'
+      ? 'Cannot submit — still needed: ' + (r.missing || []).map(m => m.replace(/_/g,' ')).join(', ')
+      : 'Could not submit: ' + ((r && r.error) || 'unknown'));
+    return;
+  }
+  allDeals = await apiGet('/deals') || [];
+  openDealDetail(dealId);
 }
 
 // ── TASKS ──

@@ -115,6 +115,9 @@ const TASK_SORTS = { created: "created_at.desc", due: "due_date.asc" };
 // CRM write allow-lists (fixed; unknown keys are rejected, values validated).
 const LEAD_SOURCES = new Set(["email", "phone", "zillow", "webflow", "facebook", "instagram", "fub", "walk-in", "avail"]);
 const DEAL_STAGES = new Set(["inquiry", "toured", "applied", "approved", "lease_sent", "signed", "moved_in", "lost"]);
+const DEAL_TYPES = new Set(["rental", "sale", "referral"]);
+const CLIENT_ROLES = new Set(["tenant", "landlord", "buyer", "seller", "referral_partner"]);
+const COMMISSION_PAYERS = new Set(["landlord", "tenant", "seller", "buyer", "split"]);
 const TASK_PRIORITIES = new Set(["normal", "high", "low"]);
 // Commission split. Listing takes 10% of the TOTAL; showing and lead generation
 // each take 25% of the NET remaining after the listing cut. Anything left stays
@@ -372,7 +375,7 @@ exports.handler = async (event) => {
       return json(200, { ok: true, data: await sbGet(`agents?select=id,name,email,phone,role&order=name.asc&limit=200`) });
     }
     if (route === "/deals" && method === "GET") {
-      return json(200, { ok: true, data: await sbGet(`deals?select=id,lead_id,property,monthly_rent,commission_total,stage,assigned_to,notes,created_at,leads(name,phone,email,property)&order=created_at.desc&limit=500`) });
+      return json(200, { ok: true, data: await sbGet(`deals?select=id,lead_id,property,monthly_rent,commission_total,stage,assigned_to,notes,created_at,deal_number,deal_type,client_role,client_name,closing_date,move_in_date,lease_term_months,security_deposit,sale_price,commission_payer,co_broke_firm,co_broke_agent,submitted_at,submitted_by,leads(name,phone,email,property)&order=created_at.desc&limit=500`) });
     }
     if (route === "/commissions" && method === "GET") {
       return json(200, { ok: true, data: await sbGet(`commissions?select=id,agent_id,rate,status,paid_at,notes,created_at&order=created_at.desc&limit=500`) });
@@ -509,13 +512,100 @@ exports.handler = async (event) => {
         if (body.stage !== undefined) patch.stage = vEnum(body.stage, DEAL_STAGES, "stage", true);
         if (body.agent_id !== undefined) patch.assigned_to = body.agent_id ? vId(body.agent_id, "agent_id") : null;
         if (body.notes !== undefined) patch.notes = vStr(body.notes, 5000, "notes", false);
+        if (body.deal_type !== undefined) patch.deal_type = vEnum(body.deal_type, DEAL_TYPES, "deal_type", false);
+        if (body.client_role !== undefined) patch.client_role = vEnum(body.client_role, CLIENT_ROLES, "client_role", false);
+        if (body.client_name !== undefined) patch.client_name = vStr(body.client_name, 200, "client_name", false);
+        if (body.closing_date !== undefined) patch.closing_date = vDate(body.closing_date, "closing_date");
+        if (body.move_in_date !== undefined) patch.move_in_date = vDate(body.move_in_date, "move_in_date");
+        if (body.lease_term_months !== undefined) patch.lease_term_months = vNum(body.lease_term_months, "lease_term_months");
+        if (body.security_deposit !== undefined) patch.security_deposit = vNum(body.security_deposit, "security_deposit");
+        if (body.sale_price !== undefined) patch.sale_price = vNum(body.sale_price, "sale_price");
+        if (body.commission_payer !== undefined) patch.commission_payer = vEnum(body.commission_payer, COMMISSION_PAYERS, "commission_payer", false);
+        if (body.co_broke_firm !== undefined) patch.co_broke_firm = vStr(body.co_broke_firm, 200, "co_broke_firm", false);
+        if (body.co_broke_agent !== undefined) patch.co_broke_agent = vStr(body.co_broke_agent, 200, "co_broke_agent", false);
       } catch (e) {
         return json(400, { ok: false, error: e.message || "validation_failed", field: e.field || null });
       }
       if (Object.keys(patch).length === 0) return json(400, { ok: false, error: "nothing_to_update" });
 
+      // A submitted deal is frozen. Corrections go to deal_amendments, which is
+      // append-only — a record you can silently rewrite is not evidence.
+      const cur = await sbGet(`deals?id=eq.${encodeURIComponent(id)}&select=submitted_at&limit=1`);
+      if (Array.isArray(cur) && cur[0] && cur[0].submitted_at) {
+        return json(403, { ok: false, error: "deal_locked" });
+      }
+
       await sbPatch(`deals?id=eq.${encodeURIComponent(id)}`, patch);
       return json(200, { ok: true, id, updated: Object.keys(patch) });
+    }
+
+    // Submit: lock the deal. Refuses if required paperwork is missing, because
+    // a lock that seals an incomplete record is worse than no lock.
+    if (route.startsWith("/deals/") && route.endsWith("/submit") && method === "POST") {
+      if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
+      const id = route.slice("/deals/".length, -"/submit".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+
+      const rows = await sbGet(`deals?id=eq.${encodeURIComponent(id)}&select=deal_type,client_role,submitted_at,commission_total&limit=1`);
+      const d = Array.isArray(rows) && rows[0] ? rows[0] : null;
+      if (!d) return json(404, { ok: false, error: "not_found" });
+      if (d.submitted_at) return json(400, { ok: false, error: "already_submitted" });
+      if (!d.deal_type || !d.client_role) return json(400, { ok: false, error: "type_and_role_required" });
+
+      const REQUIRED = {
+        rental: { landlord: ["listing_agreement", "disclosure", "lease"], tenant: ["disclosure", "application", "lease"] },
+        sale: { seller: ["listing_agreement", "sale_agreement", "disclosure"], buyer: ["sale_agreement", "disclosure"] },
+        referral: { referral_partner: ["referral_agreement"] },
+      };
+      const need = (REQUIRED[d.deal_type] && REQUIRED[d.deal_type][d.client_role]) || [];
+      const docs = await sbGet(`deal_documents?deal_id=eq.${encodeURIComponent(id)}&select=kind,storage_path,acknowledged`);
+      const have = new Set((docs || []).filter((x) => x.storage_path || x.acknowledged).map((x) => x.kind));
+      const missing = need.filter((k) => !have.has(k));
+      if (missing.length) return json(400, { ok: false, error: "missing_documents", missing });
+
+      await sbPatch(`deals?id=eq.${encodeURIComponent(id)}`, {
+        submitted_at: new Date().toISOString(),
+        submitted_by: s.user || "operator",
+      });
+      console.log(`[deals] ${id} submitted and locked by ${s.user || "operator"}`);
+      return json(200, { ok: true, locked: true });
+    }
+
+    // Amend a locked deal. Appends a reason and an author; the correction is
+    // applied AND recorded, so the original value is never lost.
+    if (route.startsWith("/deals/") && route.endsWith("/amend") && method === "POST") {
+      if (!requireCsrf(event, s.token)) return json(403, { ok: false, error: "csrf_failed" });
+      const id = route.slice("/deals/".length, -"/amend".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+      let body; try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { ok: false, error: "invalid_json" }); }
+
+      const field = vStr(body.field, 60, "field", true);
+      const reason = vStr(body.reason, 500, "reason", true);
+      if (reason.length < 5) return json(400, { ok: false, error: "reason_required" });
+      const AMENDABLE = new Set(["closing_date", "move_in_date", "commission_total", "sale_price",
+                                 "security_deposit", "lease_term_months", "notes", "stage"]);
+      if (!AMENDABLE.has(field)) return json(400, { ok: false, error: "field_not_amendable" });
+
+      const rows = await sbGet(`deals?id=eq.${encodeURIComponent(id)}&select=${field}&limit=1`);
+      const oldVal = Array.isArray(rows) && rows[0] ? rows[0][field] : null;
+
+      await sbPost("deal_amendments", {
+        deal_id: id, field,
+        old_value: oldVal === null || oldVal === undefined ? null : String(oldVal),
+        new_value: body.value === null || body.value === undefined ? null : String(body.value),
+        reason, amended_by: s.user || "operator",
+      });
+      await sbPatch(`deals?id=eq.${encodeURIComponent(id)}`, { [field]: body.value });
+      console.log(`[deals] ${id} amended: ${field} by ${s.user || "operator"}`);
+      return json(200, { ok: true });
+    }
+
+    // The amendment history for a deal.
+    if (route.startsWith("/deals/") && route.endsWith("/amendments") && method === "GET") {
+      const id = route.slice("/deals/".length, -"/amendments".length);
+      if (!validId(id)) return json(400, { ok: false, error: "bad_id" });
+      const rows = await sbGet(`deal_amendments?deal_id=eq.${encodeURIComponent(id)}&select=*&order=created_at.desc&limit=50`);
+      return json(200, { ok: true, data: rows || [] });
     }
 
     if (route.startsWith("/deals/") && route.endsWith("/participants") && method === "GET") {
