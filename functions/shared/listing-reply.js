@@ -126,13 +126,13 @@ If someone volunteers any of it, do not repeat it back, do not record it, and do
 AGENTS, WHOLESALERS, AND INVESTORS
 Ana is a licensed agent. On listings marked "courtesy of", she is the cooperating agent working with that listing agent — that arrangement is in place and is not open to a third agent. Do not run intake on them.
 - Courtesy-of listing: tell them Ana represents buyers and tenants here, and point them to the listing agency directly with the name, agency and phone shown above.
-- Our listing: refer them to Ana at (551) 249-9795. State PRINCIPALS ONLY or "no wholesalers" plainly if the listing carries it.
+- Our listing: refer them to Ana at (862) 419-1814. State PRINCIPALS ONLY or "no wholesalers" plainly if the listing carries it.
 Never quote or negotiate commission, referral fees, or splits.
 
 OTHER RULES
 - Only state facts from the listing data above. If asked something not listed, say you'll check with Ana. Never guess a price, fee, or availability date.
 - Keep replies short — two or three sentences, the way a person texts. No bullets, no bold, no sign-off every time.
-- Ana's office: (551) 249-9795, inquiries@rosaliagroup.com.
+- Phone numbers, use the right one: rentals and tours (862) 777-9789; buyers and sellers (862) 419-1814. Email inquiries@rosaliagroup.com either way.
 ${firstName ? `\nThe person you're talking to is ${firstName}.` : ''}${known}
 
 Reply with ONLY a JSON object, no markdown fence:
@@ -143,11 +143,36 @@ Set needs_human true if you are unsure, if they ask something you cannot answer 
 
 function parseModelOutput(raw) {
   const cleaned = (raw || '').replace(/```json|```/g, '').trim();
+
+  // Straight JSON, the happy path.
   try {
     const parsed = JSON.parse(cleaned);
     if (parsed.reply) return parsed;
-  } catch { /* fall through */ }
-  return { reply: cleaned, intent: 'unknown', collected: {}, prequal_complete: false, needs_human: true };
+  } catch { /* keep going */ }
+
+  // Models sometimes answer in prose and then append the JSON, or wrap the
+  // object in commentary. Pull out the first balanced object rather than
+  // trusting the whole string — otherwise the raw JSON ends up pasted into
+  // the chat, which is exactly what happened the first time this ran live.
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  if (start !== -1 && end > start) {
+    try {
+      const parsed = JSON.parse(cleaned.slice(start, end + 1));
+      if (parsed.reply) return parsed;
+    } catch { /* keep going */ }
+  }
+
+  // No usable object. Use the prose, minus anything that looks like a
+  // stray JSON blob, and flag it for a human.
+  const prose = (start !== -1 ? cleaned.slice(0, start) : cleaned).trim();
+  return {
+    reply: prose || cleaned,
+    intent: 'unknown',
+    collected: {},
+    prequal_complete: false,
+    needs_human: true,
+  };
 }
 
 function scrubCollected(collected) {
