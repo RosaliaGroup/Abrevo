@@ -9,6 +9,11 @@ const PAGE_TOKEN = process.env.FB_PAGE_TOKEN;
 
 const GRAPH = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
+// Booking links carry the brokerage's domain. Abrevo is the software
+// vendor and holds no real estate licence — the domain in an advert is
+// part of the advert.
+const BOOKING_HOST = process.env.BOOKING_HOST || 'https://buy.rosaliagroup.com';
+
 // ── supabase ──────────────────────────────────────────────────
 const sbHeaders = {
   'Content-Type': 'application/json',
@@ -140,8 +145,8 @@ function buildMessage(l) {
       ? 'All lawful sources of income welcome, including housing vouchers.'
       : null,
     isRental
-      ? `Book a tour: https://abrevo.co/booking-form?listing=${l.id}&type=tour`
-      : `Book a buyer consultation: https://abrevo.co/buyer-consultation?listing=${l.id}`,
+      ? `Book a tour: ${BOOKING_HOST}/renting`
+      : `Book an appointment: ${BOOKING_HOST}`,
     '',
     ...termsLines(l),
     termsLines(l).length ? '' : null,

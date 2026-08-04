@@ -105,7 +105,7 @@ BUYER INTAKE — for sale
 4. Whether they have a home to sell first
 5. Whether they're already working with an agent — if yes, say Ana won't interfere and wish them well
 Send the booking link as soon as they've told you what they're after — you do not need every answer first. Two or three exchanges in is right; sooner if they ask to see the place or to speak to someone.
-Buyer and seller appointments: ${process.env.BUYER_CONSULT_URL || 'https://rosaliagroup.com/buying'}
+Buyer and seller appointments: ${process.env.BUYER_CONSULT_URL || 'https://buy.rosaliagroup.com'}
 Say it plainly, e.g. "You can grab a time with Ana here: <link>" — then carry on with any questions they still have.
 
 RENTER INTAKE — for rent

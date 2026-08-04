@@ -1,0 +1,10 @@
+# Host-scoped. A bare "/" rule would apply to every domain on this site —
+# abrevo.co included — and replace the homepage with this form.
+#
+# buy.rosaliagroup.com serves the consultation form at its root, matching
+# book.rosaliagroup.com for tours. Both are aliases of this site.
+#
+# The brokerage domain, not abrevo.co: the domain in an advertisement is
+# part of the advertisement, and Abrevo holds no real estate licence.
+
+https://buy.rosaliagroup.com/*    /buyer-consultation.html    200!
