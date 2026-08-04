@@ -2393,12 +2393,21 @@ async function loadDealContacts(dealId, locked, deal) {
         ? '<div style="font-size:13px;color:#ff9a9a;margin-top:8px">Still needed: '
           + need.filter(r => !have.has(r)).map(r => CONTACT_LABELS[r] || r).join(', ') + '</div>'
         : '')
-    + (locked ? '' : '<button class="btn btn-sm btn-outline" style="margin-top:10px" onclick="addContact(\''+dealId+'\')">+ Add person</button>');
+    + (locked ? '' :
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+        // One button per party this deal still needs, named. The alternative —
+        // a generic button and a nine-item dropdown — makes you work out what
+        // the deal requires when the deal already knows.
+        + need.filter(r => !have.has(r)).map(r =>
+            '<button class="btn btn-sm btn-gold" onclick="addContact(\''+dealId+'\',\''+r+'\')">+ Add '
+            + (CONTACT_LABELS[r] || r).toLowerCase() + '</button>').join('')
+        + '<button class="btn btn-sm btn-outline" onclick="addContact(\''+dealId+'\',\'\')">+ Someone else</button>'
+        + '</div>');
 }
 
 // An inline form, not a chain of prompts. Five prompts in a row is unusable for
 // four people on one deal, and you can't correct an earlier answer.
-function addContact(dealId) {
+function addContact(dealId, presetRole) {
   const box = document.getElementById('dl-contact-form');
   if (!box) return;
   const roles = [
@@ -2406,11 +2415,18 @@ function addContact(dealId) {
     ['co_broke_agent','Other agent'], ['co_broke_firm','Other brokerage'],
     ['referral_partner','Referral partner'], ['attorney','Attorney'], ['other','Other'],
   ];
+  const known = roles.find(([v]) => v === presetRole);
   box.innerHTML =
       '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-top:10px">'
+    // When we already know the role, state it rather than offering a choice.
+    + (known
+        ? '<div style="font-size:15px;margin-bottom:10px">Adding the <strong>' + known[1].toLowerCase() + '</strong>'
+          + '<input type="hidden" id="nc-role" value="' + known[0] + '"></div>'
+        : '')
     + '<div class="form-row">'
-    + '<div class="form-group"><label>Role</label><select id="nc-role">'
-    + roles.map(([v,l]) => '<option value="'+v+'">'+l+'</option>').join('') + '</select></div>'
+    + (known ? '' :
+        '<div class="form-group"><label>Role</label><select id="nc-role">'
+        + roles.map(([v,l]) => '<option value="'+v+'">'+l+'</option>').join('') + '</select></div>')
     // Pull from an existing lead where there is one — most landlords and
     // co-broke agents on a repeat property are already in the system.
     + '<div class="form-group"><label>Existing lead</label><select id="nc-lead" onchange="fillContactFromLead()">'
