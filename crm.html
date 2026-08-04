@@ -2360,7 +2360,23 @@ const CONTACT_LABELS = {
 async function loadDealContacts(dealId, locked, deal) {
   const el = document.getElementById('dl-contacts');
   if (!el) return;
-  const rows = await apiGet('/deals/' + encodeURIComponent(dealId) + '/contacts') || [];
+  let rows = await apiGet('/deals/' + encodeURIComponent(dealId) + '/contacts') || [];
+
+  // The client is already on the deal — asking someone to retype a name, phone
+  // and email we're displaying two inches higher is busywork, and retyping is
+  // how a digit gets dropped. Add them once, automatically.
+  const lead = deal.leads || allLeads.find(l => l.id === deal.lead_id);
+  const clientRole = deal.deal_type === 'rental' ? (deal.client_role === 'landlord' ? 'landlord' : 'tenant')
+                   : deal.deal_type === 'sale' ? (deal.client_role === 'seller' ? 'seller' : 'buyer')
+                   : 'client';
+  if (!locked && lead && lead.name && !rows.some(r => r.lead_id === deal.lead_id)) {
+    const r = await apiSend('POST', '/deals/' + dealId + '/contacts', {
+      role: clientRole, name: lead.name,
+      phone: lead.phone || '', email: lead.email || '',
+      lead_id: deal.lead_id,
+    });
+    if (r && r.ok !== false) rows = await apiGet('/deals/' + encodeURIComponent(dealId) + '/contacts') || [];
+  }
   const need = requiredContactRoles(deal || {});
   const have = new Set(rows.map(r => r.role));
 
@@ -2395,7 +2411,13 @@ function addContact(dealId) {
     + '<div class="form-row">'
     + '<div class="form-group"><label>Role</label><select id="nc-role">'
     + roles.map(([v,l]) => '<option value="'+v+'">'+l+'</option>').join('') + '</select></div>'
-    + '<div class="form-group"><label>Full name</label><input id="nc-name" placeholder="Jane Smith"></div></div>'
+    // Pull from an existing lead where there is one — most landlords and
+    // co-broke agents on a repeat property are already in the system.
+    + '<div class="form-group"><label>Existing lead</label><select id="nc-lead" onchange="fillContactFromLead()">'
+    + '<option value="">Type manually</option>'
+    + allLeads.slice(0, 300).map(l => '<option value="'+l.id+'">'+esc(l.name || 'Unknown')+'</option>').join('')
+    + '</select></div></div>'
+    + '<div class="form-group"><label>Full name</label><input id="nc-name" placeholder="Jane Smith"></div>'
     + '<div class="form-row">'
     + '<div class="form-group"><label>Phone</label><input id="nc-phone" placeholder="(201) 555-0123"></div>'
     + '<div class="form-group"><label>Email</label><input id="nc-email" type="email" placeholder="jane@example.com"></div></div>'
@@ -2405,6 +2427,17 @@ function addContact(dealId) {
     + '<button class="btn btn-sm btn-gold" onclick="saveContact(\''+dealId+'\')">Add</button>'
     + '<button class="btn btn-sm btn-outline" onclick="document.getElementById(\'dl-contact-form\').innerHTML=\'\'">Cancel</button>'
     + '</div></div>';
+}
+
+// Copy an existing lead's details into the form rather than retyping them.
+function fillContactFromLead() {
+  const id = document.getElementById('nc-lead').value;
+  if (!id) return;
+  const l = allLeads.find(x => x.id === id);
+  if (!l) return;
+  document.getElementById('nc-name').value = l.name || '';
+  document.getElementById('nc-phone').value = l.phone || '';
+  document.getElementById('nc-email').value = l.email || '';
 }
 
 async function saveContact(dealId) {
@@ -2422,6 +2455,7 @@ async function saveContact(dealId) {
   const r = await apiSend('POST', '/deals/' + dealId + '/contacts', {
     role: document.getElementById('nc-role').value,
     name, phone, email, company: v('nc-company'),
+    lead_id: document.getElementById('nc-lead').value || null,
   });
   if (!r || r.ok === false) { show('Could not add: ' + ((r && r.error) || 'unknown error')); return; }
 
