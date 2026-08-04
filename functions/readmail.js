@@ -79,6 +79,7 @@ Ana Haynes | Rosalia Group
 const { getPropertyMedia } = require('./lib/propertyMedia');
 
 const { sendSMS } = require('./lib/sms');
+const { leadLink } = require('./_lib/outboundLeadLink');
 const { getGoogleCredentials } = require('./lib/googleCreds');
 const { cleanName } = require('./lib/leadName');
 const { extractProperty, propertyFromClient } = require('./lib/leadProperty');
@@ -1447,11 +1448,15 @@ async function triggerCall(phone, leadName) {
   }
 }
 
-async function buildAndSendLeadText(phone, leadName, property, bookingUrl) {
+async function buildAndSendLeadText(phone, leadName, property, bookingUrl, leadId, client) {
   const firstName = leadName?.split(' ')[0] || 'there';
   const url = bookingUrl || BOOKING_FORM_URL;
   const msg = `Hi ${firstName}! Rosalia Group here — we just replied to your inquiry${property ? ` about ${property}` : ''}.\nBook a tour: ${url}`;
-  const result = await sendSMS(phone, msg, { optOut: true, cooldownHours: 2 });
+  // Phase 2A-2: attach the email-resolved known lead id (Rosalia only) so the
+  // existing sendSMS -> threadLog path links the persisted outbound message.
+  // Additive option only; body, URL, recipient, and cooldown are unchanged.
+  const link = leadLink(leadId, client);
+  const result = await sendSMS(phone, msg, { optOut: true, cooldownHours: 2, ...(link ? { links: [link] } : {}) });
   console.log('SMS sent to:', phone, result.success);
   return result;
 }
@@ -2240,7 +2245,7 @@ exports.handler = async (event) => {
         // For FUB leads with no real email (Facebook/Instagram leads) — skip email reply, use SMS+call only
         if (isFUB && !realEmail) {
           console.log('FUB lead with no email (Facebook/Instagram) — skipping email reply, SMS+call only');
-          await saveLead(fromEmail, realName || fromName, subject, body, null, phone, leadClient, parsed.messageId);
+          const savedLead = await saveLead(fromEmail, realName || fromName, subject, body, null, phone, leadClient, parsed.messageId);
           await notifyAna(realName || fromName || from, subject, phone, false);
           if (phone) {
             const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
@@ -2251,7 +2256,7 @@ exports.handler = async (event) => {
                                 (etHour >= 11 && etHour < 17);
             const smsBookingUrl = leadClient === 'iron65' ? IRON65_BOOKING_URL : BOOKING_FORM_URL;
             const smsProperty = extractProperty(body, subject) || '';
-            await buildAndSendLeadText(phone, realName || fromName, smsProperty, smsBookingUrl);
+            await buildAndSendLeadText(phone, realName || fromName, smsProperty, smsBookingUrl, savedLead?.id, savedLead?.client);
             if (callAllowed) {
               await triggerCall(phone, realName || fromName);
             }
@@ -2353,7 +2358,7 @@ exports.handler = async (event) => {
           const ccEmail = avail && realEmail && realEmail !== fromEmail ? realEmail : null;
           await sendReply(replyTarget, subject, replyText, ccEmail);
         }
-        await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone, leadClient, parsed.messageId);
+        const savedLead = await saveLead(realEmail || fromEmail, realName || fromName, subject, body, replyText, phone, leadClient, parsed.messageId);
         // Business hours check BEFORE notifying Ana
         let callAllowed = false;
         if (phone) {
@@ -2376,7 +2381,7 @@ exports.handler = async (event) => {
           const shouldSendSMS = !hadPhone || !isReply;
           if (shouldSendSMS) {
             if (isReply && !hadPhone) console.log('Phone newly provided in reply — sending SMS immediately:', phone);
-            await buildAndSendLeadText(phone, realName || fromName, propertyName, smsBookingUrl);
+            await buildAndSendLeadText(phone, realName || fromName, propertyName, smsBookingUrl, savedLead?.id, savedLead?.client);
             if (callAllowed) {
               await triggerCall(phone, realName || fromName);
               console.log('Call triggered during business hours for:', realName || fromName);

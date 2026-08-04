@@ -8,6 +8,7 @@ const JESSICA_PHONE_ID = '2e2b6713-f631-4e9e-95fa-3418ecc77c0a';
 const { sendSMS } = require('./lib/sms');
 const { isSkipNumber } = require('./lib/skipNumbers');
 const { cleanName } = require('./lib/leadName');
+const { leadLink } = require('./_lib/outboundLeadLink');
 const ANA_PHONE = '+16462269189';
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
 const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
@@ -131,7 +132,7 @@ function buildingLabel(property) {
   return p;
 }
 
-async function sendLeadSMS(phone, leadName, bookingUrl, attemptNumber, property) {
+async function sendLeadSMS(phone, leadName, bookingUrl, attemptNumber, property, leadId, client) {
   const firstName = (leadName || '').split(' ')[0] || 'there';
   const b = buildingLabel(property);
 
@@ -157,7 +158,11 @@ async function sendLeadSMS(phone, leadName, bookingUrl, attemptNumber, property)
   // 1h cooldown: readmail already texts a brand-new lead the moment their
   // email lands, and autocall picks the same lead up seconds later. Without
   // this they get two texts ~20s apart. The CALL still happens either way.
-  const result = await sendSMS(phone, msg, { optOut: true, cooldownHours: 1 });
+  // Phase 2A-2: attach the known lead id (Rosalia only) so the existing
+  // sendSMS -> threadLog path links the persisted outbound message. Additive
+  // option only; body, recipient, cooldown, and timing are unchanged.
+  const link = leadLink(leadId, client);
+  const result = await sendSMS(phone, msg, { optOut: true, cooldownHours: 1, ...(link ? { links: [link] } : {}) });
   console.log(`SMS attempt ${attemptNumber} sent to ${result.to || phone}: ${result.success}`);
   return result;
 }
@@ -194,6 +199,9 @@ async function triggerCall(phone, leadName, assistantId, phoneId, property) {
     return null;
   }
 }
+
+// Exposed for unit tests (lead-link propagation). Not used by the handler wiring.
+exports.sendLeadSMS = sendLeadSMS;
 
 exports.handler = async (event) => {
   const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
@@ -245,7 +253,7 @@ exports.handler = async (event) => {
         const callId = await triggerCall(lead.phone, callName, assistantId, phoneId, lead.property);
 
         // Send SMS after every missed call attempt
-        await sendLeadSMS(lead.phone, callName, bookingUrl, attempts, lead.property);
+        await sendLeadSMS(lead.phone, callName, bookingUrl, attempts, lead.property, lead.id, lead.client);
 
         // Placing a call is an ATTEMPT, however many times we try. 'contacted'
         // means the person actually engaged, and only an inbound reply proves
