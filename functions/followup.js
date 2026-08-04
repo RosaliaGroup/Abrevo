@@ -16,6 +16,7 @@ const GMAIL_PASS = process.env.GMAIL_PASS_INQUIRIES;
 const BOOKING_FORM_URL = 'https://book.rosaliagroup.com/book';
 const IRON65_BOOKING_URL = 'https://book.rosaliagroup.com/iron65';
 const { sendSMS } = require('./lib/sms');
+const { leadLink } = require('./_lib/outboundLeadLink');
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
 // Ask Claude to improve ONLY the wording of a follow-up email. Returns the raw
@@ -107,7 +108,11 @@ async function sendFollowUpSMS(lead, attempt) {
   const msg = buildSMS(lead, attempt, bookingUrl);
   // Route through the shared Telnyx sender (functions/lib/sms.js). buildSMS()
   // already includes "Reply STOP to opt out.", so withOptOut is a no-op backstop.
-  const result = await sendSMS(lead.phone, msg, { optOut: true });
+  // Phase 2A-2: attach the known lead id (Rosalia only) so the existing
+  // sendSMS -> threadLog path links the persisted outbound message. Additive
+  // option only; body, recipient, and every other option are unchanged.
+  const link = leadLink(lead.id, lead.client);
+  const result = await sendSMS(lead.phone, msg, { optOut: true, ...(link ? { links: [link] } : {}) });
   console.log(`Follow-up SMS #${attempt} sent to:`, lead.phone, result.success);
 }
 
@@ -169,3 +174,6 @@ exports.handler = async () => {
     return { statusCode: 500, headers, body: JSON.stringify({ error: e.message }) };
   }
 };
+
+// Exposed for unit tests (lead-link propagation). Not used by the handler wiring.
+exports.sendFollowUpSMS = sendFollowUpSMS;
