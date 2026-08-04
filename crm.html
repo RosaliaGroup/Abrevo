@@ -2163,8 +2163,9 @@ async function openDealDetail(id) {
 
   document.getElementById('dl-body').innerHTML =
       (locked ? '<div style="background:rgba(201,168,76,.12);border:1px solid var(--gold);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:14px">'
-        + 'Submitted ' + fmtStamp(d.submitted_at) + ' by ' + esc(d.submitted_by || 'operator')
-        + '. This deal is locked — use <b>Amend</b> to record a correction.</div>' : '')
+        + '<div>Submitted ' + fmtStamp(d.submitted_at) + ' by ' + esc(d.submitted_by || 'operator') + '. This deal is locked.</div>'
+        + '<button class="btn btn-sm btn-outline" style="margin-top:8px" onclick="openAmend(\''+id+'\')">Record a correction</button>'
+        + '<div id="dl-amend"></div><div id="dl-amend-log" style="margin-top:10px"></div></div>' : '')
     + (d.deal_number ? '<div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Deal '+esc(d.deal_number)+'</div>' : '')
     + '<div class="form-row">'
     + sel('dl-type','Deal type',['rental','sale','referral'], d.deal_type)
@@ -2203,6 +2204,7 @@ async function openDealDetail(id) {
   });
 
   loadDealSplit(id, locked, d);
+  if (locked) loadAmendments(id);
   loadDealContacts(id, locked, d);
 
   // Everything read-only once submitted; the record is the record.
@@ -2267,6 +2269,74 @@ async function saveDealEdit() {
   closeModal('deal-modal');
   allDeals = await apiGet('/deals') || [];
   loadPipeline();
+}
+
+// ── AMENDMENTS ──
+// A submitted deal is frozen, but a wrong date still has to be correctable —
+// otherwise the first typo makes the record permanently wrong, which is worse
+// than no lock. Corrections are applied AND appended with a reason and author,
+// so the original value is never lost.
+const AMENDABLE_FIELDS = [
+  ['closing_date', 'Closing date', 'date'],
+  ['move_in_date', 'Move-in date', 'date'],
+  ['commission_total', 'Commission', 'number'],
+  ['sale_price', 'Sale price', 'number'],
+  ['security_deposit', 'Security deposit', 'number'],
+  ['lease_term_months', 'Lease term (months)', 'number'],
+  ['stage', 'Stage', 'text'],
+  ['notes', 'Notes', 'text'],
+];
+
+function openAmend(dealId) {
+  const box = document.getElementById('dl-amend');
+  if (!box) return;
+  box.innerHTML =
+      '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;margin-top:10px">'
+    + '<div class="form-row">'
+    + '<div class="form-group"><label>What is being corrected</label><select id="am-field">'
+    + AMENDABLE_FIELDS.map(([v,l]) => '<option value="'+v+'">'+l+'</option>').join('') + '</select></div>'
+    + '<div class="form-group"><label>Correct value</label><input id="am-value"></div></div>'
+    // A reason is mandatory: an amendment without one is just an edit, and the
+    // whole point of the trail is being able to explain a change later.
+    + '<div class="form-group"><label>Reason for the correction</label>'
+    + '<input id="am-reason" placeholder="e.g. closing moved at landlord\'s request"></div>'
+    + '<div id="am-err" style="display:none;color:#ff9a9a;font-size:13px;margin-bottom:8px"></div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button class="btn btn-sm btn-gold" onclick="saveAmend(\''+dealId+'\')">Record correction</button>'
+    + '<button class="btn btn-sm btn-outline" onclick="document.getElementById(\'dl-amend\').innerHTML=\'\'">Cancel</button>'
+    + '</div></div>';
+}
+
+async function saveAmend(dealId) {
+  const err = document.getElementById('am-err');
+  const show = m => { err.style.display = 'block'; err.textContent = m; };
+  err.style.display = 'none';
+  const field = document.getElementById('am-field').value;
+  const value = (document.getElementById('am-value').value || '').trim();
+  const reason = (document.getElementById('am-reason').value || '').trim();
+  if (!reason || reason.length < 5) { show('Give a reason — it is what makes this a correction rather than an edit.'); return; }
+
+  const r = await apiSend('POST', '/deals/' + dealId + '/amend', { field, value: value || null, reason });
+  if (!r || r.ok === false) { show('Could not record: ' + ((r && r.error) || 'unknown error')); return; }
+
+  document.getElementById('dl-amend').innerHTML = '';
+  allDeals = await apiGet('/deals') || [];
+  openDealDetail(dealId);
+}
+
+// The history, shown on the deal. A correction nobody can see is not a trail.
+async function loadAmendments(dealId) {
+  const el = document.getElementById('dl-amend-log');
+  if (!el) return;
+  const rows = await apiGet('/deals/' + encodeURIComponent(dealId) + '/amendments') || [];
+  if (!rows.length) { el.innerHTML = ''; return; }
+  const label = f => (AMENDABLE_FIELDS.find(([v]) => v === f) || [f, f])[1];
+  el.innerHTML = '<div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Corrections</div>'
+    + rows.map(a =>
+        '<div style="font-size:13px;padding:6px 0;border-top:1px solid rgba(255,255,255,.06)">'
+        + '<div>' + esc(label(a.field)) + ': ' + esc(a.old_value || '—') + ' &rarr; ' + esc(a.new_value || '—') + '</div>'
+        + '<div style="color:var(--text-muted)">' + esc(a.reason) + ' — ' + esc(a.amended_by) + ', ' + fmtStamp(a.created_at) + '</div>'
+        + '</div>').join('');
 }
 
 // ── COMMISSION STRUCTURE ──
