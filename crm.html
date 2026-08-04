@@ -544,45 +544,21 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 
 <!-- ADD DEAL MODAL -->
 <div class="modal-overlay" id="add-deal-modal" onclick="if(event.target===this)closeModal(this.id)">
-<div class="modal">
-  <h2>Add Deal</h2>
-  <div class="form-group"><label>Lead</label><select id="ad-lead"></select></div>
-  <div class="form-row">
-    <div class="form-group"><label>Property</label><input id="ad-property"></div>
-    <div class="form-group"><label>Monthly Rent</label><input id="ad-rent" type="number" placeholder="2500"></div>
-  </div>
-  <div class="form-row">
-    <div class="form-group"><label>Stage</label><select id="ad-stage"><option>inquiry</option><option>toured</option><option>applied</option><option>approved</option><option>lease_sent</option><option>signed</option><option>moved_in</option><option>lost</option></select></div>
-    <div class="form-group"><label>Assigned Agent</label><select id="ad-agent"><option value="">Unassigned</option></select></div>
-  </div>
-  <div class="form-row">
-    <div class="form-group"><label>Commission ($)</label>
-      <input id="ad-commission" type="number" step="0.01" placeholder="2500" oninput="renderSplit()">
-      <div style="margin-top:6px;display:flex;gap:6px">
-        <button type="button" class="btn btn-sm btn-outline" onclick="commissionFromRent(1)">1 month</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="commissionFromRent(0.5)">&frac12; month</button>
-      </div>
-    </div>
-    <div class="form-group"><label>Split</label>
-      <div id="ad-split-summary" style="font-size:14px;color:var(--text-muted);padding-top:8px">Enter a commission to see the split</div>
+  <div class="modal" style="max-width:460px">
+    <h2>Start a deal</h2>
+    <p style="color:var(--text-muted);font-size:14px;margin:6px 0 16px">
+      Pick the lead and the property. Everything else — type, contacts, dates,
+      commission and documents — is on the deal itself.
+    </p>
+    <div class="form-group"><label>Lead</label><select id="ad-lead"></select></div>
+    <div class="form-group"><label>Property</label><input type="text" id="ad-property" placeholder="Iron 65"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-outline" onclick="closeModal('add-deal-modal')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveDeal()">Create &amp; open</button>
     </div>
   </div>
-
-  <div class="form-group">
-    <label>Who was involved</label>
-    <div id="ad-roles"></div>
-    <button type="button" class="btn btn-sm btn-outline" onclick="addOtherRole()" style="margin-top:8px">+ Add someone else</button>
-  </div>
-
-  <div class="form-group"><label>Notes</label><textarea id="ad-notes" rows="2"></textarea></div>
-  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-    <button class="btn btn-outline" onclick="closeModal('add-deal-modal')">Cancel</button>
-    <button class="btn btn-gold" onclick="saveDeal()">Save Deal</button>
-  </div>
-</div>
 </div>
 
-<!-- ADD TASK MODAL -->
 <div class="modal-overlay" id="add-task-modal" onclick="if(event.target===this)closeModal(this.id)">
 <div class="modal">
   <h2>Add Task</h2>
@@ -2593,10 +2569,9 @@ function createDealForLead() {
 }
 
 function openDealModal() {
-  __otherRoles = [];
-  ['ad-property','ad-rent','ad-commission','ad-notes'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
-  renderRoleRows();
-  renderSplit();
+  // Only two fields now — the rest of the deal is filled in on the deal itself,
+  // so there is one form to learn rather than two that disagree.
+  ['ad-property'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
   // Property follows the selected lead: it's already on the record, and retyping
   // it by hand is how the same building ends up spelled three ways.
   const sel = document.getElementById('ad-lead');
@@ -2619,125 +2594,31 @@ function fillDealProperty() {
 // the NET left after the listing cut. Whatever remains stays with the house.
 // The server recalculates all of this on save — these figures are a preview, so
 // nobody is agreeing a number the backend won't honour.
-const SPLIT_ROLES = [
-  ['listing',  'Listing agent',   10, 'total'],
-  ['showing',  'Showing agent',   25, 'net'],
-  ['lead_gen', 'Lead generation', 25, 'net'],
-];
-let __otherRoles = [];   // [{label, pct, basis, agent_id}]
 
-function agentOptions(sel) {
-  return ['<option value="">Not involved</option>'].concat(
-    allAgents.map(a => '<option value="'+a.id+'"'+(sel===a.id?' selected':'')+'>'+esc(a.name)+'</option>')
-  ).join('');
-}
 
-function renderRoleRows() {
-  const box = document.getElementById('ad-roles');
-  if (!box) return;
-  const core = SPLIT_ROLES.map(([key,label,pct,basis]) =>
-      '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
-    + '<div style="width:130px;font-size:14px">'+label+'</div>'
-    + '<select id="role-'+key+'" onchange="renderSplit()" style="flex:1">'+agentOptions('')+'</select>'
-    + '<div style="width:96px;font-size:13px;color:var(--text-muted)">'+pct+'% of '+basis+'</div>'
-    + '<div id="amt-'+key+'" style="width:88px;text-align:right;font-size:14px"></div></div>').join('');
 
-  const others = __otherRoles.map((o,i) =>
-      '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
-    + '<input value="'+esc(o.label||'')+'" placeholder="Role" oninput="__otherRoles['+i+'].label=this.value" style="width:130px">'
-    + '<select onchange="__otherRoles['+i+'].agent_id=this.value;renderSplit()" style="flex:1">'+agentOptions(o.agent_id)+'</select>'
-    + '<input type="number" value="'+(o.pct||0)+'" oninput="__otherRoles['+i+'].pct=Number(this.value);renderSplit()" style="width:56px"> '
-    + '<select onchange="__otherRoles['+i+'].basis=this.value;renderSplit()" style="width:74px">'
-    +   '<option value="net"'+(o.basis==='net'?' selected':'')+'>of net</option>'
-    +   '<option value="total"'+(o.basis==='total'?' selected':'')+'>of total</option></select>'
-    + '<button type="button" class="btn btn-sm btn-outline" onclick="__otherRoles.splice('+i+',1);renderRoleRows();renderSplit()">&times;</button></div>').join('');
-  box.innerHTML = core + others;
-}
 
-function addOtherRole() {
-  // Several people can be involved in a transaction; the three core roles are
-  // fixed but this is open-ended.
-  __otherRoles.push({ label: '', pct: 10, basis: 'net', agent_id: '' });
-  renderRoleRows();
-  renderSplit();
-}
 
-function commissionFromRent(mult) {
-  const rent = Number(document.getElementById('ad-rent').value) || 0;
-  if (!rent) { alert('Enter the monthly rent first.'); return; }
-  document.getElementById('ad-commission').value = (rent * mult).toFixed(2);
-  renderSplit();
-}
 
-function splitAmount(total, pct, basis) {
-  const listingCut = total * 0.10;
-  const base = basis === 'total' ? total : total - listingCut;
-  return Math.round(base * (pct/100) * 100) / 100;
-}
-
-function renderSplit() {
-  const total = Number((document.getElementById('ad-commission')||{}).value) || 0;
-  const money = n => '$' + n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-  let paid = 0;
-  SPLIT_ROLES.forEach(([key,,pct,basis]) => {
-    const sel = document.getElementById('role-'+key);
-    const cell = document.getElementById('amt-'+key);
-    const active = sel && sel.value;
-    const amt = active ? splitAmount(total, pct, basis) : 0;
-    if (active) paid += amt;
-    if (cell) cell.textContent = active && total ? money(amt) : '—';
-  });
-  __otherRoles.forEach(o => { if (o.agent_id || o.label) paid += splitAmount(total, o.pct||0, o.basis); });
-  const el = document.getElementById('ad-split-summary');
-  if (!el) return;
-  el.innerHTML = total
-    ? 'Paid out <strong>'+money(paid)+'</strong><br>House keeps <strong>'+money(Math.round((total-paid)*100)/100)+'</strong>'
-      + (paid > total ? '<br><span style="color:#ff9a9a">Over-allocated</span>' : '')
-    : 'Enter a commission to see the split';
-}
 
 async function saveDeal() {
-  const data = {
-    lead_id: document.getElementById('ad-lead').value || null,
-    property: document.getElementById('ad-property').value.trim(),
-    monthly_rent: Number(document.getElementById('ad-rent').value) || null,
-    commission_total: Number(document.getElementById('ad-commission').value) || null,
-    stage: document.getElementById('ad-stage').value,
-    agent_id: document.getElementById('ad-agent').value || null,
-    notes: document.getElementById('ad-notes').value.trim() || null,
-  };
-  // A lead must be chosen: the API rejects a deal without one, and the previous
-  // version showed nothing when it did.
-  if (!data.lead_id) { alert('Choose a lead for this deal.'); return; }
-  if (!data.property) { alert('Enter a property.'); return; }
+  const lead_id = document.getElementById('ad-lead').value || null;
+  const property = document.getElementById('ad-property').value.trim();
+  if (!lead_id) { alert('Choose a lead for this deal.'); return; }
+  if (!property) { alert('Enter a property.'); return; }
 
-  const r = await apiSend('POST', '/deals', data);
+  const r = await apiSend('POST', '/deals', { lead_id, property, stage: 'inquiry' });
   if (!r || r.ok === false) {
-    // Previously this failed silently — no error, no feedback, the modal just
-    // stayed open and nothing saved.
-    alert('Could not save the deal: ' + ((r && r.error) || 'unknown error'));
+    alert('Could not create the deal: ' + ((r && r.error) || 'unknown error'));
     return;
   }
-  const dealId = r && (r.id || (r.data && r.data.id));
-
-  // Participants are saved second: they need the deal id, and the server
-  // recomputes every amount from the stored commission total.
-  if (dealId) {
-    const participants = [];
-    SPLIT_ROLES.forEach(([key]) => {
-      const sel = document.getElementById('role-'+key);
-      if (sel && sel.value) participants.push({ role: key, agent_id: sel.value });
-    });
-    __otherRoles.forEach(o => {
-      if (o.agent_id || o.label) participants.push({ role: 'other', agent_id: o.agent_id || null, label: o.label || 'Other', pct: o.pct || 0, basis: o.basis });
-    });
-    if (participants.length) await apiSend('POST', '/deals/'+dealId+'/participants', { participants });
-  }
-
+  const dealId = r.id || (r.data && r.data.id);
   closeModal('add-deal-modal');
-  __otherRoles = [];
   allDeals = await apiGet('/deals') || [];
   loadPipeline();
+  // Straight into the full form: one place to fill in a deal, so there is no
+  // second set of fields to discover after the fact.
+  if (dealId) openDealDetail(dealId);
 }
 
 async function saveTask() {
