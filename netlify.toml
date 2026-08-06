@@ -249,6 +249,17 @@
   force = true
 
 [[redirects]]
+  from = "/last-saturdays-dj"
+  to = "/last-saturdays-dj.html"
+  status = 200
+  force = true
+[[redirects]]
+  from = "https://book.rosaliagroup.com/last-saturdays-dj"
+  to = "/last-saturdays-dj.html"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
