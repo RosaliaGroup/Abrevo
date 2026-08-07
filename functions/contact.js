@@ -4,7 +4,9 @@
  * Abrevo "Contact Us" form -> Rosalia Group lead pipeline (Supabase `leads`).
  *
  * SERVER-SIDE ONLY. All credentials are read from Netlify environment variables:
- *   SUPABASE_URL, SUPABASE_KEY (service-role), TEXTBELT_KEY, NOTIFY_PHONE.
+ *   SUPABASE_URL, SUPABASE_KEY (service-role), NOTIFY_PHONE.
+ * SMS to Ana goes through functions/lib/sms.js (Telnyx): TELNYX_API_KEY,
+ * TELNYX_FROM_ROSALIA, TELNYX_MESSAGING_PROFILE_ID.
  * The service-role key must NEVER reach browser code and must not be hardcoded here.
  *
  * Behaviour (mirrors respondrosalia.js findExistingLead/saveOrUpdateLead, via the
@@ -14,8 +16,10 @@
  *     missing useful fields, and DO NOT change status/source/replied_at/email_reply.
  *   - no lead -> INSERT one (source=website-contact, status=new, follow_up_count=0).
  *   - replied_at & email_reply are left NULL/untouched (a website inquiry is not a reply).
- *   - Ana is notified by SMS (Textbelt); an SMS failure never fails a saved lead.
+ *   - Ana is notified by SMS via lib/sms.js (Telnyx); an SMS failure never fails a saved lead.
  */
+
+const { sendSMS } = require("./lib/sms");
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -149,33 +153,23 @@ async function mergeLead(existing, lead) {
 
 // Notify Ana. Returns true on delivery, false otherwise. NEVER throws to the caller.
 async function notifyAna({ name, email, phone, message, merged }) {
-  const key = process.env.TEXTBELT_KEY;
   const dest = process.env.NOTIFY_PHONE;
-  if (!key || !dest) {
+  if (!dest) {
     // SMS is optional. Missing config must NEVER fail an already-saved lead.
-    console.log("contact: SMS skipped — TEXTBELT_KEY or NOTIFY_PHONE not configured");
+    console.log("contact: SMS skipped — NOTIFY_PHONE not configured");
     return false;
   }
-  try {
-    let p = String(dest).replace(/\D/g, "");
-    if (p.length === 10) p = "+1" + p;
-    else if (p.length >= 11) p = "+" + p;
-    const summary = (message || "").replace(/\s+/g, " ").slice(0, 140);
-    const text =
-      `New website contact (${merged ? "MERGED" : "CREATED"})\n` +
-      `Name: ${name || "N/A"}\nEmail: ${email || "N/A"}\nPhone: ${phone || "N/A"}\n` +
-      `Msg: ${summary || "N/A"}`;
-    const res = await fetch("https://textbelt.com/text", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: p, message: text, key }),
-    });
-    const data = await res.json().catch(() => ({}));
-    return !!(data && data.success);
-  } catch (e) {
-    console.error("contact: sms notify failed:", e && e.name);
-    return false;
-  }
+  const summary = (message || "").replace(/\s+/g, " ").slice(0, 140);
+  const text =
+    `New website contact (${merged ? "MERGED" : "CREATED"})\n` +
+    `Name: ${name || "N/A"}\nEmail: ${email || "N/A"}\nPhone: ${phone || "N/A"}\n` +
+    `Msg: ${summary || "N/A"}`;
+  // Internal alert to Ana — plain send, no options, matching book.js/confirm.js/cancel.js.
+  // lib/sms.js normalizes the number (toE164), never throws, and threadLog excludes
+  // internal numbers so this is not opt-out-gated or threaded. NOTIFY_PHONE must be a
+  // recognized internal number (e.g. +16462269189) for that exclusion to apply.
+  const r = await sendSMS(dest, text);
+  return !!(r && r.success);
 }
 
 exports.handler = async (event) => {

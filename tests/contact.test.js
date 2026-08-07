@@ -1,5 +1,5 @@
 /**
- * Tests for functions/contact.js — run with:  node --test functions/contact.test.js
+ * Tests for functions/contact.js — run with:  node --test tests/contact.test.js
  * No live network: global.fetch is mocked. No real credentials are used.
  */
 const { test, beforeEach } = require("node:test");
@@ -9,8 +9,12 @@ const path = require("node:path");
 
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_KEY = "test-service-key"; // dummy — never a real key
-process.env.TEXTBELT_KEY = "test-textbelt-key";
-process.env.NOTIFY_PHONE = "+15551234567";
+process.env.NOTIFY_PHONE = "+16462269189"; // Ana's cell — a recognized internal number
+// Telnyx creds for lib/sms.js. Dummies only — global.fetch is mocked, nothing leaves the process.
+process.env.TELNYX_API_KEY = "test-telnyx-key";
+process.env.TELNYX_FROM_ROSALIA = "+12014269354";
+process.env.TELNYX_MESSAGING_PROFILE_ID = "test-profile";
+process.env.SUPABASE_SERVICE_KEY = "test-service-key"; // used by lib/sms threadLog (best-effort)
 
 const { handler } = require("../functions/contact.js");
 
@@ -34,7 +38,11 @@ function installFetch(scenario = {}) {
     } catch {}
     const u = String(url);
     calls.push({ url: u, method, body });
-    if (u.includes("textbelt.com")) return mkRes(200, scenario.sms ?? { success: true });
+    // SMS now goes via lib/sms.js -> Telnyx. scenario.smsFail drives a provider failure.
+    if (u.includes("api.telnyx.com"))
+      return scenario.smsFail
+        ? mkRes(400, { errors: [{ detail: "quota" }] })
+        : mkRes(200, { data: { id: "tx_test_1" } });
     if (u.includes("/rest/v1/leads?email=eq"))
       return scenario.lookupError ? mkRes(500, "err") : mkRes(200, scenario.emailLookup ?? []);
     if (u.includes("/rest/v1/leads?phone=ilike"))
@@ -43,6 +51,9 @@ function installFetch(scenario = {}) {
       return scenario.patchError ? mkRes(500, "err") : mkRes(200, scenario.patch ?? [{ id: 201 }]);
     if (u.endsWith("/rest/v1/leads") && method === "POST")
       return scenario.insertError ? mkRes(500, "err") : mkRes(201, scenario.insert ?? [{ id: 101 }]);
+    // Any other Supabase REST call is lib/sms.js threadLog (best-effort, fail-open).
+    // Return empty so it no-ops without throwing.
+    if (u.includes("/rest/v1/")) return mkRes(200, []);
     throw new Error("unexpected fetch: " + method + " " + u);
   };
   return calls;
@@ -148,18 +159,17 @@ test("Supabase insert error — safe 502, success false", async () => {
 });
 
 test("SMS failure does NOT fail a saved lead", async () => {
-  calls = installFetch({ insert: [{ id: 133 }], sms: { success: false, error: "quota" } });
+  calls = installFetch({ insert: [{ id: 133 }], smsFail: true });
   const { status, body } = parse(await handler(POST({ name: "Jane", email: "jane@example.com", message: "hi" })));
   assert.equal(status, 200);
   assert.equal(body.success, true);
   assert.equal(body.lead_id, 133);
   assert.equal(body.sms_notified, false);
+  assert.ok(calls.some((c) => c.url.includes("api.telnyx.com")), "provider send was attempted");
 });
 
-test("missing SMS config (no TEXTBELT_KEY/NOTIFY_PHONE) — lead still saved, 200, no SMS attempt", async () => {
-  const savedKey = process.env.TEXTBELT_KEY;
+test("missing SMS config (no NOTIFY_PHONE) — lead still saved, 200, no SMS attempt", async () => {
   const savedPhone = process.env.NOTIFY_PHONE;
-  delete process.env.TEXTBELT_KEY;
   delete process.env.NOTIFY_PHONE;
   try {
     calls = installFetch({ insert: [{ id: 144 }] });
@@ -168,9 +178,8 @@ test("missing SMS config (no TEXTBELT_KEY/NOTIFY_PHONE) — lead still saved, 20
     assert.equal(body.success, true);
     assert.equal(body.lead_id, 144);
     assert.equal(body.sms_notified, false);
-    assert.ok(!calls.some((c) => c.url.includes("textbelt.com")), "no SMS attempt when unconfigured");
+    assert.ok(!calls.some((c) => c.url.includes("api.telnyx.com")), "no SMS attempt when unconfigured");
   } finally {
-    process.env.TEXTBELT_KEY = savedKey;
     process.env.NOTIFY_PHONE = savedPhone;
   }
 });
@@ -195,6 +204,7 @@ test("source file contains no hardcoded credentials", () => {
   assert.ok(!/[0-9a-f]{40,}/i.test(src), "no long hex secret in source");
   assert.ok(src.includes("process.env.SUPABASE_KEY"), "reads SUPABASE_KEY from env");
   assert.ok(src.includes("process.env.SUPABASE_URL"), "reads SUPABASE_URL from env");
-  assert.ok(src.includes("process.env.TEXTBELT_KEY"), "reads TEXTBELT_KEY from env");
   assert.ok(src.includes("process.env.NOTIFY_PHONE"), "reads NOTIFY_PHONE from env");
+  assert.ok(src.includes('require("./lib/sms")'), "sends via shared lib/sms.js");
+  assert.ok(!/textbelt/i.test(src), "no Textbelt reference remains");
 });
