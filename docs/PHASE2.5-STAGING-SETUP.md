@@ -66,7 +66,7 @@ What IS validated now (behavioral, via 70 unit tests against a fake that mirrors
 
 ### Textbelt
 - **Env var names in active code (deployed `origin/main`):** `TEXTBELT_KEY`, `TEXTBELT_KEY_2`. (Commit `ed89fc4` moved active `functions/*` to env vars — they are **not** hardcoded on the deployed main; corrects the earlier stale-checkout impression.)
-- **Two distinct key VALUES remain exposed** (`0672a5cd…` and `06aa74dc…`) in:
+- **Two distinct key VALUES remain exposed** (`<SET IN NETLIFY ENV>` key A and `<SET IN NETLIFY ENV>` key B) in:
   - `rosalia.html` — **browser** (quota panel `monLoadSmsCredits`; the send-path key was neutralized in Phase 0).
   - Dead/backup/doc: `netlify/functions/*`, `backups/*`, `ABREVO-FINAL-BACKUP-MAR9-2026/*`, `ROSALIA-SYSTEM-GUIDE.md`.
   - **Git history** (e.g. commits `50caab5`, pre-`ed89fc4`) — present regardless of current files.

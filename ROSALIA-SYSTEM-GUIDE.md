@@ -18,14 +18,14 @@
 
 ### Gmail
 - User: inquiries@rosaliagroup.com
-- App Password: yynglhtlkmoakini (env: GMAIL_PASS_INQUIRIES)
+- App Password: <SET IN NETLIFY ENV> (env: GMAIL_PASS_INQUIRIES)
 
 ### Supabase
 - URL: https://fhkgpepkwibxbxsepetd.supabase.co
-- Service Key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... (env: SUPABASE_SERVICE_KEY)
+- Service Key: <SET IN NETLIFY ENV> (env: SUPABASE_SERVICE_KEY)
 
 ### Vapi
-- Private Key: 064f441d-a388-4404-8b6c-05e91e90f1ff (env: VAPI_KEY)
+- Private Key: <SET IN NETLIFY ENV> (env: VAPI_KEY)
 - Alex Assistant ID: 1cae5323-6b83-4434-8461-6330472da140
 - Alex Phone: (862) 701-4607 | ID: 2e2b6713-f631-4e9e-95fa-3418ecc77c0a
 - Jessica Outbound (Iron 65) Assistant ID: 35f4e4a2-aabc-47be-abfc-630cf6a85d58
@@ -35,12 +35,12 @@
 - EmporionPros (Aria) Phone: (862) 419-1763
 
 ### Anthropic (Claude AI)
-- Key: sk-ant-api03-Q4vmCwb... (env: ANTHROPIC_API_KEY)
+- Key: <SET IN NETLIFY ENV> (env: ANTHROPIC_API_KEY)
 - Org: Ana's Individual Org
 - Balance: ~$15 (top up at console.anthropic.com)
 
 ### Textbelt (SMS)
-- Key: 06aa74dcb12c73154e34300053413dd8479b0cddx35TUDd3zDznHUE2qiPma7cwr (env: TEXTBELT_KEY)
+- Key: <SET IN NETLIFY ENV> (env: TEXTBELT_KEY)
 - Top up: textbelt.com
 
 ### Google Calendar
@@ -49,7 +49,7 @@
 - Credentials: GOOGLE_CREDENTIALS env var in Netlify
 
 ### Follow Up Boss (FUB)
-- API Key: fka_0BintMy4p0REoWnt6504EBuAzvPkD7gi0h
+- API Key: <SET IN NETLIFY ENV> (env: FUB_API_KEY)
 - Account: User-level (not admin)
 
 ---

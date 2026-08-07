@@ -104,8 +104,8 @@ Two live Textbelt keys are hardcoded and public in the repo (and were browser-vi
 
 | Key (truncated) | Env var name(s) | Locations |
 |---|---|---|
-| `0672a5cd59b0fa1638624d31dea7505b49a5d146…` | referred to as `TEXTBELT_KEY` (also hardcoded) | `functions/book.js`, `functions/reschedule.js` (hardcoded); `rosalia.html` (client — send + quota) |
-| `06aa74dcb12c73154e34300053413dd8479b0cdd…` | `TEXTBELT_KEY` fallback / `TEXTBELT_KEY_2` | `functions/book-hvac.js`, `cincwebhook.js`, `parsefubemail.js`, `respondrosalia.js`, `sendForm.js`, `reschedule-hvac.js` (hardcoded); `rosalia.html` (client — quota) |
+| `<SET IN NETLIFY ENV>` (key A) | referred to as `TEXTBELT_KEY` (also hardcoded) | `functions/book.js`, `functions/reschedule.js` (hardcoded); `rosalia.html` (client — send + quota) |
+| `<SET IN NETLIFY ENV>` (key B) | `TEXTBELT_KEY` fallback / `TEXTBELT_KEY_2` | `functions/book-hvac.js`, `cincwebhook.js`, `parsefubemail.js`, `respondrosalia.js`, `sendForm.js`, `reschedule-hvac.js` (hardcoded); `rosalia.html` (client — quota) |
 
 **Scoped fix applied this branch:** `rosalia.html` client-side **send** action (`monSmsCancelLink`) neutralized — leaked key literal removed, direct send disabled, clear "SMS unavailable" message shown; the manual "Copy Cancel Link" fallback is preserved.
 
