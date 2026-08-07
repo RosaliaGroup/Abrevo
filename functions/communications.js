@@ -18,6 +18,8 @@
  *   POST {action:'addLink', conversationId, type, id}  (session + CSRF)
  *   POST {action:'send', phone?|conversationId?, body, idempotencyKey?, links?} (session + CSRF)
  *   POST {action:'markRead', conversationId}           (session + CSRF)
+ *   GET  ?action=listCallsAttention&limit=             (session)
+ *   POST {action:'clearCallAttention', id}             (session + CSRF)
  *
  * Stable JSON error shape: { ok:false, error:{ code, message } }.
  */
@@ -31,10 +33,10 @@ function reply(statusCode, obj) { return { statusCode, headers: JSON_HEADERS, bo
 function httpFor(result) {
   if (result.ok) return 200;
   const code = result.error && result.error.code;
-  if (code === 'conversation_not_found' || code === 'message_not_found') return 404;
+  if (code === 'conversation_not_found' || code === 'message_not_found' || code === 'call_not_found') return 404;
   if (code === 'missing_phone' || code === 'invalid_phone' || code === 'unsupported_entity_type' ||
       code === 'missing_entity_id' || code === 'missing_conversation_id' || code === 'missing_message_id' ||
-      code === 'empty_body') return 400;
+      code === 'missing_call_id' || code === 'empty_body') return 400;
   if (code === 'opted_out') return 409;
   return 422;
 }
@@ -50,6 +52,8 @@ const ACTIONS = {
   addLink:           { method: 'POST', mutation: true },
   send:              { method: 'POST', mutation: true },
   markRead:          { method: 'POST', mutation: true },
+  listCallsAttention:{ method: 'GET',  mutation: false },
+  clearCallAttention:{ method: 'POST', mutation: true },
 };
 
 // Factory so tests can inject a fake context (no real Supabase/Telnyx). The
@@ -116,6 +120,8 @@ function makeHandler(deps = {}) {
         case 'addLink':           result = await api.addLink({ conversationId: body.conversationId, type: body.type, id: body.id }); break;
         case 'send':              result = await api.sendMessage({ phone: body.phone, conversationId: body.conversationId, body: body.body, idempotencyKey: body.idempotencyKey, links: body.links, createdBy: sess.user || 'comm-ui' }); break;
         case 'markRead':          result = await api.markRead({ conversationId: body.conversationId }); break;
+        case 'listCallsAttention': result = await api.listCallsNeedingAttention({ limit: q.limit }); break;
+        case 'clearCallAttention': result = await api.clearCallAttention({ id: body.id }); break;
       }
       return reply(httpFor(result), result);
     } catch (e) {

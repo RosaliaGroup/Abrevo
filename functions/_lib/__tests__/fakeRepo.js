@@ -23,11 +23,12 @@ function createFakeRepo() {
   const links = [];                     // {id, conversation_id, entity_type, entity_id}
   const messages = [];                  // message rows
   const leads = [];                     // {id, phone, client} — seeded by tests
+  const calls = [];                     // call rows — seeded by tests
   let cN = 0, mN = 0, lN = 0;
 
   const repo = {
     UniqueViolationError,
-    _state: { conversations, messages, links, leads },
+    _state: { conversations, messages, links, leads, calls },
 
     async getConversationByPhone(e164) {
       const id = byPhone.get(e164);
@@ -131,6 +132,22 @@ function createFakeRepo() {
     },
     async setOptOut(conversationId, at) { return this.touchConversation(conversationId, { opted_out_at: at }); },
     async markRead(conversationId, at) { return this.touchConversation(conversationId, { last_read_at: at }); },
+
+    // Mirrors supabaseRepo: un-cleared calls, newest first. No jsonb filtering
+    // here (that's client-side), matching the real query.
+    async listCallsNeedingAttention({ limit = 200 } = {}) {
+      return calls
+        .filter((c) => c.attention_cleared_at == null)
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+        .slice(0, limit)
+        .map((c) => ({ ...c }));
+    },
+    async clearCallAttention(id, at) {
+      const c = calls.find((x) => String(x.id) === String(id));
+      if (!c) return null;
+      c.attention_cleared_at = at;
+      return { ...c };
+    },
   };
   return repo;
 }

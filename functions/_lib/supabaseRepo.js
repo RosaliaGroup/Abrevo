@@ -180,6 +180,31 @@ function createSupabaseRepo(opts = {}) {
       return Array.isArray(r.json) ? r.json : [];
     },
 
+    // Calls awaiting operator review (attention_cleared_at IS NULL). The
+    // "No booking…" flag fires on nearly every call, so it is not selective;
+    // boilerplate-only rows are dropped client-side, not here. Read-only, newest
+    // first. `flags` is jsonb and comes back as a JS array.
+    async listCallsNeedingAttention({ limit = 200 } = {}) {
+      const r = await rest('GET',
+        `/calls?attention_cleared_at=is.null` +
+        `&select=id,caller_phone,caller_name,assistant,outcome,summary,flags,recording_url,created_at` +
+        `&order=created_at.desc&limit=${enc(limit)}`);
+      if (!r.ok) throw new Error(`listCallsNeedingAttention failed: ${r.status} ${r.text.slice(0, 200)}`);
+      return Array.isArray(r.json) ? r.json : [];
+    },
+
+    // Manual "mark reviewed": stamp attention_cleared_at. Idempotent — clearing
+    // an already-cleared call just re-stamps it. Returns the row, or null if the
+    // id matched nothing.
+    async clearCallAttention(id, at) {
+      const r = await rest('PATCH', `/calls?id=eq.${enc(id)}`, {
+        prefer: 'return=representation',
+        body: { attention_cleared_at: at || new Date().toISOString() },
+      });
+      if (!r.ok) throw new Error(`clearCallAttention failed: ${r.status} ${r.text.slice(0, 200)}`);
+      return Array.isArray(r.json) && r.json.length ? r.json[0] : null;
+    },
+
     // Messages of a conversation in chronological order, paginated.
     async listMessages(conversationId, { limit = 50, offset = 0 } = {}) {
       const r = await rest('GET',

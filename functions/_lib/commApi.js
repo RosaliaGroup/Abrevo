@@ -138,7 +138,27 @@ function createCommApi({ repo, conversationService, smsService } = {}) {
     return { ok: true, conversation: updated };
   }
 
-  return { findOrCreateConversation, addLink, listConversations, getThread, getLeadThread, sendMessage, getMessageStatus, markRead };
+  // Read-only list of un-cleared flagged calls for the CRM "Needs attention —
+  // Calls" panel. Boilerplate-only filtering happens client-side (see repo note),
+  // so this returns the raw un-cleared set. Limit clamps generously because the
+  // dataset is small and the client filters it down.
+  async function listCallsNeedingAttention({ limit } = {}) {
+    const n = Number.parseInt(limit, 10);
+    const lim = Number.isFinite(n) && n > 0 ? Math.min(n, 500) : 200;
+    const calls = await repo.listCallsNeedingAttention({ limit: lim });
+    return { ok: true, calls, limit: lim };
+  }
+
+  async function clearCallAttention({ id, at } = {}) {
+    if (id === null || id === undefined || String(id).length === 0) {
+      return err('missing_call_id', 'call id is required');
+    }
+    const updated = await repo.clearCallAttention(id, at || new Date().toISOString());
+    if (!updated) return err('call_not_found', 'no such call');
+    return { ok: true, call: updated };
+  }
+
+  return { findOrCreateConversation, addLink, listConversations, getThread, getLeadThread, sendMessage, getMessageStatus, markRead, listCallsNeedingAttention, clearCallAttention };
 }
 
 module.exports = { createCommApi, MAX_PAGE };

@@ -380,6 +380,12 @@ tr:hover td{background:rgba(201,168,76,0.03)}
       <div id="dash-recent" style="max-height:340px;overflow-y:auto"></div>
     </div>
   </div>
+  <div style="margin-bottom:24px">
+    <h2 style="margin-bottom:12px;display:flex;align-items:center;gap:8px">Needs attention — Calls
+      <span id="dash-call-attention-count" style="font-size:14px;background:var(--gold);color:#000;border-radius:10px;padding:1px 8px"></span>
+    </h2>
+    <div id="dash-call-attention" style="max-height:340px;overflow-y:auto"></div>
+  </div>
   <h2 style="margin-bottom:16px">Recent Leads</h2>
   <div class="table-wrap"><table><thead><tr><th>Name</th><th>Source</th><th>Property</th><th>Stage</th><th>Date</th></tr></thead><tbody id="dash-leads-body"></tbody></table></div>
 </div>
@@ -1416,6 +1422,83 @@ async function loadDashComms() {
     : '<p style="color:var(--text-muted)">No conversations yet</p>';
 }
 
+// ── NEEDS ATTENTION — CALLS ──
+// Additive panel beside the SMS "Needs a reply" panel. Different table (calls),
+// different endpoint (listCallsAttention). The SMS panel and its queries are
+// untouched. A call needs attention when it has a real flag; the "No booking…"
+// flag fires on nearly every call, so it is filtered out here (flags is jsonb ->
+// a JS array). Runs after allLeads loads so the name fallback can resolve.
+async function loadDashCallAttention() {
+  const el = document.getElementById('dash-call-attention');
+  const countEl = document.getElementById('dash-call-attention-count');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
+
+  const r = await commApi('listCallsAttention', { query: { limit: 200 } });
+  if (!r.ok || !Array.isArray(r.calls)) {
+    el.innerHTML = '<p style="color:var(--text-muted)">Unavailable</p>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+
+  const isReal = (f) => !/^No booking/.test(String(f));
+  const calls = r.calls.filter(c => Array.isArray(c.flags) && c.flags.some(isReal));
+  if (countEl) countEl.textContent = calls.length || '';
+
+  el.innerHTML = calls.length ? calls.map(c => {
+    const real = (Array.isArray(c.flags) ? c.flags : []).filter(isReal);
+    const first = real[0] || 'Flagged';
+    const more = real.length > 1 ? ' <span style="color:var(--text-muted)">+' + (real.length - 1) + '</span>' : '';
+    const who = esc(c.caller_name || leadNameByPhone(c.caller_phone) || fmtPhone(c.caller_phone) || 'Unknown caller');
+    return '<div style="padding:9px 11px;margin-bottom:7px;border-radius:6px;background:rgba(255,255,255,.04);border-left:3px solid var(--gold)">'
+      + '<div style="display:flex;justify-content:space-between;gap:8px">'
+      + '<span onclick="openLeadByPhone(\'' + esc(c.caller_phone || '') + '\')" style="cursor:pointer;font-size:13px">' + who + '</span>'
+      + '<span style="font-size:13px;color:var(--text-muted);white-space:nowrap">' + fmtStamp(c.created_at) + '</span></div>'
+      + '<div style="font-size:14px;color:#caa54a;margin-top:3px">' + esc(first) + more + '</div>'
+      + (c.summary ? '<div style="font-size:13px;color:var(--text-muted);margin-top:3px">' + esc(String(c.summary).slice(0, 80)) + '</div>' : '')
+      + '<div style="margin-top:6px;display:flex;gap:12px;align-items:center">'
+      + (c.recording_url ? '<a href="' + esc(c.recording_url) + '" target="_blank" rel="noopener" style="font-size:13px;color:#0b5cad">Listen</a>' : '')
+      + '<button class="btn btn-sm btn-outline" onclick="dismissCallAttention(\'' + esc(c.id) + '\', this)">Mark reviewed</button></div></div>';
+  }).join('') : '<p style="color:var(--text-muted)">No calls need attention.</p>';
+}
+
+// Name fallback: calls.caller_name is often NULL; leads carries it. Match on the
+// last 10 digits — the same convention as openLeadByPhone. Scoped to allLeads
+// (the CRM's Rosalia leads), so it never borrows a shared Mechanical name.
+function leadNameByPhone(phone) {
+  const d = String(phone || '').replace(/\D/g, '').slice(-10);
+  if (d.length !== 10 || !Array.isArray(allLeads)) return null;
+  const m = allLeads.find(l => String(l.phone || '').replace(/\D/g, '').slice(-10) === d && (l.name || '').trim());
+  return m ? m.name : null;
+}
+
+// Two-click confirm (no browser confirm()): first click arms the button and
+// shows "Confirm review"; it reverts after 4s if not confirmed. Second click
+// commits the PATCH. Only a successful clear removes the row (on reload).
+let __callDismissArmed = null;
+let __callDismissTimer = null;
+async function dismissCallAttention(id, btn) {
+  if (__callDismissArmed !== id) {
+    if (__callDismissTimer) clearTimeout(__callDismissTimer);
+    __callDismissArmed = id;
+    if (btn) { btn.textContent = 'Confirm review'; btn.className = 'btn btn-sm btn-gold'; }
+    __callDismissTimer = setTimeout(() => {
+      __callDismissArmed = null;
+      if (btn && btn.isConnected) { btn.textContent = 'Mark reviewed'; btn.className = 'btn btn-sm btn-outline'; }
+    }, 4000);
+    return;
+  }
+  if (__callDismissTimer) clearTimeout(__callDismissTimer);
+  __callDismissArmed = null;
+  if (btn) { btn.disabled = true; btn.textContent = 'Reviewing…'; }
+  const r = await commApi('clearCallAttention', { method: 'POST', body: { id } });
+  if (!r.ok) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Mark reviewed'; btn.className = 'btn btn-sm btn-outline'; }
+    return;
+  }
+  loadDashCallAttention();
+}
+
 // Jump from a conversation card to the matching lead, matched on the last 10
 // digits — the same convention used server-side.
 function openLeadByPhone(phone) {
@@ -1509,6 +1592,7 @@ async function loadDashboard() {
   const weekAgo = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
 
   allLeads = await apiGet('/leads?mode=crm-list') || [];
+  loadDashCallAttention();   // after allLeads so the name fallback can resolve
   allAgents = await apiGet('/agents') || [];
   allDeals = await apiGet('/deals') || [];
   allCommissions = await apiGet('/commissions') || [];
