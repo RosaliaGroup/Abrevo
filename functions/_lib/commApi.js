@@ -12,6 +12,9 @@
  */
 
 const { SUPPORTED_ENTITY_TYPES } = require('./conversations');
+// Reused so the "Needs attention — Calls" panel excludes our own/internal lines
+// the same way outbound alerting does — single source of truth for the list.
+const { isInternalNumber } = require('./threadLog');
 
 const MAX_PAGE = 100;
 
@@ -138,15 +141,71 @@ function createCommApi({ repo, conversationService, smsService } = {}) {
     return { ok: true, conversation: updated };
   }
 
-  // Read-only list of un-cleared flagged calls for the CRM "Needs attention —
-  // Calls" panel. Boilerplate-only filtering happens client-side (see repo note),
-  // so this returns the raw un-cleared set. Limit clamps generously because the
-  // dataset is small and the client filters it down.
+  // Read-only feed for the CRM "Needs attention — Calls" panel. Two kinds of row
+  // come back in one `calls` array (client splits on callback_type):
+  //
+  //   • Call-back requests — grouped by caller (last-10 digits): one row per
+  //     caller, carrying the MOST RECENT request for display, a `count` of that
+  //     caller's requests, and every un-cleared request `id` in `ids` so a single
+  //     "Mark reviewed" clears all of them. `callback_type` is 'management' if ANY
+  //     of the caller's requests was a management escalation, else 'agent' — the
+  //     same MANAGEMENT-wins precedence as the recap email (call-recap-inquiries.js).
+  //   • Other flagged calls — one row per call (missed/dropped etc.), for the
+  //     collapsed section; `callback_type` is null, `ids` is [that call], count 1.
+  //
+  // The call-back signal is derived from the transcript here (same phrases as the
+  // recap email); the raw transcript is dropped before returning. Internal/own
+  // numbers are excluded via threadLog. The "No booking…" boilerplate flag is not
+  // selective, so it is filtered out. Limit clamps generously; the set is small.
   async function listCallsNeedingAttention({ limit } = {}) {
     const n = Number.parseInt(limit, 10);
     const lim = Number.isFinite(n) && n > 0 ? Math.min(n, 500) : 200;
     const calls = await repo.listCallsNeedingAttention({ limit: lim });
-    return { ok: true, calls, limit: lim };
+
+    const classify = (t) => {
+      const s = String(t || '');
+      if (/escalate this to management/i.test(s)) return 'management';
+      if (/message the agent to call you back/i.test(s)) return 'agent';
+      return null;
+    };
+    const isReal = (f) => !/^No booking/.test(String(f));
+    const last10 = (p) => String(p || '').replace(/\D/g, '').slice(-10);
+
+    // Rows arrive newest-first, so the first request seen per caller is the most
+    // recent one (the representative). `order` preserves that newest-first order.
+    const order = [];
+    const groups = new Map();
+    const flagged = [];
+    for (const c of calls) {
+      if (isInternalNumber(c.caller_phone)) continue;
+      const ct = classify(c.transcript);
+      if (ct) {
+        const key = last10(c.caller_phone) || ('id:' + c.id);
+        let g = groups.get(key);
+        if (!g) {
+          g = {
+            caller_phone: c.caller_phone, caller_name: c.caller_name,
+            created_at: c.created_at, summary: c.summary, recording_url: c.recording_url,
+            callback_type: ct, count: 0, ids: [],
+          };
+          groups.set(key, g); order.push(key);
+        }
+        g.count += 1;
+        g.ids.push(c.id);
+        if (ct === 'management') g.callback_type = 'management'; // MANAGEMENT wins
+        continue;
+      }
+      const real = (Array.isArray(c.flags) ? c.flags : []).filter(isReal);
+      if (real.length) {
+        flagged.push({
+          caller_phone: c.caller_phone, caller_name: c.caller_name,
+          created_at: c.created_at, summary: c.summary, recording_url: c.recording_url,
+          callback_type: null, count: 1, ids: [c.id], flags: real,
+        });
+      }
+    }
+    const callbacks = order.map((k) => groups.get(k));
+    return { ok: true, calls: [...callbacks, ...flagged], limit: lim };
   }
 
   async function clearCallAttention({ id, at } = {}) {

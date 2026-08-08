@@ -856,7 +856,7 @@ let __modalStack = [];
 function openModal(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.classList.add('open'); var mdlBox = el.querySelector('.modal'); if (mdlBox) mdlBox.scrollTop = 0;
+  el.classList.add('open'); var mdlBox = el.querySelector('.modal'); if (mdlBox) { mdlBox.scrollTop = 0; var pinN = 0; var pinT = setInterval(function () { mdlBox.scrollTop = 0; if (++pinN > 12) clearInterval(pinT); }, 100); var pinOff = function () { clearInterval(pinT); }; mdlBox.addEventListener('touchstart', pinOff, { once: true }); mdlBox.addEventListener('wheel', pinOff, { once: true }); }
   __modalStack.push(id);
   if (typeof history !== 'undefined') history.pushState({ modal: id }, '');
 }

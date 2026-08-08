@@ -182,14 +182,14 @@ function createSupabaseRepo(opts = {}) {
       return Array.isArray(r.json) ? r.json : [];
     },
 
-    // Calls awaiting operator review (attention_cleared_at IS NULL). The
-    // "No booking…" flag fires on nearly every call, so it is not selective;
-    // boilerplate-only rows are dropped client-side, not here. Read-only, newest
-    // first. `flags` is jsonb and comes back as a JS array.
+    // Calls awaiting operator review (attention_cleared_at IS NULL). Read-only,
+    // newest first. `flags` is jsonb and comes back as a JS array. `transcript`
+    // is selected so commApi can classify call-back requests server-side (the
+    // raw transcript is never forwarded to the browser).
     async listCallsNeedingAttention({ limit = 200 } = {}) {
       const r = await rest('GET',
         `/calls?attention_cleared_at=is.null` +
-        `&select=id,caller_phone,caller_name,assistant,outcome,summary,flags,recording_url,created_at` +
+        `&select=id,caller_phone,caller_name,assistant,outcome,summary,flags,transcript,recording_url,created_at` +
         `&order=created_at.desc&limit=${enc(limit)}`);
       if (!r.ok) throw new Error(`listCallsNeedingAttention failed: ${r.status} ${r.text.slice(0, 200)}`);
       return Array.isArray(r.json) ? r.json : [];
@@ -260,6 +260,7 @@ function createSupabaseRepo(opts = {}) {
           email_attention_cleared_at: l.email_attention_cleared_at || null,
           subject: n.subject || null,
           snippet: emailSnippet(bodyById.get(n.id) || ''),
+          body: String(bodyById.get(n.id) || '').slice(0, 10000), // full last-inbound for the reader modal
           last_inbound_at: n.created_at,
           inbound_count: g.count, outbound_count: outByLead.get(l.id) || 0,
         };
