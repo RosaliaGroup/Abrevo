@@ -386,6 +386,12 @@ tr:hover td{background:rgba(201,168,76,0.03)}
     </h2>
     <div id="dash-call-attention" style="max-height:340px;overflow-y:auto"></div>
   </div>
+  <div style="margin-bottom:24px">
+    <h2 style="margin-bottom:12px;display:flex;align-items:center;gap:8px">Needs attention — Email replies
+      <span id="dash-email-attention-count" style="font-size:14px;background:var(--gold);color:#000;border-radius:10px;padding:1px 8px"></span>
+    </h2>
+    <div id="dash-email-attention" style="max-height:340px;overflow-y:auto"></div>
+  </div>
   <h2 style="margin-bottom:16px">Recent Leads</h2>
   <div class="table-wrap"><table><thead><tr><th>Name</th><th>Source</th><th>Property</th><th>Stage</th><th>Date</th></tr></thead><tbody id="dash-leads-body"></tbody></table></div>
 </div>
@@ -1499,6 +1505,80 @@ async function dismissCallAttention(id, btn) {
   loadDashCallAttention();
 }
 
+// ── NEEDS ATTENTION — EMAIL REPLIES ──
+// A lead wrote back after the AI's first reply (>1 inbound row in `emails`). The
+// server does the aggregation (no RPC/view); the browser applies the two filters
+// (same idea as the calls panel): vendor/system senders are excluded, and a
+// cleared lead reappears only if its newest inbound is newer than the clear.
+const EMAIL_VENDOR_RE = [/@rosaliagroup\.com$/i, /zillow\.com$/i, /followupboss\.com$/i, /apartments\.com$/i, /theconversioncloud\.com$/i, /@realtor\.com$/i];
+function isVendorEmail(e) {
+  e = String(e || '').toLowerCase().trim();
+  if (!e) return true;
+  if (e === 'liveiron65@gmail.com') return true;
+  if (e.startsWith('no-reply') || e.startsWith('noreply')) return true;
+  return EMAIL_VENDOR_RE.some(re => re.test(e));
+}
+
+async function loadDashEmailAttention() {
+  const el = document.getElementById('dash-email-attention');
+  const countEl = document.getElementById('dash-email-attention-count');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
+
+  const r = await commApi('listEmailAttention', { query: {} });
+  if (!r.ok || !Array.isArray(r.items)) {
+    el.innerHTML = '<p style="color:var(--text-muted)">Unavailable</p>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+
+  const rows = r.items.filter(it => {
+    if (isVendorEmail(it.email)) return false;                                         // vendor/system sender
+    if (!it.email_attention_cleared_at) return true;                                   // never cleared
+    return new Date(it.last_inbound_at) > new Date(it.email_attention_cleared_at);     // wrote again after clear
+  });
+  if (countEl) countEl.textContent = rows.length || '';
+
+  el.innerHTML = rows.length ? rows.map(it => {
+    const who = esc(it.name || it.email || 'Unknown lead');
+    return '<div style="padding:9px 11px;margin-bottom:7px;border-radius:6px;background:rgba(255,255,255,.04);border-left:3px solid var(--gold)">'
+      + '<div style="display:flex;justify-content:space-between;gap:8px">'
+      + '<span onclick="openLeadDetail(\'' + esc(it.lead_id) + '\')" style="cursor:pointer;font-size:13px">' + who + '</span>'
+      + '<span style="font-size:13px;color:var(--text-muted);white-space:nowrap">' + fmtStamp(it.last_inbound_at) + '</span></div>'
+      + (it.email ? '<div style="font-size:13px;color:var(--text-muted)">' + esc(it.email) + '</div>' : '')
+      + '<div style="font-size:14px;color:#caa54a;margin-top:3px">' + esc(it.subject || '(no subject)') + '</div>'
+      + (it.snippet ? '<div style="font-size:13px;color:var(--text-muted);margin-top:3px">' + esc(it.snippet) + '</div>' : '')
+      + '<div style="margin-top:6px;display:flex;gap:12px;align-items:center">'
+      + '<span style="font-size:12px;color:var(--text-muted)">' + it.inbound_count + ' in · ' + it.outbound_count + ' out</span>'
+      + '<button class="btn btn-sm btn-outline" onclick="dismissEmailAttention(\'' + esc(it.lead_id) + '\', this)">Mark reviewed</button></div></div>';
+  }).join('') : '<p style="color:var(--text-muted)">No email replies need attention.</p>';
+}
+
+// Two-click confirm (no browser confirm()), mirroring the calls panel.
+let __emailDismissArmed = null;
+let __emailDismissTimer = null;
+async function dismissEmailAttention(leadId, btn) {
+  if (__emailDismissArmed !== leadId) {
+    if (__emailDismissTimer) clearTimeout(__emailDismissTimer);
+    __emailDismissArmed = leadId;
+    if (btn) { btn.textContent = 'Confirm review'; btn.className = 'btn btn-sm btn-gold'; }
+    __emailDismissTimer = setTimeout(() => {
+      __emailDismissArmed = null;
+      if (btn && btn.isConnected) { btn.textContent = 'Mark reviewed'; btn.className = 'btn btn-sm btn-outline'; }
+    }, 4000);
+    return;
+  }
+  if (__emailDismissTimer) clearTimeout(__emailDismissTimer);
+  __emailDismissArmed = null;
+  if (btn) { btn.disabled = true; btn.textContent = 'Reviewing…'; }
+  const r = await commApi('clearEmailAttention', { method: 'POST', body: { leadId } });
+  if (!r.ok) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Mark reviewed'; btn.className = 'btn btn-sm btn-outline'; }
+    return;
+  }
+  loadDashEmailAttention();
+}
+
 // Jump from a conversation card to the matching lead, matched on the last 10
 // digits — the same convention used server-side.
 function openLeadByPhone(phone) {
@@ -1593,6 +1673,7 @@ async function loadDashboard() {
 
   allLeads = await apiGet('/leads?mode=crm-list') || [];
   loadDashCallAttention();   // after allLeads so the name fallback can resolve
+  loadDashEmailAttention();  // email-reply attention panel (self-contained fetch)
   allAgents = await apiGet('/agents') || [];
   allDeals = await apiGet('/deals') || [];
   allCommissions = await apiGet('/commissions') || [];

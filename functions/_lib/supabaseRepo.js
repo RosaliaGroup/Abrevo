@@ -205,6 +205,76 @@ function createSupabaseRepo(opts = {}) {
       return Array.isArray(r.json) && r.json.length ? r.json[0] : null;
     },
 
+    // "Needs attention — Email replies": leads with >1 inbound email. No RPC/view —
+    // page inbound metadata (no body) and group in Node, then hydrate qualifying
+    // leads BY ID (not bound by the crm-list 500 cap, and gets email_attention_cleared_at).
+    // Vendor-exclusion and the cleared-at "reappear" rule are applied client-side,
+    // mirroring the calls panel. Returns the >1-inbound superset; the browser filters.
+    async listEmailAttention({ pageSize = 1000, maxRows = 20000 } = {}) {
+      const inList = (ids) => `(${ids.map((x) => enc(x)).join(',')})`;
+      // Pass 1: all inbound metadata, newest first (no body — keep it narrow).
+      const inbound = [];
+      for (let off = 0; off < maxRows; off += pageSize) {
+        const r = await rest('GET',
+          `/emails?direction=eq.inbound&select=id,lead_id,subject,from_email,created_at` +
+          `&order=created_at.desc&limit=${pageSize}&offset=${off}`);
+        if (!r.ok) throw new Error(`listEmailAttention inbound failed: ${r.status} ${r.text.slice(0, 200)}`);
+        const rows = Array.isArray(r.json) ? r.json : [];
+        inbound.push(...rows);
+        if (rows.length < pageSize) break;
+      }
+      // Group by lead. Rows are global desc, so the first seen per lead is newest.
+      const byLead = new Map();
+      for (const e of inbound) {
+        if (e.lead_id == null) continue;
+        const g = byLead.get(e.lead_id) || { count: 0, newest: null };
+        g.count += 1; if (!g.newest) g.newest = e;
+        byLead.set(e.lead_id, g);
+      }
+      const leadIds = [...byLead.entries()].filter(([, g]) => g.count > 1).map(([id]) => id);
+      if (!leadIds.length) return [];
+      // Pass 2: hydrate qualifying leads (name / email / cleared-at).
+      const lr = await rest('GET', `/leads?id=in.${inList(leadIds)}&select=id,name,email,email_attention_cleared_at`);
+      if (!lr.ok) throw new Error(`listEmailAttention leads failed: ${lr.status} ${lr.text.slice(0, 200)}`);
+      const leads = Array.isArray(lr.json) ? lr.json : [];
+      // Pass 3: outbound counts for these leads (narrow: lead_id only).
+      const outByLead = new Map();
+      for (let off = 0; off < maxRows; off += pageSize) {
+        const r = await rest('GET', `/emails?direction=eq.outbound&lead_id=in.${inList(leadIds)}&select=lead_id&limit=${pageSize}&offset=${off}`);
+        if (!r.ok) break;
+        const rows = Array.isArray(r.json) ? r.json : [];
+        for (const e of rows) outByLead.set(e.lead_id, (outByLead.get(e.lead_id) || 0) + 1);
+        if (rows.length < pageSize) break;
+      }
+      // Pass 4: newest-inbound body for the snippet (only these leads' newest ids).
+      const bodyById = new Map();
+      const newestIds = leadIds.map((id) => byLead.get(id).newest.id);
+      const br = await rest('GET', `/emails?id=in.${inList(newestIds)}&select=id,body`);
+      if (br.ok && Array.isArray(br.json)) for (const e of br.json) bodyById.set(e.id, e.body);
+      return leads.map((l) => {
+        const g = byLead.get(l.id); const n = g.newest;
+        return {
+          lead_id: l.id, name: l.name || null, email: l.email || null,
+          email_attention_cleared_at: l.email_attention_cleared_at || null,
+          subject: n.subject || null,
+          snippet: String(bodyById.get(n.id) || '').replace(/\s+/g, ' ').trim().slice(0, 140),
+          last_inbound_at: n.created_at,
+          inbound_count: g.count, outbound_count: outByLead.get(l.id) || 0,
+        };
+      });
+    },
+
+    // Manual "mark reviewed": stamp leads.email_attention_cleared_at. Idempotent —
+    // clearing again just re-stamps it. Returns the row, or null if id matched nothing.
+    async clearEmailAttention(leadId, at) {
+      const r = await rest('PATCH', `/leads?id=eq.${enc(leadId)}`, {
+        prefer: 'return=representation',
+        body: { email_attention_cleared_at: at || new Date().toISOString() },
+      });
+      if (!r.ok) throw new Error(`clearEmailAttention failed: ${r.status} ${r.text.slice(0, 200)}`);
+      return Array.isArray(r.json) && r.json.length ? r.json[0] : null;
+    },
+
     // Messages of a conversation in chronological order, paginated.
     async listMessages(conversationId, { limit = 50, offset = 0 } = {}) {
       const r = await rest('GET',

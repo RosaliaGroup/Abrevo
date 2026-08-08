@@ -24,11 +24,13 @@ function createFakeRepo() {
   const messages = [];                  // message rows
   const leads = [];                     // {id, phone, client} — seeded by tests
   const calls = [];                     // call rows — seeded by tests
+  const emails = [];                    // email rows {id, lead_id, direction, subject, body, from_email, created_at}
+  const leadRows = [];                  // full lead rows for email-attention hydration — seeded by tests
   let cN = 0, mN = 0, lN = 0;
 
   const repo = {
     UniqueViolationError,
-    _state: { conversations, messages, links, leads, calls },
+    _state: { conversations, messages, links, leads, calls, emails, leadRows },
 
     async getConversationByPhone(e164) {
       const id = byPhone.get(e164);
@@ -147,6 +149,41 @@ function createFakeRepo() {
       if (!c) return null;
       c.attention_cleared_at = at;
       return { ...c };
+    },
+
+    // Mirrors supabaseRepo.listEmailAttention aggregation in-memory: leads with
+    // >1 inbound, newest-inbound subject/snippet, inbound/outbound counts. No
+    // vendor/cleared-at filtering here (that's client-side), matching the real repo.
+    async listEmailAttention() {
+      const inbound = emails
+        .filter((e) => e.direction === 'inbound' && e.lead_id != null)
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+      const byLead = new Map();
+      for (const e of inbound) {
+        const g = byLead.get(e.lead_id) || { count: 0, newest: null };
+        g.count += 1; if (!g.newest) g.newest = e;
+        byLead.set(e.lead_id, g);
+      }
+      const leadIds = [...byLead.entries()].filter(([, g]) => g.count > 1).map(([id]) => id);
+      return leadIds.map((id) => {
+        const g = byLead.get(id); const n = g.newest;
+        const l = leadRows.find((x) => String(x.id) === String(id)) || {};
+        const outbound_count = emails.filter((e) => String(e.lead_id) === String(id) && e.direction === 'outbound').length;
+        return {
+          lead_id: id, name: l.name || null, email: l.email || null,
+          email_attention_cleared_at: l.email_attention_cleared_at || null,
+          subject: n.subject || null,
+          snippet: String(n.body || '').replace(/\s+/g, ' ').trim().slice(0, 140),
+          last_inbound_at: n.created_at,
+          inbound_count: g.count, outbound_count,
+        };
+      });
+    },
+    async clearEmailAttention(leadId, at) {
+      const l = leadRows.find((x) => String(x.id) === String(leadId));
+      if (!l) return null;
+      l.email_attention_cleared_at = at;
+      return { ...l };
     },
   };
   return repo;

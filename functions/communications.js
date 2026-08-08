@@ -20,6 +20,8 @@
  *   POST {action:'markRead', conversationId}           (session + CSRF)
  *   GET  ?action=listCallsAttention&limit=             (session)
  *   POST {action:'clearCallAttention', id}             (session + CSRF)
+ *   GET  ?action=listEmailAttention                    (session)
+ *   POST {action:'clearEmailAttention', leadId}        (session + CSRF)
  *
  * Stable JSON error shape: { ok:false, error:{ code, message } }.
  */
@@ -33,10 +35,10 @@ function reply(statusCode, obj) { return { statusCode, headers: JSON_HEADERS, bo
 function httpFor(result) {
   if (result.ok) return 200;
   const code = result.error && result.error.code;
-  if (code === 'conversation_not_found' || code === 'message_not_found' || code === 'call_not_found') return 404;
+  if (code === 'conversation_not_found' || code === 'message_not_found' || code === 'call_not_found' || code === 'lead_not_found') return 404;
   if (code === 'missing_phone' || code === 'invalid_phone' || code === 'unsupported_entity_type' ||
       code === 'missing_entity_id' || code === 'missing_conversation_id' || code === 'missing_message_id' ||
-      code === 'missing_call_id' || code === 'empty_body') return 400;
+      code === 'missing_call_id' || code === 'missing_lead_id' || code === 'empty_body') return 400;
   if (code === 'opted_out') return 409;
   return 422;
 }
@@ -54,6 +56,8 @@ const ACTIONS = {
   markRead:          { method: 'POST', mutation: true },
   listCallsAttention:{ method: 'GET',  mutation: false },
   clearCallAttention:{ method: 'POST', mutation: true },
+  listEmailAttention:{ method: 'GET',  mutation: false },
+  clearEmailAttention:{ method: 'POST', mutation: true },
 };
 
 // Factory so tests can inject a fake context (no real Supabase/Telnyx). The
@@ -122,6 +126,8 @@ function makeHandler(deps = {}) {
         case 'markRead':          result = await api.markRead({ conversationId: body.conversationId }); break;
         case 'listCallsAttention': result = await api.listCallsNeedingAttention({ limit: q.limit }); break;
         case 'clearCallAttention': result = await api.clearCallAttention({ id: body.id }); break;
+        case 'listEmailAttention': result = await api.listEmailAttention(); break;
+        case 'clearEmailAttention': result = await api.clearEmailAttention({ leadId: body.leadId }); break;
       }
       return reply(httpFor(result), result);
     } catch (e) {

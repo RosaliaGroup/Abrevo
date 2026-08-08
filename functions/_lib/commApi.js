@@ -158,7 +158,24 @@ function createCommApi({ repo, conversationService, smsService } = {}) {
     return { ok: true, call: updated };
   }
 
-  return { findOrCreateConversation, addLink, listConversations, getThread, getLeadThread, sendMessage, getMessageStatus, markRead, listCallsNeedingAttention, clearCallAttention };
+  // "Needs attention — Email replies": leads with >1 inbound email. Aggregation
+  // lives in the repo (no RPC/view); the browser applies vendor-exclusion and the
+  // cleared-at "reappear" rule, mirroring the calls panel.
+  async function listEmailAttention() {
+    const items = await repo.listEmailAttention({});
+    return { ok: true, items };
+  }
+
+  async function clearEmailAttention({ leadId, at } = {}) {
+    if (leadId === null || leadId === undefined || String(leadId).length === 0) {
+      return err('missing_lead_id', 'leadId is required');
+    }
+    const updated = await repo.clearEmailAttention(leadId, at || new Date().toISOString());
+    if (!updated) return err('lead_not_found', 'no such lead');
+    return { ok: true, lead: updated };
+  }
+
+  return { findOrCreateConversation, addLink, listConversations, getThread, getLeadThread, sendMessage, getMessageStatus, markRead, listCallsNeedingAttention, clearCallAttention, listEmailAttention, clearEmailAttention };
 }
 
 module.exports = { createCommApi, MAX_PAGE };
