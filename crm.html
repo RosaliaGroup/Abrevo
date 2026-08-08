@@ -856,7 +856,7 @@ let __modalStack = [];
 function openModal(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.classList.add('open');
+  el.classList.add('open'); var mdlBox = el.querySelector('.modal'); if (mdlBox) mdlBox.scrollTop = 0;
   __modalStack.push(id);
   if (typeof history !== 'undefined') history.pushState({ modal: id }, '');
 }
@@ -2273,7 +2273,7 @@ function renderLeadTimeline(messages, calls, emails) {
   if (__scrollTimelineToInbound) {
     __scrollTimelineToInbound = false;
     const ins = el.querySelectorAll('.ld-in');
-    if (ins.length) ins[ins.length - 1].scrollIntoView({ block: 'center' });
+    if (ins.length) { var tgtMsg = ins[ins.length - 1]; el.scrollTop += tgtMsg.getBoundingClientRect().top - el.getBoundingClientRect().top - (el.clientHeight - tgtMsg.offsetHeight) / 2; }
     else el.scrollTop = el.scrollHeight;
   } else {
     el.scrollTop = el.scrollHeight;
