@@ -3209,3 +3209,25 @@ function populateLeadDropdowns() {
 </script>
 </body>
 </html>
+// Opens the lead a tapped notification points at, instead of the dashboard.
+(function deepLinkFromNotification() {
+  var q = new URLSearchParams(location.search);
+  var phone = q.get('phone');
+  var leadId = q.get('lead');
+  if (!phone && !leadId) return;
+  var tries = 0;
+  var timer = setInterval(function () {
+    tries++;
+    if (typeof allLeads !== 'undefined' && allLeads && allLeads.length) {
+      clearInterval(timer);
+      try { history.replaceState({}, '', location.pathname); } catch (e) {}
+      if (leadId) {
+        var lead = allLeads.find(function (l) { return String(l.id) === String(leadId); });
+        if (lead) { openLeadDetail(lead.id); showDetailTab(q.get('tab') || 'messages'); return; }
+      }
+      if (phone) openLeadByPhone(phone);
+    } else if (tries > 40) {
+      clearInterval(timer);
+    }
+  }, 250);
+})();
