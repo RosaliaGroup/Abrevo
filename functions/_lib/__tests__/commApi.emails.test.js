@@ -21,7 +21,7 @@ function seed(repo) {
   repo._state.emails.push(
     { id: 'e1', lead_id: 'A', direction: 'inbound', subject: 'Tour?', body: 'Is 2pm ok?', created_at: '2026-08-01T10:00:00Z' },
     { id: 'e2', lead_id: 'A', direction: 'outbound', subject: 'Re: Tour?', body: 'Sure', created_at: '2026-08-01T11:00:00Z' },
-    { id: 'e3', lead_id: 'A', direction: 'inbound', subject: 'Following up', body: 'Any update on my tour?  ', created_at: '2026-08-02T09:00:00Z' },
+    { id: 'e3', lead_id: 'A', direction: 'inbound', subject: 'Following up', body: 'Any update on my tour?\n\n> On Aug 1 you wrote:\n> Sure, see you then', created_at: '2026-08-02T09:00:00Z' },
   );
   // Lead B: only 1 inbound -> excluded.
   repo._state.leadRows.push({ id: 'B', name: 'Ben Once', email: 'ben@example.com', email_attention_cleared_at: null });
@@ -38,7 +38,8 @@ test('listEmailAttention returns only leads with >1 inbound, with newest inbound
   assert.equal(a.lead_id, 'A');
   assert.equal(a.inbound_count, 2);
   assert.equal(a.outbound_count, 1);
-  // Newest inbound (e3) drives subject/snippet/timestamp; snippet is whitespace-collapsed.
+  // Newest inbound (e3) drives subject/snippet/timestamp; the quoted reply chain
+  // is stripped so only the lead's newest text remains.
   assert.equal(a.subject, 'Following up');
   assert.equal(a.snippet, 'Any update on my tour?');
   assert.equal(a.last_inbound_at, '2026-08-02T09:00:00Z');

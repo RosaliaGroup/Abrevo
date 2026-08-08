@@ -13,6 +13,8 @@
  *   SUPABASE_SERVICE_KEY   service-role key (server-side only)
  */
 
+const { emailSnippet } = require('./emailSnippet');
+
 class UniqueViolationError extends Error {
   constructor(message) {
     super(message || 'unique_violation');
@@ -257,7 +259,7 @@ function createSupabaseRepo(opts = {}) {
           lead_id: l.id, name: l.name || null, email: l.email || null,
           email_attention_cleared_at: l.email_attention_cleared_at || null,
           subject: n.subject || null,
-          snippet: String(bodyById.get(n.id) || '').replace(/\s+/g, ' ').trim().slice(0, 140),
+          snippet: emailSnippet(bodyById.get(n.id) || ''),
           last_inbound_at: n.created_at,
           inbound_count: g.count, outbound_count: outByLead.get(l.id) || 0,
         };
