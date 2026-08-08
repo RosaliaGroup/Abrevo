@@ -178,7 +178,7 @@ async function pushInboundAlert(phone, text) {
     title: `New message from ${who}`,
     body: String(text || '').slice(0, 140),
     tag: 'rosalia-' + String(phone || '').slice(-10),
-    url: '/crm',
+    url: '/crm?phone=' + encodeURIComponent(String(phone || '').replace(/\D/g, '').slice(-10)),
   };
 
   for (const sub of subs) {

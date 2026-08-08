@@ -370,13 +370,17 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
     <div>
-      <h2 style="margin-bottom:12px;display:flex;align-items:center;gap:8px">Needs attention — Calls
+      <h2 onclick="showPage('callbacks')" title="View all call-backs" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;cursor:pointer">Call-backs needed
         <span id="dash-call-attention-count" style="font-size:14px;background:var(--gold);color:#000;border-radius:10px;padding:1px 8px"></span>
       </h2>
       <div id="dash-call-attention" style="max-height:340px;overflow-y:auto"></div>
+      <details style="margin-top:12px">
+        <summary style="cursor:pointer;color:var(--text-muted);font-size:14px">Other flagged calls (missed / dropped) <span id="dash-call-other-count"></span></summary>
+        <div id="dash-call-other" style="max-height:280px;overflow-y:auto;margin-top:8px"></div>
+      </details>
     </div>
     <div>
-      <h2 style="margin-bottom:12px;display:flex;align-items:center;gap:8px">Needs attention — Email replies
+      <h2 onclick="showPage('emailAttention')" title="View all email replies" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;cursor:pointer">Needs attention — Email replies
         <span id="dash-email-attention-count" style="font-size:14px;background:var(--gold);color:#000;border-radius:10px;padding:1px 8px"></span>
       </h2>
       <div id="dash-email-attention" style="max-height:340px;overflow-y:auto"></div>
@@ -529,6 +533,24 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 <div class="page-section" id="page-sequences">
   <div class="main-header"><h1>Follow-up Sequences</h1></div>
   <div class="seq-grid" id="seq-grid"></div>
+</div>
+
+<!-- CALL-BACKS (full page) -->
+<div class="page-section" id="page-callbacks">
+  <div class="main-header"><h1>Call-backs needed</h1>
+    <button class="btn btn-sm btn-outline" onclick="showPage('dashboard')">&larr; Dashboard</button></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Type</th><th>Caller</th><th>Requests</th><th>Most recent</th><th>Summary</th><th></th></tr></thead>
+    <tbody id="callbacks-all-body"></tbody></table></div>
+</div>
+
+<!-- EMAIL REPLIES (full page) -->
+<div class="page-section" id="page-emailAttention">
+  <div class="main-header"><h1>Email replies — needs attention</h1>
+    <button class="btn btn-sm btn-outline" onclick="showPage('dashboard')">&larr; Dashboard</button></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Lead</th><th>Last message</th><th>When</th><th></th></tr></thead>
+    <tbody id="email-attention-all-body"></tbody></table></div>
 </div>
 
 
@@ -684,6 +706,19 @@ tr:hover td{background:rgba(201,168,76,0.03)}
 </div>
 </div>
 
+<!-- EMAIL READER MODAL -->
+<div class="modal-overlay" id="email-read-modal" onclick="if(event.target===this)closeModal(this.id)">
+<div class="modal" style="max-width:720px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+    <h2 id="email-read-subject" style="margin:0 0 2px"></h2>
+    <button class="btn btn-sm btn-outline" onclick="closeModal('email-read-modal')">Close</button>
+  </div>
+  <div id="email-read-meta" style="font-size:13px;color:var(--text-muted);margin-bottom:14px"></div>
+  <pre id="email-read-body" style="white-space:pre-wrap;font:inherit;font-size:14px;line-height:1.6;margin:0"></pre>
+  <div style="margin-top:16px;text-align:right"><a href="#" id="email-read-openlead" style="font-size:14px">Open lead &rarr;</a></div>
+</div>
+</div>
+
 <!-- LEAD DETAIL MODAL -->
 <div class="modal-overlay" id="lead-detail-modal" onclick="if(event.target===this)closeModal(this.id)">
 <div class="modal" style="max-width:640px">
@@ -807,6 +842,8 @@ function showPage(page, fromHistory) {
   if (page === 'agents') loadAgents();
   if (page === 'commissions') loadCommissions();
   if (page === 'sequences') loadSequences();
+  if (page === 'callbacks') loadCallbacksPage();
+  if (page === 'emailAttention') loadEmailAttentionPage();
 
 }
 
@@ -1432,43 +1469,59 @@ async function loadDashComms() {
 }
 
 // ── NEEDS ATTENTION — CALLS ──
-// Additive panel beside the SMS "Needs a reply" panel. Different table (calls),
-// different endpoint (listCallsAttention). The SMS panel and its queries are
-// untouched. A call needs attention when it has a real flag; the "No booking…"
-// flag fires on nearly every call, so it is filtered out here (flags is jsonb ->
-// a JS array). Runs after allLeads loads so the name fallback can resolve.
+// Two views from one endpoint. The server (commApi.listCallsNeedingAttention)
+// classifies call-back requests from the transcript, groups them by caller, and
+// excludes internal numbers; it also returns the remaining flagged calls one per
+// row. Here: call-back requests fill the main panel (label states what's needed);
+// everything else drops into the collapsed "Other flagged calls" section, out of
+// the main flow. Runs after allLeads loads so the name fallback can resolve.
+const CB_LABEL = { management: 'Management call back', agent: 'Agent call back' };
+
 async function loadDashCallAttention() {
   const el = document.getElementById('dash-call-attention');
   const countEl = document.getElementById('dash-call-attention-count');
+  const otherEl = document.getElementById('dash-call-other');
+  const otherCountEl = document.getElementById('dash-call-other-count');
   if (!el) return;
   el.innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
 
-  const r = await commApi('listCallsAttention', { query: { limit: 200 } });
+  const r = await commApi('listCallsAttention', { query: { limit: 500 } });
   if (!r.ok || !Array.isArray(r.calls)) {
     el.innerHTML = '<p style="color:var(--text-muted)">Unavailable</p>';
     if (countEl) countEl.textContent = '';
+    if (otherEl) otherEl.innerHTML = '';
     return;
   }
 
-  const isReal = (f) => !/^No booking/.test(String(f));
-  const calls = r.calls.filter(c => Array.isArray(c.flags) && c.flags.some(isReal));
-  if (countEl) countEl.textContent = calls.length || '';
+  const callbacks = r.calls.filter(c => c.callback_type);
+  const other = r.calls.filter(c => !c.callback_type);
 
-  el.innerHTML = calls.length ? calls.map(c => {
-    const real = (Array.isArray(c.flags) ? c.flags : []).filter(isReal);
-    const first = real[0] || 'Flagged';
-    const more = real.length > 1 ? ' <span style="color:var(--text-muted)">+' + (real.length - 1) + '</span>' : '';
-    const who = esc(c.caller_name || leadNameByPhone(c.caller_phone) || fmtPhone(c.caller_phone) || 'Unknown caller');
-    return '<div style="padding:9px 11px;margin-bottom:7px;border-radius:6px;background:rgba(255,255,255,.04);border-left:3px solid var(--gold)">'
-      + '<div style="display:flex;justify-content:space-between;gap:8px">'
-      + '<span onclick="openLeadByPhone(\'' + esc(c.caller_phone || '') + '\')" style="cursor:pointer;font-size:13px">' + who + '</span>'
-      + '<span style="font-size:13px;color:var(--text-muted);white-space:nowrap">' + fmtStamp(c.created_at) + '</span></div>'
-      + '<div style="font-size:14px;color:#caa54a;margin-top:3px">' + esc(first) + more + '</div>'
-      + (c.summary ? '<div style="font-size:13px;color:var(--text-muted);margin-top:3px">' + esc(String(c.summary).slice(0, 80)) + '</div>' : '')
-      + '<div style="margin-top:6px;display:flex;gap:12px;align-items:center">'
-      + (c.recording_url ? '<a href="' + esc(c.recording_url) + '" target="_blank" rel="noopener" style="font-size:13px;color:#0b5cad">Listen</a>' : '')
-      + '<button class="btn btn-sm btn-outline" onclick="dismissCallAttention(\'' + esc(c.id) + '\', this)">Mark reviewed</button></div></div>';
-  }).join('') : '<p style="color:var(--text-muted)">No calls need attention.</p>';
+  if (countEl) countEl.textContent = callbacks.length || '';
+  el.innerHTML = callbacks.length
+    ? callbacks.map(c => callAttentionCard(c, CB_LABEL[c.callback_type] || 'Call back')).join('')
+    : '<p style="color:var(--text-muted)">No call-backs needed.</p>';
+
+  if (otherCountEl) otherCountEl.textContent = other.length ? '(' + other.length + ')' : '';
+  if (otherEl) otherEl.innerHTML = other.length
+    ? other.map(c => callAttentionCard(c, (Array.isArray(c.flags) && c.flags[0]) || 'Flagged')).join('')
+    : '<p style="color:var(--text-muted)">None.</p>';
+}
+
+// Shared card. `label` is the call-back type in the main panel, the flag in the
+// collapsed one. The count reflects how many call-back requests this caller made;
+// "Mark reviewed" clears every request id in the group (dismissCallAttention).
+function callAttentionCard(c, label) {
+  const who = esc(c.caller_name || leadNameByPhone(c.caller_phone) || fmtPhone(c.caller_phone) || 'Unknown caller');
+  const count = (c.count && c.count > 1) ? ' <span style="color:var(--text-muted)">· ' + c.count + ' requests</span>' : '';
+  return '<div style="padding:9px 11px;margin-bottom:7px;border-radius:6px;background:rgba(255,255,255,.04);border-left:3px solid var(--gold)">'
+    + '<div style="display:flex;justify-content:space-between;gap:8px">'
+    + '<span onclick="openLeadByPhone(\'' + esc(c.caller_phone || '') + '\')" style="cursor:pointer;font-size:13px">' + who + '</span>'
+    + '<span style="font-size:13px;color:var(--text-muted);white-space:nowrap">' + fmtStamp(c.created_at) + '</span></div>'
+    + '<div style="font-size:14px;color:#caa54a;margin-top:3px">' + esc(label) + count + '</div>'
+    + (c.summary ? '<div style="font-size:13px;color:var(--text-muted);margin-top:3px">' + esc(String(c.summary).slice(0, 80)) + '</div>' : '')
+    + '<div style="margin-top:6px;display:flex;gap:12px;align-items:center">'
+    + (c.recording_url ? '<a href="' + esc(c.recording_url) + '" target="_blank" rel="noopener" style="font-size:13px;color:#0b5cad">Listen</a>' : '')
+    + '<button class="btn btn-sm btn-outline" onclick="dismissCallAttention(\'' + esc((c.ids || []).join(',')) + '\', this)">Mark reviewed</button></div></div>';
 }
 
 // Name fallback: calls.caller_name is often NULL; leads carries it. Match on the
@@ -1483,13 +1536,18 @@ function leadNameByPhone(phone) {
 
 // Two-click confirm (no browser confirm()): first click arms the button and
 // shows "Confirm review"; it reverts after 4s if not confirmed. Second click
-// commits the PATCH. Only a successful clear removes the row (on reload).
+// commits. `ids` is the group's comma-joined request ids — each is cleared via
+// the existing per-call clearCallAttention (groups are 1–2 in practice). All-or-
+// nothing from the user's view: any failure reverts the button and leaves the row.
 let __callDismissArmed = null;
 let __callDismissTimer = null;
-async function dismissCallAttention(id, btn) {
-  if (__callDismissArmed !== id) {
+async function dismissCallAttention(ids, btn) {
+  const list = String(ids).split(',').filter(Boolean);
+  const key = list.join(',');
+  if (!list.length) return;
+  if (__callDismissArmed !== key) {
     if (__callDismissTimer) clearTimeout(__callDismissTimer);
-    __callDismissArmed = id;
+    __callDismissArmed = key;
     if (btn) { btn.textContent = 'Confirm review'; btn.className = 'btn btn-sm btn-gold'; }
     __callDismissTimer = setTimeout(() => {
       __callDismissArmed = null;
@@ -1500,8 +1558,8 @@ async function dismissCallAttention(id, btn) {
   if (__callDismissTimer) clearTimeout(__callDismissTimer);
   __callDismissArmed = null;
   if (btn) { btn.disabled = true; btn.textContent = 'Reviewing…'; }
-  const r = await commApi('clearCallAttention', { method: 'POST', body: { id } });
-  if (!r.ok) {
+  const results = await Promise.all(list.map(id => commApi('clearCallAttention', { method: 'POST', body: { id } })));
+  if (results.some(r => !r.ok)) {
     if (btn) { btn.disabled = false; btn.textContent = 'Mark reviewed'; btn.className = 'btn btn-sm btn-outline'; }
     return;
   }
@@ -1542,19 +1600,36 @@ async function loadDashEmailAttention() {
   });
   if (countEl) countEl.textContent = rows.length || '';
 
+  __emailAttnById = new Map(rows.map(it => [String(it.lead_id), it]));   // reader-modal cache (no refetch on click)
+
+  // Only the last inbound message per lead: sender + subject + preview. Row click
+  // opens the larger reader; the Mark-reviewed button is isolated from that click.
   el.innerHTML = rows.length ? rows.map(it => {
     const who = esc(it.name || it.email || 'Unknown lead');
-    return '<div onclick="openLeadFromEmailPanel(\'' + esc(it.lead_id) + '\', \'' + esc(it.email || '') + '\')" style="cursor:pointer;padding:9px 11px;margin-bottom:7px;border-radius:6px;background:rgba(255,255,255,.04);border-left:3px solid var(--gold)">'
+    return '<div onclick="openEmailReader(\'' + esc(it.lead_id) + '\')" style="cursor:pointer;padding:9px 11px;margin-bottom:7px;border-radius:6px;background:rgba(255,255,255,.04);border-left:3px solid var(--gold)">'
       + '<div style="display:flex;justify-content:space-between;gap:8px">'
       + '<span style="font-size:13px">' + who + '</span>'
       + '<span style="font-size:13px;color:var(--text-muted);white-space:nowrap">' + fmtStamp(it.last_inbound_at) + '</span></div>'
-      + (it.email ? '<div style="font-size:13px;color:var(--text-muted)">' + esc(it.email) + '</div>' : '')
       + '<div style="font-size:14px;color:#caa54a;margin-top:3px">' + esc(it.subject || '(no subject)') + '</div>'
       + (it.snippet ? '<div style="font-size:13px;color:var(--text-muted);margin-top:3px">' + esc(it.snippet) + '</div>' : '')
-      + '<div onclick="event.stopPropagation()" style="margin-top:6px;display:flex;gap:12px;align-items:center">'
-      + '<span style="font-size:12px;color:var(--text-muted)">' + it.inbound_count + ' in · ' + it.outbound_count + ' out</span>'
+      + '<div onclick="event.stopPropagation()" style="margin-top:6px">'
       + '<button class="btn btn-sm btn-outline" onclick="dismissEmailAttention(\'' + esc(it.lead_id) + '\', this)">Mark reviewed</button></div></div>';
   }).join('') : '<p style="color:var(--text-muted)">No email replies need attention.</p>';
+}
+
+// Larger readable view of a single lead's most recent inbound message. Reads the
+// cache populated by the panel/full-page loaders; falls back to the lead detail.
+let __emailAttnById = new Map();
+function openEmailReader(leadId) {
+  const it = __emailAttnById.get(String(leadId));
+  if (!it) return;
+  document.getElementById('email-read-subject').textContent = it.subject || '(no subject)';
+  document.getElementById('email-read-meta').textContent =
+    (it.name || it.email || 'Unknown') + ' · ' + fmtStamp(it.last_inbound_at);
+  document.getElementById('email-read-body').textContent = cleanEmailBody(it.body || it.snippet || '');
+  const link = document.getElementById('email-read-openlead');
+  link.onclick = (e) => { e.preventDefault(); closeModal('email-read-modal'); openLeadFromEmailPanel(leadId, it.email || ''); };
+  openModal('email-read-modal');
 }
 
 // Two-click confirm (no browser confirm()), mirroring the calls panel.
@@ -1592,6 +1667,52 @@ async function openLeadFromEmailPanel(leadId, email) {
     if (hit) allLeads.push(hit);   // openLeadDetail reads allLeads
   }
   openLeadMessagesAtNewestInbound(leadId);
+}
+
+// ── FULL-PAGE VIEWS (reached by clicking a panel title) ──
+// Both reuse the dashboard endpoints and the same filters; they render every row
+// as a table (not cards) and reuse dismissCallAttention / openEmailReader.
+async function loadCallbacksPage() {
+  const body = document.getElementById('callbacks-all-body');
+  if (!body) return;
+  body.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted)">Loading…</td></tr>';
+  const r = await commApi('listCallsAttention', { query: { limit: 500 } });
+  if (!r.ok || !Array.isArray(r.calls)) { body.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted)">Unavailable</td></tr>'; return; }
+  const rows = r.calls.filter(c => c.callback_type);
+  body.innerHTML = rows.length ? rows.map(c => {
+    const who = esc(c.caller_name || leadNameByPhone(c.caller_phone) || fmtPhone(c.caller_phone) || 'Unknown');
+    return '<tr>'
+      + '<td>' + esc(CB_LABEL[c.callback_type] || 'Call back') + '</td>'
+      + '<td style="cursor:pointer" onclick="openLeadByPhone(\'' + esc(c.caller_phone || '') + '\')">' + who + '</td>'
+      + '<td>' + (c.count || 1) + '</td>'
+      + '<td>' + fmtStamp(c.created_at) + '</td>'
+      + '<td>' + esc(String(c.summary || '').slice(0, 120)) + '</td>'
+      + '<td><button class="btn btn-sm btn-outline" onclick="dismissCallAttention(\'' + esc((c.ids || []).join(',')) + '\', this)">Reviewed</button></td>'
+      + '</tr>';
+  }).join('') : '<tr><td colspan="6" style="color:var(--text-muted)">No call-backs needed.</td></tr>';
+}
+
+async function loadEmailAttentionPage() {
+  const body = document.getElementById('email-attention-all-body');
+  if (!body) return;
+  body.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted)">Loading…</td></tr>';
+  const r = await commApi('listEmailAttention', { query: {} });
+  if (!r.ok || !Array.isArray(r.items)) { body.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted)">Unavailable</td></tr>'; return; }
+  const rows = r.items.filter(it => {                                                 // same filters as the panel
+    if (isVendorEmail(it.email)) return false;
+    if (!it.email_attention_cleared_at) return true;
+    return new Date(it.last_inbound_at) > new Date(it.email_attention_cleared_at);
+  });
+  __emailAttnById = new Map(rows.map(it => [String(it.lead_id), it]));
+  body.innerHTML = rows.length ? rows.map(it => {
+    const who = esc(it.name || it.email || 'Unknown lead');
+    return '<tr style="cursor:pointer" onclick="openEmailReader(\'' + esc(it.lead_id) + '\')">'
+      + '<td>' + who + '</td>'
+      + '<td>' + esc(it.subject || '(no subject)') + '</td>'
+      + '<td>' + fmtStamp(it.last_inbound_at) + '</td>'
+      + '<td onclick="event.stopPropagation()"><button class="btn btn-sm btn-outline" onclick="dismissEmailAttention(\'' + esc(it.lead_id) + '\', this)">Reviewed</button></td>'
+      + '</tr>';
+  }).join('') : '<tr><td colspan="4" style="color:var(--text-muted)">None.</td></tr>';
 }
 
 // Same as openLeadMessages, but renderLeadTimeline scrolls to the newest inbound
